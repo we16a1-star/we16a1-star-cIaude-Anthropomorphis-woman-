@@ -1,0 +1,73 @@
+G43 WP2｜表情窗四階（好感度 0-24／25-44／45-89／90-100）測試紀錄
+日期：2026-11-11
+環境：Node v22.14.0；jsdom（暫存 node_modules）
+
+=== 1. node tests/expression-affinity.test.cjs ===
+PASS affinityTier is exposed for tests
+PASS affinityFaceFor is exposed for tests
+PASS tier boundaries: 0-24 / 25-44 / 45-89 / 90-100 (clamped to 0-100)
+PASS missing value -> null
+PASS undefined -> null
+PASS empty string -> null
+PASS non-numeric -> null
+PASS numeric string (progress value) is accepted
+PASS 0-24 -> aff-1 (36625)
+PASS 25-44 -> aff-2 (36627)
+PASS 45-89 -> aff-3 (36624; opening 50)
+PASS 90-100 -> aff-4 (36623)
+PASS image not loaded -> fallback (null)
+PASS no affinity value -> fallback (null)
+PASS four WebP faces exist with correct size and <=400 KB
+PASS reads affinity from #affProgress
+PASS click path resolves affinity face
+PASS click path passes affinity face to showFace
+PASS story emotion still uses story-* faces
+PASS touch motion still uses expressionFor
+PASS touch effects (hearts/orbit/sparkles) remain
+PASS face crop uses inline background size/position (no style.css change)
+
+22 passed, 0 failed
+
+=== 2. node tests/wait-interlude.test.cjs（回歸） ===
+PASS overlay is created hidden
+PASS not shown before showDelay
+PASS shown after delay
+PASS day uses g43-wait-writing.jpg
+PASS day ratio is portrait
+PASS title copied from existing wait text
+PASS caption line rotates
+PASS hint appears after hintAfter
+PASS does not hide immediately (min visible / flicker guard)
+PASS hidden after wait ends
+PASS short wait never shows
+PASS quick re-render does not close overlay
+PASS night also uses the single wait image
+PASS night uses portrait day layout
+PASS code no longer uses the night wait variant
+PASS night wait variant g43-wait-night.jpg is removed from assets
+PASS wait image matches the approved attachment
+PASS not shown when tab has text-only
+PASS not shown when tab has has-custom-portrait
+PASS not shown when tab has has-scene-image
+PASS not shown when tab has has-bundled-cg
+PASS closes when a CG starts
+PASS English caption lines when lang=en
+PASS English title copied
+PASS second wait reuses a single overlay
+
+25 passed, 0 failed
+
+=== 3. 既有 21 檔故事測試（回歸） ===
+# tests 109
+# pass 109
+# fail 0
+# duration_ms 455.0485
+
+=== 4. 視覺檢查 ===
+以 Electron 載入四張 WebP，套用與 app 相同的圓窗裁切參數（background-size:240%、逐張 background-position），
+分別以 320 px 與 96 px 預覽；四張臉（眼睛、鼻子、嘴巴）都完整落在圓窗內，沒有被裁掉。
+預覽圖：tests/g43-wp2-表情窗四階預覽-20261111.png
+
+=== 5. Electron 實際載入（app/www/index.html） ===
+SMOKE {"api":true,"tier50":2,"face50":"g43-face-aff-3.webp","hasProgress":true,"faces":["1088x1445","941x1672","1088x1445","1088x1445"]}
+四張圖都載入成功；console 只有測試 harness 關閉 webSecurity 造成的 Electron 安全警告，沒有程式錯誤。

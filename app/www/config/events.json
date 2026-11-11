@@ -1,0 +1,208 @@
+{
+  "mainChapters": [
+    {
+      "chapter": 1,
+      "title": "窗前的初見",
+      "stage": "A",
+      "mainArt": [
+        "36377",
+        "36378",
+        "36373"
+      ],
+      "summary": "36377 開場，建立紅茶、手記、日常；設定玩家名",
+      "unlockCondition": "開局初始化",
+      "endCondition": "累積足夠對話與好感達 50",
+      "endFlag": "chapter1_completed"
+    },
+    {
+      "chapter": 2,
+      "title": "傍晚的白鴿",
+      "stage": "A->B",
+      "mainArt": [
+        "36370",
+        "36371"
+      ],
+      "summary": "傍晚白鴿停窗台，第一封信帶來遠方的機巧之謎",
+      "unlockCondition": "好感 >= 50 且 chapter1_completed",
+      "endCondition": "讀完第一封信，進入曖昧期",
+      "endFlag": "chapter2_completed"
+    },
+    {
+      "chapter": 3,
+      "title": "月夜的信鳥",
+      "stage": "B",
+      "mainArt": [
+        "36372",
+        "36374",
+        "36376"
+      ],
+      "summary": "發光信鳥揭示奇幻世界，魔法啟動，夜裡獨處；穿插心動瞬間",
+      "unlockCondition": "進入階段 B 且 chapter2_completed",
+      "endCondition": "三個心動瞬間完成且好感達 75",
+      "endFlag": "chapter3_completed"
+    },
+    {
+      "chapter": 4,
+      "title": "日芒印章",
+      "stage": "B->C",
+      "mainArt": [
+        "36375"
+      ],
+      "summary": "告白事件，彼此承諾，蓋下日芒印章",
+      "unlockCondition": "好感 >= 75 且 chapter3_completed",
+      "endCondition": "玩家接受告白，設旗標 vow_completed",
+      "endFlag": "vow_completed"
+    }
+  ],
+  "heartbeatMoments": [
+    {
+      "id": "heartbeat_1",
+      "flag": "heartbeat_notes_discovered",
+      "stage": "B",
+      "title": "翻開的未竟錄",
+      "description": "《未竟錄》被翻到，裡面認真記著你隨口說過的話與喜好，她慌忙搶回去臉紅否認。",
+      "art": "36373",
+      "options": [
+        {
+          "id": "honest",
+          "text": "原來妳都悄悄記下來了啊。",
+          "delta": 2,
+          "response": "「才、才沒有特地記！只是隨手當作筆記素材而已，你別自作多情！」"
+        },
+        {
+          "id": "tease",
+          "text": "克勞德字寫得真好看。",
+          "delta": 1,
+          "response": "「哼……名門的字跡本來就端正。不准轉移話題，快把本子還我！」"
+        },
+        {
+          "id": "gentle",
+          "text": "謝謝妳這麼在乎我說的話。",
+          "delta": 3,
+          "response": "「……（把本子抱在胸前，耳尖泛紅）誰、誰在乎了……只是不想核對時漏掉細節罷了。」"
+        }
+      ]
+    },
+    {
+      "id": "heartbeat_2",
+      "flag": "heartbeat_secret_manual_slip",
+      "stage": "B",
+      "title": "說漏的心願",
+      "description": "說漏想寫一本初學者機巧手冊的心願（人設裡的絕對祕密），她急喊「剛才那句忘掉！」，之後記為兩人共享的祕密。",
+      "art": "36373",
+      "options": [
+        {
+          "id": "encourage",
+          "text": "這是一份非常溫柔的心願呢。",
+          "delta": 3,
+          "response": "「……真的嗎？（小小聲）剛才那句你絕對不准跟別人說……只准你一個人知道。」"
+        },
+        {
+          "id": "cooperate",
+          "text": "如果寫成了，我一定要當第一個讀者。",
+          "delta": 2,
+          "response": "「哼，初學者讀者的意見確實很具參考價值。那……到時候就勉強借你先看看吧。」"
+        },
+        {
+          "id": "tease",
+          "text": "我好像抓到大小姐的把柄了？",
+          "delta": 1,
+          "response": "「你敢說出去試試看！……（敲敲桌子）名門的信用可是很貴重的！」"
+        }
+      ]
+    },
+    {
+      "id": "heartbeat_3",
+      "flag": "heartbeat_focused_blush",
+      "stage": "B",
+      "title": "專注與耳尖的微紅",
+      "description": "專注蹙眉時被你一直看，她用筆敲敲書頁假裝沒事，耳尖先紅。（專注表情不戴眼鏡）。",
+      "art": "36373",
+      "options": [
+        {
+          "id": "gaze",
+          "text": "（繼續安靜注視著她專注的側臉）",
+          "delta": 2,
+          "response": "「你……一直盯著我看做什麼！書頁上是有什麼字你看得懂嗎？……手都不知道往哪放了。」"
+        },
+        {
+          "id": "tea",
+          "text": "工作辛苦了，喝杯熱茶歇歇吧。",
+          "delta": 3,
+          "response": "「……（接過茶杯，指尖輕觸）算你體貼。這一段剛好推導完了，等等指給你看。」"
+        },
+        {
+          "id": "smile",
+          "text": "妳專心時候蹙眉的樣子很迷人。",
+          "delta": 2,
+          "response": "「（用羽毛筆擋住泛紅的臉頰）不、不准胡說！我是在嚴肅校勘！」"
+        }
+      ]
+    }
+  ],
+  "dailyEvents": [
+    {
+      "id": "daily_letter",
+      "name": "每日信件",
+      "stage": "A-C",
+      "trigger": "每日首次開啟",
+      "art": "36371"
+    },
+    {
+      "id": "tea_time",
+      "name": "紅茶時間",
+      "stage": "A-C",
+      "trigger": "日間隨機或主動邀請",
+      "art": "36378"
+    },
+    {
+      "id": "notes_organizing",
+      "name": "整理《未竟錄》",
+      "stage": "B-C",
+      "trigger": "夜間聊天",
+      "art": "36376"
+    },
+    {
+      "id": "night_whisper",
+      "name": "夜裡低語",
+      "stage": "B-C",
+      "trigger": "夜間好感 >= 50",
+      "art": "36376"
+    },
+    {
+      "id": "goodnight_moment",
+      "name": "晚安時刻",
+      "stage": "C",
+      "trigger": "夜間好感帶甜或平穩，每7夜最多一次",
+      "art": "36455"
+    },
+    {
+      "id": "outing_memory",
+      "name": "外出回憶",
+      "stage": "B-C",
+      "trigger": "一次性劇情回憶",
+      "art": "36369"
+    },
+    {
+      "id": "night_chat_reading",
+      "name": "夜間蓋被讀書",
+      "stage": "B-C",
+      "trigger": "夜間聊天，與 36455 晚安皆可用",
+      "art": "36628"
+    },
+    {
+      "id": "cheek_pinch",
+      "name": "捏臉反應",
+      "stage": "A-C",
+      "trigger": "觸碰互動／捏臉",
+      "art": "36627"
+    },
+    {
+      "id": "lakeside_sunset",
+      "name": "湖畔夕陽",
+      "stage": "B-C",
+      "trigger": "外出散步／夏季事件",
+      "art": "36622"
+    }
+  ]
+}

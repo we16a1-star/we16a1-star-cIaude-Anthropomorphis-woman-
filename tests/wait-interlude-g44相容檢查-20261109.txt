@@ -1,0 +1,8 @@
+PASS overlay is created hidden
+PASS G44 figcaption.loading-dot triggers overlay
+PASS G44 title copied from busy figcaption text
+PASS night uses g43-wait-night.jpg
+PASS night uses landscape ratio/theme
+PASS G44 busy art is hidden while overlay is visible
+
+6 passed, 0 failed

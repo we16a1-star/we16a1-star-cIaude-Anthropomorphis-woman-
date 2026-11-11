@@ -1,0 +1,54 @@
+﻿G43 WP6｜臥室場景 CG（36628／36629）測試紀錄
+日期：2026-11-11
+環境：Node v22.14.0；jsdom（暫存 node_modules）
+
+=== 1. node tests/bedroom-scene.test.cjs ===
+PASS 36628 (reading) 素材存在
+PASS 36628 (reading) 是有效 JPEG
+PASS 36628 (reading) 尺寸 1024×1536
+PASS 36629 (nightgown) 素材存在
+PASS 36629 (nightgown) 是有效 JPEG
+PASS 36629 (nightgown) 尺寸 1024×1536
+PASS story-art 登錄 nightgown（artId 36629）
+PASS nightgown 指向 g43-cg-goodnight-nightgown.jpg
+PASS nightgown 使用 portrait
+PASS nightgown 啟用 blurBg
+PASS nightgown 不掛 AI eventFlag（只由本機呼叫）
+PASS 36628（goodnight-reading）既有登錄保留
+PASS story-art 暴露 showBedroomScene
+PASS returnToTimeDefault 不引用臥室 CG
+PASS applyEmotionArt 不引用臥室 CG
+PASS cgEvents 之前不引用臥室 CG
+PASS art_distribution 含 36628
+PASS 36628 為 portrait + blurBg
+PASS 36628 autoSwitch 為 false（不自動切換）
+PASS art_distribution 含 36629
+PASS 36629 為 portrait + blurBg
+PASS 36629 autoSwitch 為 false（不自動切換）
+PASS __storyArt.showBedroomScene 可用
+PASS 臥室場景 36629 可顯示
+PASS CG 為 nightgown
+PASS CG data-ratio 為 portrait
+PASS portrait CG 加上 has-portrait-cg
+PASS 載入 nightgown 圖
+PASS 臥室 CG 照常顯示
+PASS 臥室 CG 結束後恢復
+PASS 臥室場景 36628 可顯示
+PASS 36628 顯示為 goodnight-reading
+PASS 載入 reading 圖
+PASS 純文字模式不顯示
+PASS 不存在的 artId 不顯示
+PASS null 不顯示
+PASS 預設立繪不是臥室圖
+
+37 passed, 0 failed
+
+=== 2. 回歸測試 ===
+WP5 rare-goodnight：100/100 PASS
+WP2 expression-affinity：22/22 PASS
+wait-interlude：25/25 PASS
+既有 21 檔故事測試：109/109 PASS
+
+=== 3. 文字掃描 ===
+PII hits: 0
+Simplified hits: 0（'里' 出現在既有 '里程碑' 為傳統字，屬誤報）

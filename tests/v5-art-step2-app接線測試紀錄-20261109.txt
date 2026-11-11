@@ -1,0 +1,50 @@
+TAP version 13
+# Subtest: v5 Step 2 (D16): art_distribution.json 正確標記橫直比與晚安/夜間聊天角色
+ok 1 - v5 Step 2 (D16): art_distribution.json 正確標記橫直比與晚安/夜間聊天角色
+  ---
+  duration_ms: 1.3943
+  ...
+# Subtest: v5 Step 2 (D16): StoryEngine 晚安時刻支援 36455 主 CG 與 36628 夜間 CG 雙路徑
+ok 2 - v5 Step 2 (D16): StoryEngine 晚安時刻支援 36455 主 CG 與 36628 夜間 CG 雙路徑
+  ---
+  duration_ms: 0.5203
+  ...
+# Subtest: v5 Step 2: StoryEngine 支援觸碰反應（捏臉 36627）與湖畔夕陽（36622）事件
+ok 3 - v5 Step 2: StoryEngine 支援觸碰反應（捏臉 36627）與湖畔夕陽（36622）事件
+  ---
+  duration_ms: 0.2312
+  ...
+# Subtest: v5 Step 2: style.css 包含直式圖版型、模糊背景與矮橫條樣式規則
+ok 4 - v5 Step 2: style.css 包含直式圖版型、模糊背景與矮橫條樣式規則
+  ---
+  duration_ms: 1.7115
+  ...
+# Subtest: D18: scenePacks.json 佔位檔結構與 loadScenePacks 驗證通過
+ok 5 - D18: scenePacks.json 佔位檔結構與 loadScenePacks 驗證通過
+  ---
+  duration_ms: 0.3079
+  ...
+# Subtest: v5 Step 2 (app): story-events 已加入四個新旗標與好感／時段閘門
+ok 6 - v5 Step 2 (app): story-events 已加入四個新旗標與好感／時段閘門
+  ---
+  duration_ms: 0.814
+  ...
+# Subtest: v5 Step 2 (app): story-art 的 CG 對照已接上新圖與直式版型
+ok 7 - v5 Step 2 (app): story-art 的 CG 對照已接上新圖與直式版型
+  ---
+  duration_ms: 0.8379
+  ...
+# Subtest: v5 Step 2 (app): app.js 提示詞、核准呼叫與狀態已接上四個新旗標
+ok 8 - v5 Step 2 (app): app.js 提示詞、核准呼叫與狀態已接上四個新旗標
+  ---
+  duration_ms: 3.8766
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 139.7507

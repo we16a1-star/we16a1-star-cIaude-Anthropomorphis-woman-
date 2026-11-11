@@ -1,0 +1,24 @@
+PASS overlay is created hidden
+PASS not shown before showDelay
+PASS shown after delay
+PASS day uses g43-wait-writing.jpg
+PASS day ratio is portrait
+PASS title copied from existing wait text
+PASS caption line rotates
+PASS hint appears after hintAfter
+PASS does not hide immediately (min visible / flicker guard)
+PASS hidden after wait ends
+PASS short wait never shows
+PASS quick re-render does not close overlay
+PASS night falls back to day art (D6: ART.night=null)
+PASS night uses day ratio/theme (D6)
+PASS not shown when tab has text-only
+PASS not shown when tab has has-custom-portrait
+PASS not shown when tab has has-scene-image
+PASS not shown when tab has has-bundled-cg
+PASS closes when a CG starts
+PASS English caption lines when lang=en
+PASS English title copied
+PASS second wait reuses a single overlay
+
+22 passed, 0 failed

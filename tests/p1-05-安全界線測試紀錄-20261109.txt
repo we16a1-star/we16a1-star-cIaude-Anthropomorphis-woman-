@@ -1,0 +1,25 @@
+P1-05 玩家低落／危險安全界線測試紀錄（2026-11-09）
+
+環境：Node v22.14.0（temp）、Windows、Electron 測試包
+指令：node --test tests/story/p1-05-player-safety.test.js
+
+PASS 案1：crisis.json 新欄位齊全，config schema 通過且要求低落詞與三支熱線
+PASS 案2：現有 14 個危機詞全部命中（含空白與標點正規化）
+PASS 案3：低落詞逐條命中；中性與正面句不命中
+PASS 案4：危機優先於低落；分類回傳三種結果
+PASS 案5：本機安全回應含三支熱線、好感 0，中英文都有
+PASS 案6：安全段可重複附加但不重複；低落段只在命中時加入
+PASS 案7：常駐安全段要求 AI 自行轉接、危機好感 0、不假裝真人
+PASS 案8：安全段可接在角色界線之後，不覆蓋既有界線
+PASS 案9：低落詞不重複、不與危機詞完全相同
+PASS 案10：app.js 三個入口都接上危機攔截，兩條提示詞管線都接上安全段
+PASS 案11：本機安全回應不呼叫 applyTurn、不寫玩家原句、不留下待辦回合
+PASS 案12：實際執行本機安全回應——只加一則 safety、清待辦、好感與選項不變
+
+12 passed, 0 failed
+
+回歸：
+- 14 檔完整測試 75/75 PASS
+- wait-interlude.test.cjs 22/22 PASS
+- Electron 煙測 ok:true（exit 0，零 ConfigLoaderError）
+- bundle 內含 lowMoodKeywords／safetyResponseTemplateEn／1925

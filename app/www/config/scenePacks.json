@@ -1,0 +1,9 @@
+{
+  "version": "v2.0-placeholder",
+  "scenePacks": [],
+  "bgmEnabled": false,
+  "defaultBgm": null,
+  "supportedFormats": ["mp3", "ogg", "wav", "m4a"],
+  "note": "D18：待用戶提供音樂音效素材後啟用實際播放"
+}
+

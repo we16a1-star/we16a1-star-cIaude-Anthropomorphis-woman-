@@ -1,0 +1,44 @@
+{
+  "title": "回覆協議 v1（P0-05 定稿）",
+  "fields": {
+    "text": {
+      "required": true,
+      "type": "string",
+      "rule": "對白正文（含括號動作描寫）；缺失或留空＝整則回覆無效，走重試或兜底"
+    },
+    "emotion": {
+      "required": false,
+      "type": "string",
+      "whitelistSource": "www/config/emotions.json whitelist",
+      "rule": "缺失、非字串或不在白名單＝回退 defaultEmotion（neutral）"
+    },
+    "action": {
+      "required": false,
+      "type": "string|null",
+      "whitelistSource": "www/config/actions.json whitelist（附錄 B 14 動作）",
+      "maxPerReply": 1,
+      "onInvalid": "discard",
+      "rule": "選填；白名單外直接丟棄（置 null），不重試整則回覆（T6）；動作須符合當前位置與活動（適配驗證屬遊戲層，見 P0-05 文檔）"
+    },
+    "affection_delta": {
+      "required": false,
+      "type": "integer",
+      "min": -3,
+      "max": 3,
+      "rule": "超出範圍以 clamp 收斂；非數值＝0；正向加分請謹慎，僅在真誠陪伴或打動內心時給予"
+    },
+    "flag": {
+      "required": false,
+      "type": "string|null",
+      "rule": "劇情事件提議；可為空字串或 null；僅為提議，由遊戲程式最終裁定"
+    }
+  },
+  "outputFormat": {
+    "jsonOnly": true,
+    "markdownFenced": "解析層自動剝除 ``` 圍欄，並容錯擷取第一個 { 到最後一個 }",
+    "exampleJson": "{\"text\": \"你的台詞與括號描寫\", \"emotion\": \"neutral\", \"action\": \"sip_tea\", \"affection_delta\": 1, \"flag\": null}"
+  },
+  "promptSectionTemplate": "【回覆限制與格式協議】\n- 風格調整：[[tsundereAdj]]；[[actionCount]]；回覆篇幅：[[lengthLimit]]。\n- 動作標籤 action 必須嚴格選自以下白名單：[[actionWhitelist]]，且符合當前位置與活動。\n- 情緒標籤 emotion 必須嚴格選自白名單：[[emotionWhitelist]]。\n- 好感度變化 affection_delta 必須是 [[deltaMin]] 到 [[deltaMax]] 的整數（正向加分請謹慎，僅在真誠陪伴或打動內心時給予）。\n- flag 為劇情事件提議（可為空字串或 null，由遊戲程式最終裁定）。\n- 輸出格式必須是合法純 JSON 本體，不含 markdown 代碼塊標記，欄位格式如下：\n[[exampleJson]]",
+  "retryRule": "JSON 解析失敗或 text 缺失＝整則無效（重試 1–2 次，由呼叫層決定）；action／emotion 為欄位級降級（個別丟棄或回退），不重試整則",
+  "fallbackRule": "重試無效或連線失敗→ dialogue_fallback.json 情境台詞（PromptAssembler.getFallbackReply），affection_delta 一律 0"
+}

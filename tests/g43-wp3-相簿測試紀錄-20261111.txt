@@ -1,0 +1,41 @@
+﻿PASS ALBUM_ENTRIES 共 9 張
+PASS 免費解鎖 6 張
+PASS albumEntry 可查
+PASS isAlbumUnlocked 正確
+PASS 未解鎖回 false
+PASS albumImageSrc 指向既有 CG
+PASS g43-album-36626.jpg 存在
+PASS g43-album-36626.jpg 是有效 JPEG
+PASS g43-album-36676.jpg 存在
+PASS g43-album-36676.jpg 是有效 JPEG
+PASS g43-album-36684.jpg 存在
+PASS g43-album-36684.jpg 是有效 JPEG
+PASS g43-album-36623.webp 存在
+PASS g43-album-36623.webp 是有效 WebP
+PASS g43-album-36624.webp 存在
+PASS g43-album-36624.webp 是有效 WebP
+PASS g43-album-36625.webp 存在
+PASS g43-album-36625.webp 是有效 WebP
+PASS g43-cg-goodnight-reading.jpg 存在（既有 CG）
+PASS g43-cg-goodnight-nightgown.jpg 存在（既有 CG）
+PASS g43-cg-goodnight.jpg 存在（既有 CG）
+PASS app.js 匯入 album
+PASS fresh() 預設解鎖免費圖
+PASS undo 快照正規化 albumUnlocked
+PASS normalizeSlot 保留 albumUnlocked
+PASS serializeState 保留 albumUnlocked
+PASS applyTurn 記錄 albumUnlocked
+PASS applyTurn 還原 albumUnlocked
+PASS restoreTurnUndo 還原 albumUnlocked
+PASS unlockAlbum helper
+PASS renderAlbum
+PASS openAlbumLightbox
+PASS 稀有 CG 解鎖 36685
+PASS 臥室場景解鎖對應圖
+PASS render() 呼叫 renderAlbum
+PASS index.html 含 albumGrid
+PASS index.html 含 albumLightbox
+PASS style.css 含 .album-grid
+PASS style.css 含 .album-lightbox
+
+39 passed, 0 failed

@@ -1,0 +1,36 @@
+{
+  "contrastTarget": 7,
+  "dayTextBox": {
+    "textColor": "#FFF4E0",
+    "bgColor": "#2B1A12",
+    "opacity": 0.88,
+    "border": "1px solid rgba(221, 170, 51, 0.35)",
+    "notes": "日間圖偏亮，不透明度取 85–90%"
+  },
+  "nightTextBox": {
+    "textColor": "#FFF4E0",
+    "bgColor": "#2B1A12",
+    "opacity": 0.78,
+    "border": "1px solid #D4AF37",
+    "notes": "不用純黑，加細金邊，不透明度 75–80%"
+  },
+  "openingTitle36377": {
+    "textColor": "#3A2316",
+    "textShadow": "0 0 10px rgba(255, 244, 224, 0.85), 0 0 20px rgba(255, 244, 224, 0.5)",
+    "notes": "亮天空上標題用深棕字，加淡奶白外光，不可使用奶白字"
+  },
+  "nameTag": {
+    "textColor": "#E69C24",
+    "fontWeight": "bold",
+    "accentColor": "#DDAA33"
+  },
+  "optionButton": {
+    "isSolid": true,
+    "bgColor": "#352016",
+    "textColor": "#FFF4E0",
+    "hoverBgColor": "#4D3022",
+    "border": "1px solid #C49746",
+    "notes": "實心底，不用半透明"
+  }
+}
+

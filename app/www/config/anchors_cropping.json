@@ -1,0 +1,19 @@
+{
+  "targetAspectWidth": 16,
+  "targetAspectHeight": 9,
+  "defaultTextBoxHeight": 0.28,
+  "description": "16:9 cover 裁切規範與錨點配置（臉部落入預設範圍則移動文字框，不裁切臉部）",
+  "anchors": {
+    "36377": { "width": 1536, "height": 1024, "topCropPx": 0, "anchorX": 0.5, "anchorY": 0.35, "textBoxHeight": 0.28 },
+    "36378": { "width": 1536, "height": 1024, "topCropPx": 20, "anchorX": 0.5, "anchorY": 0.38, "textBoxHeight": 0.28 },
+    "36373": { "width": 1536, "height": 1024, "topCropPx": 0, "anchorX": 0.5, "anchorY": 0.35, "textBoxHeight": 0.28 },
+    "36376": { "width": 1536, "height": 1024, "topCropPx": 0, "anchorX": 0.5, "anchorY": 0.40, "textBoxHeight": 0.28 },
+    "36370": { "width": 1672, "height": 941, "topCropPx": 0, "anchorX": 0.5, "anchorY": 0.50, "textBoxHeight": 0.28 },
+    "36371": { "width": 1672, "height": 941, "topCropPx": 0, "anchorX": 0.5, "anchorY": 0.50, "textBoxHeight": 0.22 },
+    "36372": { "width": 1672, "height": 941, "topCropPx": 0, "anchorX": 0.5, "anchorY": 0.50, "textBoxHeight": 0.28 },
+    "36374": { "width": 1536, "height": 1024, "topCropPx": 0, "anchorX": 0.5, "anchorY": 0.45, "textBoxHeight": 0.28 },
+    "36375": { "width": 1536, "height": 1024, "topCropPx": 0, "anchorX": 0.5, "anchorY": 0.40, "textBoxHeight": 0.28 },
+    "36455": { "width": 1672, "height": 941, "topCropPx": 0, "anchorX": 0.5, "anchorY": 0.50, "textBoxHeight": 0.22 }
+  }
+}
+

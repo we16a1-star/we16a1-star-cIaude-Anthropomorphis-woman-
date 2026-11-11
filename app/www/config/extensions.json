@@ -1,0 +1,123 @@
+{
+  "rules": {
+    "freeOnly": true,
+    "userPaidApi": true,
+    "noGuiltRetention": true,
+    "allCanBeDisabled": true
+  },
+  "expansion": {
+    "dailyBonusCap": 3,
+    "note": "D9：擴充機制加成合計每日上限＋3（仍受每日 +10 總上限約束）"
+  },
+  "usage": {
+    "dailyCap": {
+      "enabled": false,
+      "limit": null,
+      "note": "D7：預設關閉，設定可開（設定頁提供開關＋數值）；關閉時不降級、只顯示用量統計"
+    }
+  },
+  "mechanisms": [
+    {
+      "id": 1,
+      "key": "read_together",
+      "name": "共讀時間",
+      "description": "計時陪讀，她在書桌做自己的事；計時中不呼叫 LLM，開始與結束各 1 次",
+      "phase": "P3",
+      "apiCalls": "極低（開始與結束各 1 次）",
+      "dailyAffectionCap": 2,
+      "defaultTimerMinutes": 25,
+      "shortBreakMinutes": 5
+    },
+    {
+      "id": 2,
+      "key": "interaction_style",
+      "name": "相處風格設定",
+      "description": "嘴硬濃度（低中高）、動作描寫量（少中多）、回覆長度（短中長）可調，對應提示詞參數",
+      "phase": "P2",
+      "apiCalls": "無額外呼叫",
+      "dailyAffectionCap": 0
+    },
+    {
+      "id": 3,
+      "key": "save_backup",
+      "name": "存檔備份",
+      "description": "手動匯出匯入，自動保留 3 份歷史；不包含 API 金鑰",
+      "phase": "P2",
+      "apiCalls": "無",
+      "dailyAffectionCap": 0
+    },
+    {
+      "id": 4,
+      "key": "memory_cards",
+      "name": "回憶卡與相簿",
+      "description": "重要事件與收藏的句子變成卡片，同時寫入長期記憶；玩家可檢視、刪除",
+      "phase": "P3",
+      "apiCalls": "低（每張 1 次）",
+      "dailyAffectionCap": 0
+    },
+    {
+      "id": 5,
+      "key": "critical_event_choices",
+      "name": "關鍵事件選項",
+      "description": "心動瞬間與關鍵劇情給予 2–3 個選項，影響口吻與小幅好感（−1～+3）",
+      "phase": "P2",
+      "apiCalls": "低",
+      "dailyAffectionCap": 0
+    },
+    {
+      "id": 6,
+      "key": "mailbox",
+      "name": "信匣",
+      "description": "玩家寫信送出，她在下一個夜晚時段回信；不顯示已讀，通知預設關閉",
+      "phase": "P3",
+      "apiCalls": "低（每封 1 次）",
+      "dailyAffectionCap": 1
+    },
+    {
+      "id": 7,
+      "key": "manual_coauthor",
+      "name": "手冊共筆",
+      "description": "玩家扮演初學者讀者，幫她校驗機巧手冊段落；完成可匯出",
+      "phase": "v1.1",
+      "apiCalls": "中",
+      "dailyAffectionCap": 1
+    },
+    {
+      "id": 8,
+      "key": "anniversary_seasonal",
+      "name": "紀念日與季節事件",
+      "description": "認識第 N 天、告白紀念日、四季變換問候",
+      "phase": "P3",
+      "apiCalls": "低",
+      "dailyAffectionCap": 1
+    },
+    {
+      "id": 9,
+      "key": "small_gifts",
+      "name": "小禮物",
+      "description": "每日一次從清單挑選（紅茶包、特製墨水、書籤等），她記住並給予個人化回應；不涉及金錢",
+      "phase": "P3",
+      "apiCalls": "低",
+      "dailyAffectionCap": 1
+    },
+    {
+      "id": 10,
+      "key": "mood_checkin",
+      "name": "心情打卡",
+      "description": "選填心情標籤記錄今天，她在後續對話關心；危機訊號改走安全通道",
+      "phase": "v1.1",
+      "apiCalls": "低",
+      "dailyAffectionCap": 0
+    },
+    {
+      "id": 11,
+      "key": "mini_games",
+      "name": "小遊戲",
+      "description": "古籍校勘比眼力、沖泡紅茶時機、機巧零件拼裝，3 分鐘內輕量互動",
+      "phase": "v1.1 之後",
+      "apiCalls": "無",
+      "dailyAffectionCap": 1
+    }
+  ]
+}
+

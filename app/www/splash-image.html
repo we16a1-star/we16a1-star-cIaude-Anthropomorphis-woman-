@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="zh-Hant" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="google" content="notranslate">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude娘啟動</title>
+<style>
+:root{color-scheme:dark;--warm:#f6a768;--cream:#fff4e6}
+*{box-sizing:border-box;margin:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#090706}
+body{font-family:"Microsoft JhengHei UI","Microsoft JhengHei",sans-serif;color:var(--cream)}
+#stage{position:fixed;inset:0;overflow:hidden;background:radial-gradient(ellipse at 34% 52%,#40251e 0,#1c100d 42%,#080706 78%)}
+#glow{position:absolute;inset:-15%;background:radial-gradient(ellipse at 34% 48%,rgba(239,132,67,.25),transparent 48%);animation:breathe 6s ease-in-out infinite alternate}
+#portrait{position:absolute;left:0;bottom:0;height:100vh;width:min(58vh,55vw);object-fit:contain;object-position:center bottom;filter:drop-shadow(0 0 34px rgba(231,127,70,.22));opacity:1;transform:scale(1);clip-path:circle(0% at 42% 15%);will-change:clip-path,filter}
+#shade{position:absolute;inset:0;z-index:1;background:linear-gradient(90deg,transparent 0%,rgba(8,7,6,.04) 39%,rgba(8,7,6,.68) 58%,#090706 100%);pointer-events:none}
+#fx{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none}
+#hud{position:absolute;left:55vw;right:7vw;top:32vh;z-index:3;isolation:isolate}
+.tag{color:var(--warm);letter-spacing:.34em;font:600 13px/1.5 "Consolas",monospace;opacity:0;transform:translateY(12px)}
+h1{font-size:clamp(34px,5vw,72px);font-weight:500;letter-spacing:.08em;line-height:1.18;margin-top:18px;opacity:0;min-height:1.18em;text-shadow:0 4px 28px rgba(0,0,0,.45)}
+.caret{display:inline-block;width:.055em;height:.88em;margin-left:.09em;background:var(--warm);vertical-align:-.06em;box-shadow:0 0 14px rgba(246,167,104,.8);animation:caret-blink .72s steps(2,start) infinite}
+.rule{height:2px;width:0;margin:24px 0;background:linear-gradient(90deg,var(--warm),rgba(246,167,104,0));box-shadow:0 0 12px rgba(246,167,104,.8)}
+#welcome{font-size:clamp(17px,2vw,28px);letter-spacing:.2em;color:#f8ddc7;opacity:0;text-shadow:0 0 0 rgba(246,167,104,0)}
+#welcome::after{content:" ✦";display:inline-block;color:var(--warm);transform-origin:center;opacity:var(--spark,0);text-shadow:0 0 12px rgba(255,174,104,.9);transform:scale(var(--spark,1)) rotate(var(--spark-turn,0deg))}
+#skip{position:fixed;right:22px;bottom:18px;padding:9px 14px;border:1px solid rgba(255,244,230,.24);border-radius:999px;background:rgba(8,7,6,.45);color:rgba(255,244,230,.82);font:13px "Microsoft JhengHei UI",sans-serif;cursor:pointer}
+@keyframes rise{to{opacity:1;transform:translateY(0)}}
+@keyframes caret-blink{to{visibility:hidden}}
+@keyframes breathe{to{transform:scale(1.08);opacity:.7}}
+@media(max-width:700px){#portrait{left:-8vw;width:70vw;height:100vh}#shade{background:linear-gradient(90deg,transparent 0%,rgba(8,7,6,.2) 36%,rgba(8,7,6,.82) 62%,#090706 100%)}#hud{left:48vw;right:5vw;top:38vh}h1{font-size:clamp(25px,7vw,48px)}.tag{font-size:10px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-delay:0ms!important}}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="glow"></div>
+  <img id="portrait" src="assets/claude-splash-user/Claude娘圖2-transparent.png" alt="Claude娘圖2">
+  <div id="shade"></div>
+  <canvas id="fx" aria-hidden="true"></canvas>
+  <main id="hud">
+    <div class="tag">Claude娘</div>
+    <h1 id="title"><span id="typed"></span><span class="caret" id="caret"></span></h1>
+    <div class="rule"></div>
+    <div id="welcome">歡迎回來</div>
+  </main>
+</div>
+<button id="skip" type="button">點擊或按 Esc 跳過</button>
+<script>
+(() => {
+  const query = new URLSearchParams(location.search);
+  const appUrl = query.get('appUrl') || '';
+  const skip = document.getElementById('skip');
+  const portrait = document.getElementById('portrait');
+  const canvas = document.getElementById('fx');
+  const ctx = canvas.getContext('2d', {alpha:true});
+  const tag = document.querySelector('.tag');
+  const title = document.getElementById('title');
+  const typed = document.getElementById('typed');
+  const caret = document.getElementById('caret');
+  const rule = document.querySelector('.rule');
+  const welcome = document.getElementById('welcome');
+  const titleText = 'Claude娘啟動';
+  const layer = document.createElement('canvas'), layerCtx = layer.getContext('2d');
+  let layerScale = 2;
+  const chains = [], grid = { w: 260, h: 0 };   // 金線：輪廓追蹤後的連續線條（格點座標）
+  const rain = Array.from({ length: 34 }, () => ({ x: Math.random(), y: Math.random(), v: .35 + Math.random() * .55, len: 26 + Math.random() * 70, a: .05 + Math.random() * .11 }));
+  let leaving = false;
+  const go = () => {
+    if (leaving || !appUrl) return;
+    leaving = true;
+    location.replace(appUrl);
+  };
+  function rebuildLayer() {
+    // 快取層解析度：略大於螢幕上實際顯示的大小（含推近 1.05 倍），畫完的線從這裡貼圖
+    const r = photoRect(), dpr = Math.min(window.devicePixelRatio || 1, 1.25);
+    layerScale = Math.max(1.2, Math.min(4, (r.w || 400) / grid.w * 1.08 * dpr));
+    layer.width = Math.ceil(grid.w * layerScale); layer.height = Math.ceil(Math.max(1, grid.h) * layerScale);
+    for (const c of chains) c.done = false;
+  }
+  function resizeCanvas() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
+    canvas.width = Math.round(innerWidth * dpr);
+    canvas.height = Math.round(innerHeight * dpr);
+    canvas.style.width = innerWidth + 'px';
+    canvas.style.height = innerHeight + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (chains.length) rebuildLayer();
+  }
+  // 金線：模糊 → Sobel 邊緣 → 非極大值抑制（1px 細線）→ 雙門檻連通（只留相連的強輪廓，去掉零碎雜訊）
+  //       → 追蹤成長線 → 平滑。每條線記錄「由臉部往外」的出場時間，讓它們像一筆一筆被畫出來。
+  function buildEdges() {
+    chains.length = 0;
+    try {
+      const w = grid.w, h = Math.round(w * portrait.naturalHeight / portrait.naturalWidth); grid.h = h;
+      const off = document.createElement('canvas'); off.width = w; off.height = h;
+      const g = off.getContext('2d', {willReadFrequently:true});
+      g.fillStyle = '#1d1511'; g.fillRect(0, 0, w, h);          // 墊深色底，立繪外框也能被偵測成輪廓
+      g.drawImage(portrait, 0, 0, w, h);
+      const px = g.getImageData(0, 0, w, h).data;
+      const gray = new Float32Array(w * h), bl = new Float32Array(w * h);
+      for (let i = 0; i < gray.length; i++) gray[i] = px[i*4]*.299 + px[i*4+1]*.587 + px[i*4+2]*.114;
+      for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+        const i = y*w + x;
+        bl[i] = (gray[i-w-1] + 2*gray[i-w] + gray[i-w+1] + 2*gray[i-1] + 4*gray[i] + 2*gray[i+1] + gray[i+w-1] + 2*gray[i+w] + gray[i+w+1]) / 16;
+      }
+      const pw = new Float32Array(w * h), an = new Float32Array(w * h);
+      for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+        const i = y*w + x;
+        const gx = -bl[i-w-1] + bl[i-w+1] - 2*bl[i-1] + 2*bl[i+1] - bl[i+w-1] + bl[i+w+1];
+        const gy = -bl[i-w-1] - 2*bl[i-w] - bl[i-w+1] + bl[i+w-1] + 2*bl[i+w] + bl[i+w+1];
+        pw[i] = Math.hypot(gx, gy); an[i] = Math.atan2(gy, gx);
+      }
+      const HI = 120, LO = 55, cls = new Uint8Array(w * h);
+      for (let y = 2; y < h - 2; y++) for (let x = 2; x < w - 2; x++) {
+        const i = y*w + x, p = pw[i];
+        if (p < LO) continue;
+        const dx = Math.round(Math.cos(an[i])), dy = Math.round(Math.sin(an[i]));
+        if (p < pw[i + dy*w + dx] || p < pw[i - dy*w - dx]) continue;
+        cls[i] = p >= HI ? 2 : 1;
+      }
+      const NB = [[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]];
+      const edge = new Uint8Array(w * h), stack = [];
+      for (let i = 0; i < cls.length; i++) if (cls[i] === 2) { edge[i] = 1; stack.push(i); }
+      while (stack.length) {
+        const i = stack.pop(), x = i % w, y = (i / w) | 0;
+        for (const [dx, dy] of NB) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue; const j = ny*w + nx; if (cls[j] === 1 && !edge[j]) { edge[j] = 1; stack.push(j); } }
+      }
+      const visited = new Uint8Array(w * h);
+      const degree = i => { let n = 0; const x = i % w, y = (i / w) | 0; for (const [dx, dy] of NB) { const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < w && ny < h && edge[ny*w + nx] && !visited[ny*w + nx]) n++; } return n; };
+      const trace = start => {
+        const pts = []; let cur = start, dir = -1;
+        while (cur >= 0) {
+          visited[cur] = 1; pts.push([cur % w, (cur / w) | 0]);
+          let best = -1, bestScore = -99, bestK = 0; const x = cur % w, y = (cur / w) | 0;
+          for (let k = 0; k < 8; k++) {
+            const nx = x + NB[k][0], ny = y + NB[k][1]; if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+            const j = ny*w + nx; if (!edge[j] || visited[j]) continue;
+            const turn = dir < 0 ? 0 : Math.min((k - dir + 8) % 8, (dir - k + 8) % 8);
+            const score = -turn - (k % 2 ? .3 : 0);              // 偏好直走、其次斜角
+            if (score > bestScore) { bestScore = score; best = j; bestK = k; }
+          }
+          if (best < 0) break; dir = bestK; cur = best;
+        }
+        return pts;
+      };
+      const starts = [];
+      for (let i = 0; i < edge.length; i++) if (edge[i]) starts.push(i);
+      const pass = [i => degree(i) <= 1, i => true];
+      const raw = [];
+      for (const accept of pass) for (const i of starts) if (!visited[i] && accept(i)) { const pts = trace(i); if (pts.length >= 16) raw.push(pts); }
+      const cx = w * .42, cy = h * .15, diag = Math.hypot(w, h);
+      raw.forEach((pts, idx) => {
+        for (let rep = 0; rep < 2; rep++) for (let k = 1; k < pts.length - 1; k++) { pts[k] = [(pts[k-1][0] + 2*pts[k][0] + pts[k+1][0]) / 4, (pts[k-1][1] + 2*pts[k][1] + pts[k+1][1]) / 4]; }
+        const mid = pts[pts.length >> 1], d0 = Math.hypot(mid[0] - cx, mid[1] - cy) / (diag * .85);
+        const jitter = ((idx * 2654435761) % 1000) / 1000 * .35;
+        chains.push({ pts, ts: 1.55 + 2.45 * Math.min(1, d0) + jitter, dur: Math.min(1.9, .45 + pts.length / 70) });
+      });
+      off.width = off.height = 0;
+      rebuildLayer();
+    } catch (error) { chains.length = 0; }   // 讀不到像素（例如被視為跨來源）就只少了金線，其餘動畫照常
+  }
+  const clamp = n => Math.max(0,Math.min(1,n));
+  const smooth = (a,b,t) => { const x=clamp((t-a)/(b-a)); return x*x*(3-2*x); };
+  const mix = (a,b,t) => a+(b-a)*t;
+  function photoRect() {
+    const r=portrait.getBoundingClientRect(), scale=Math.min(r.width/portrait.naturalWidth,r.height/portrait.naturalHeight);
+    const w=portrait.naturalWidth*scale,h=portrait.naturalHeight*scale;
+    return {x:r.left+(r.width-w)/2,y:r.bottom-h,w,h};
+  }
+  function bezier(p0,p1,p2,p3,t) {
+    const u=1-t; return [u*u*u*p0[0]+3*u*u*t*p1[0]+3*u*t*t*p2[0]+t*t*t*p3[0],u*u*u*p0[1]+3*u*u*t*p1[1]+3*u*t*t*p2[1]+t*t*t*p3[1]];
+  }
+  function render(now) {
+    const t=Math.max(0,(now-started)/1000), r=photoRect(), d=Math.hypot(r.w,r.h);
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+    const glow=smooth(1.5,3.8,t)*(1-smooth(5.1,6.2,t));
+    if(glow>0){const x=r.x+r.w*.42,y=r.y+r.h*.15,rad=ctx.createRadialGradient(x,y,0,x,y,d*.7);rad.addColorStop(0,`rgba(255,174,104,${.24*glow})`);rad.addColorStop(1,'rgba(255,174,104,0)');ctx.fillStyle=rad;ctx.fillRect(0,0,innerWidth,innerHeight);}
+    // Warm light trails sweep around the portrait, then fade as the color image blooms in.
+    const ribbons=[[[r.x-r.w*.08,r.y+r.h*.83],[r.x+r.w*.1,r.y+r.h*.25],[r.x+r.w*.88,r.y+r.h*.98],[r.x+r.w*1.02,r.y+r.h*.12]],[[r.x+r.w*.02,r.y+r.h*.38],[r.x+r.w*.32,r.y+r.h*.06],[r.x+r.w*.65,r.y+r.h*.7],[r.x+r.w*.98,r.y+r.h*.52]],[[r.x-r.w*.03,r.y+r.h*.68],[r.x+r.w*.3,r.y+r.h*.34],[r.x+r.w*.72,r.y+r.h*.18],[r.x+r.w*1.03,r.y+r.h*.86]],[[r.x+r.w*.06,r.y+r.h*.97],[r.x+r.w*.38,r.y+r.h*.66],[r.x+r.w*.58,r.y+r.h*.04],[r.x+r.w*.92,r.y+r.h*.27]]];
+    ribbons.forEach((p,i)=>{
+      const q=clamp((t-(.62+i*.13))/2.15),fade=Math.min(smooth(0,.18,q),1-smooth(.72,1,q));
+      if(q<=0||fade<=0)return;
+      const steps=Math.max(2,Math.floor(52*q));
+      const trace=(from,to)=>{ctx.beginPath();ctx.moveTo(...bezier(...p,from/52));for(let n=from+1;n<=to;n++)ctx.lineTo(...bezier(...p,n/52));};
+      trace(0,steps);
+      // 開場流線採用暖金柔光、琥珀色光帶與奶油白亮芯三層，呼應參考動畫的絲帶質感。
+      ctx.save();ctx.globalCompositeOperation='screen';ctx.lineCap='round';ctx.lineJoin='round';
+      ctx.strokeStyle=`rgba(244,133,67,${.16*fade})`;ctx.lineWidth=16;ctx.shadowColor='#f28a4c';ctx.shadowBlur=24;ctx.stroke();
+      ctx.shadowBlur=0;ctx.strokeStyle=`rgba(247,171,105,${.34*fade})`;ctx.lineWidth=6.5;ctx.stroke();
+      ctx.strokeStyle=`rgba(255,226,184,${.82*fade})`;ctx.lineWidth=1.8;ctx.stroke();
+      // 光點沿流線前進，前方亮核與後方短尾同時保留，讓開場一眼看出光的方向。
+      const from=Math.max(0,steps-9);trace(from,steps);
+      ctx.strokeStyle=`rgba(255,157,82,${.54*fade})`;ctx.lineWidth=8;ctx.shadowColor='#ff9d55';ctx.shadowBlur=18;ctx.stroke();
+      ctx.shadowBlur=0;ctx.strokeStyle=`rgba(255,244,218,${.98*fade})`;ctx.lineWidth=2.8;ctx.stroke();
+      const [hx,hy]=bezier(...p,q),radius=Math.max(7,Math.min(18,r.w*.022));
+      const point=ctx.createRadialGradient(hx,hy,0,hx,hy,radius*2.5);
+      point.addColorStop(0,`rgba(255,255,239,${.98*fade})`);point.addColorStop(.18,`rgba(255,219,164,${.88*fade})`);point.addColorStop(.52,`rgba(255,151,78,${.34*fade})`);point.addColorStop(1,'rgba(255,126,54,0)');
+      ctx.fillStyle=point;ctx.beginPath();ctx.arc(hx,hy,radius*2.5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=`rgba(255,255,242,${.96*fade})`;ctx.beginPath();ctx.arc(hx,hy,Math.max(1.5,radius*.19),0,Math.PI*2);ctx.fill();
+      // 細小粒子落在光點後方，逐步淡出而不形成固定光球。
+      for(let k=1;k<=3;k++){const f=Math.max(0,q-k*.035);if(f<=0)continue;const [sx,sy]=bezier(...p,f),rr=Math.max(1,radius*(.16-k*.032));ctx.fillStyle=`rgba(255,220,170,${fade*(.50-k*.11)})`;ctx.beginPath();ctx.arc(sx,sy,rr,0,Math.PI*2);ctx.fill();}
+      ctx.restore();
+    });
+    // 雨夜：極細的金色雨絲緩緩落下（線，不是點）
+    const rainA=smooth(.3,1.8,t)*(1-smooth(8.6,9.3,t));
+    if(rainA>0){ctx.save();ctx.globalCompositeOperation='screen';ctx.lineWidth=1;ctx.lineCap='round';for(const d of rain){const yy=((d.y+t*d.v*.1)%1.2-.1)*innerHeight,xx=d.x*innerWidth+yy*.07;const gr=ctx.createLinearGradient(xx,yy,xx-d.len*.07,yy-d.len);gr.addColorStop(0,`rgba(255,196,128,${d.a*rainA})`);gr.addColorStop(1,'rgba(255,196,128,0)');ctx.strokeStyle=gr;ctx.beginPath();ctx.moveTo(xx,yy);ctx.lineTo(xx-d.len*.07,yy-d.len);ctx.stroke();}ctx.restore();}
+    // 金線：輪廓由臉部往外一筆一筆被畫出來，線頭是一小段發亮的線；之後有一道亮光由上往下掃過，彩色立繪再浮現。
+    const line=smooth(1.5,2.6,t)*(1-smooth(5.2,6.1,t));
+    if(line>0&&chains.length){
+      const sc=r.w/grid.w;
+      // 1) 已畫完的線只描一次，存進快取層；之後每幀只貼圖（線條很多，逐幀重畫會卡）
+      const lc=layerCtx;lc.save();lc.setTransform(layerScale,0,0,layerScale,0,0);lc.globalCompositeOperation='screen';lc.lineJoin='round';lc.lineCap='round';
+      const fresh=new Path2D();let any=false;
+      for(const c of chains){if(c.done||t<c.ts+c.dur)continue;c.done=true;any=true;fresh.moveTo(c.pts[0][0],c.pts[0][1]);for(let k=1;k<c.pts.length;k++)fresh.lineTo(c.pts[k][0],c.pts[k][1]);}
+      if(any){const w=layerScale/sc;lc.strokeStyle='rgba(255,140,64,.16)';lc.lineWidth=3.6/sc*(layerScale/layerScale);lc.stroke(fresh);lc.strokeStyle='rgba(255,200,134,.86)';lc.lineWidth=1.15/sc;lc.stroke(fresh);}
+      lc.restore();
+      ctx.save();ctx.globalCompositeOperation='screen';ctx.globalAlpha=line;ctx.drawImage(layer,r.x,r.y,grid.w*sc,grid.h*sc);
+      // 亮光由上往下掃過所有金線：把同一張快取層在一條橫帶內再疊一次
+      const sweep=smooth(3.3,5.4,t);if(sweep>0&&sweep<1){const by=r.y+mix(-.04,1.04,sweep)*grid.h*sc;ctx.beginPath();ctx.rect(r.x-6,by-18,grid.w*sc+12,36);ctx.clip();ctx.globalAlpha=Math.min(1,line*1.4);ctx.drawImage(layer,r.x,r.y,grid.w*sc,grid.h*sc);ctx.drawImage(layer,r.x,r.y,grid.w*sc,grid.h*sc);}
+      ctx.restore();
+      // 2) 正在畫的線（只有一小部分），線頭是一小段發亮的線
+      ctx.save();ctx.translate(r.x,r.y);ctx.scale(sc,sc);ctx.globalCompositeOperation='screen';ctx.lineJoin='round';ctx.lineCap='round';
+      const body=new Path2D(),heads=new Path2D();let live=false;
+      for(const c of chains){if(c.done)continue;const q=clamp((t-c.ts)/c.dur);if(q<=0)continue;const n=c.pts.length,m=Math.max(2,Math.floor(q*(n-1))+1);live=true;body.moveTo(c.pts[0][0],c.pts[0][1]);for(let k=1;k<m;k++)body.lineTo(c.pts[k][0],c.pts[k][1]);const k0=Math.max(0,m-9);heads.moveTo(c.pts[k0][0],c.pts[k0][1]);for(let k=k0+1;k<m;k++)heads.lineTo(c.pts[k][0],c.pts[k][1]);}
+      if(live){ctx.strokeStyle=`rgba(255,200,134,${.86*line})`;ctx.lineWidth=1.15/sc;ctx.stroke(body);
+        // 線頭發光：用「寬而淡」＋「窄而亮」兩層描邊，不用 shadowBlur（畫布上的模糊陰影非常耗效能）
+        ctx.strokeStyle=`rgba(255,160,90,${.30*line})`;ctx.lineWidth=5.2/sc;ctx.stroke(heads);ctx.strokeStyle=`rgba(255,246,224,${.98*line})`;ctx.lineWidth=2.1/sc;ctx.stroke(heads);}
+      ctx.restore();}
+    // 緩慢推近＋呼吸：整個開屏期間立繪由 1.05 倍慢慢回到 1 倍，並有極輕的上下／左右浮動
+    const zoom=1.05-.05*smooth(0,9.4,t);portrait.style.transformOrigin='42% 62%';portrait.style.transform=`translate(${(Math.sin(t*.9)*3).toFixed(2)}px,${(Math.sin(t*1.15)*-2.4).toFixed(2)}px) scale(${zoom.toFixed(4)})`;
+    const reveal=smooth(3.8,5.85,t);portrait.style.clipPath=`ellipse(${(reveal*112).toFixed(1)}% ${(reveal*112).toFixed(1)}% at 42% 15%)`;portrait.style.filter=`drop-shadow(0 0 ${22+glow*20}px rgba(231,127,70,${.2+glow*.35}))`;
+    const intro=smooth(6.1,6.65,t);tag.style.opacity=intro;tag.style.transform=`translateY(${(1-intro)*12}px)`;
+    const chars=Math.max(0,Math.min([...titleText].length,Math.floor((t-6.35)/.15)+1));typed.textContent=[...titleText].slice(0,chars).join('');title.style.opacity=smooth(6.25,6.55,t);caret.style.opacity=(chars<[...titleText].length||t<7.5)?(Math.floor(t*3)%2===0?1:0):0;
+    const tp=clamp((t-6.35)/1.05);title.style.textShadow=`0 0 ${4+Math.sin(t*2.4)*8}px rgba(255,174,104,${.32+intro*.35})`;title.style.background=`linear-gradient(105deg,#fff4e6 0%,#fff4e6 ${Math.max(0,tp*70-12)}%,#ffe0a6 ${Math.min(100,tp*70)}%,#fff4e6 ${Math.min(100,tp*70+18)}%,#fff4e6 100%)`;title.style.backgroundSize='240% 100%';title.style.backgroundPosition=`${(100-(t-6.5)*78)%240}% 50%`;title.style.webkitBackgroundClip='text';title.style.backgroundClip='text';title.style.color='transparent';
+    const rp=smooth(7.0,7.7,t);rule.style.width=`${Math.min(28,28*rp)}vw`;const wp=smooth(7.45,8.05,t);welcome.style.opacity=wp;welcome.style.transform=`translateY(${(1-wp)*12}px)`;welcome.style.textShadow=`0 0 ${Math.max(0,Math.sin(t*2.5)*15*wp)}px rgba(255,174,104,.82)`;const spark=.55+.45*(.5+.5*Math.sin(t*4));welcome.style.setProperty('--spark',String(spark));welcome.style.setProperty('--spark-turn',`${(spark-.5)*40}deg`);welcome.style.setProperty('filter',`drop-shadow(0 0 ${Math.max(0,Math.sin(t*2.5)*8*wp)}px rgba(255,174,104,.7))`);
+    if(t<9.4&&!leaving)requestAnimationFrame(render);else if(!leaving)go();
+  }
+  let started=0;
+  portrait.addEventListener('load', () => {
+    resizeCanvas();buildEdges();started=performance.now();requestAnimationFrame(render);
+    requestAnimationFrame(() => requestAnimationFrame(() => { document.title = 'CLAUDE_SPLASH_VISIBLE'; }));
+  }, { once: true });
+  addEventListener('resize',resizeCanvas);
+  skip.addEventListener('click', go);
+  document.addEventListener('click', event => { if (event.target !== skip) go(); });
+  document.addEventListener('keydown', event => {
+    if (['Escape', ' ', 'Enter'].includes(event.key)) { event.preventDefault(); go(); }
+  });
+  setTimeout(go, 9800);
+})();
+</script>
+</body>
+</html>

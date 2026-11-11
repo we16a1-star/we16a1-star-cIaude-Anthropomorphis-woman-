@@ -1,0 +1,56 @@
+﻿PASS bedroom-scene.js 是純判定模組
+PASS 臥室場景機率為 25%
+PASS 臥室場景冷卻為 24 小時
+PASS 臥室場景好感門檻為 45
+PASS isBedroomScene("臥室 · 夜") === true
+PASS isBedroomScene("寢室") === true
+PASS isBedroomScene("睡前") === true
+PASS isBedroomScene("床邊") === true
+PASS isBedroomScene("古籍閱覽室 · 雨夜") === false
+PASS isBedroomScene("") === false
+PASS isBedroomScene(null) === false
+PASS 好感 44 不給圖
+PASS 好感 45 → 36628
+PASS 好感 89 → 36628
+PASS 好感 90 → 36629
+PASS 好感 100 → 36629
+PASS 夜間＋好感 50＋臥室標籤＋第一次 → 顯示
+PASS 第一次顯示 36628
+PASS 好感 95 → 36629
+PASS 回覆產生中不觸發
+PASS Game Over 不觸發
+PASS 終章不觸發
+PASS 純文字模式不觸發
+PASS 暖機期不觸發
+PASS 日間不觸發
+PASS 好感 44 不觸發
+PASS 非臥室標籤不觸發
+PASS 同一場景只觸發一次
+PASS 不同場景可各自觸發
+PASS 未滿 24 小時受冷卻
+PASS 滿 24 小時解除冷卻
+PASS 第一次必出現（不受機率）
+PASS 之後 25%：0.99 不顯示
+PASS 之後 25%：0.1 顯示
+PASS 隨機值正好 0.25 不顯示（< 0.25 才顯示）
+PASS app.js 匯入臥室判定
+PASS fresh() 預設 bedroomSceneAt
+PASS fresh() 預設 bedroomSceneLabels
+PASS undo 快照正規化 bedroomSceneAt
+PASS undo 快照正規化 bedroomSceneLabels
+PASS normalizeSlot 保留 bedroomSceneAt
+PASS serializeState 保留 bedroomSceneAt
+PASS applyTurn 記錄 bedroomSceneAt 前的值
+PASS applyTurn 記錄 bedroomSceneLabels 前的值
+PASS restoreTurnUndo 還原 bedroomSceneAt
+PASS restoreTurnUndo 還原 bedroomSceneLabels
+PASS 追蹤本回合是否臥室場景
+PASS currentBedroomLabel 讀取場景標籤
+PASS 合併判定函式
+PASS 稀有晚安 CG 優先顯示
+PASS 臥室場景 CG 顯示
+PASS 每場景只觸發一次（記錄標籤）
+PASS API／網頁回覆仍走同一延遲判定
+PASS story-art 暴露 showBedroomScene
+
+54 passed, 0 failed

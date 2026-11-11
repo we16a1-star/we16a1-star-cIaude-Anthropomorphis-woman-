@@ -1,0 +1,130 @@
+﻿G43 WP5｜稀有晚安 CG（36685）測試紀錄
+日期：2026-11-11
+環境：Node v22.14.0；jsdom（暫存 node_modules）；Electron（離屏煙測）
+
+=== 1. node tests/rare-goodnight.test.cjs ===
+PASS night-cg.js 是純判定模組（不碰 DOM／存檔）
+PASS 機率為 10%
+PASS 冷卻為 24 小時
+PASS 好感門檻為 45
+PASS 暖機為 3 個成功回合
+PASS 含「晚安」視為晚安文字
+PASS good night 視為晚安文字
+PASS 英文不分大小寫
+PASS goodnight 連寫也接受
+PASS good-night 連字號也接受
+PASS 「早安」不算晚安
+PASS 空字串不算
+PASS null／undefined 不算
+PASS 夜間＋好感 50＋晚安文字＋10% 內 -> 顯示
+PASS 回覆產生中不觸發
+PASS Game Over 不觸發
+PASS 終章不觸發
+PASS 純文字模式不觸發
+PASS 暖機 3 回合內不觸發
+PASS 暖機剩 1 回合仍不觸發
+PASS 暖機結束才可能觸發
+PASS 日間不觸發
+PASS 好感 44 不觸發
+PASS 好感 45 邊界觸發
+PASS 好感值無效不觸發
+PASS 沒有晚安文字不觸發
+PASS 英文晚安文字可觸發
+PASS 未滿 24 小時受冷卻
+PASS 滿 24 小時邊界解除冷卻
+PASS 超過 24 小時可再觸發
+PASS 未來時間戳視為現在，最多再等 24 小時
+PASS 從未出現過不受冷卻
+PASS 隨機值 0.099999 在 10% 內
+PASS 隨機值正好 0.1 不顯示（< 0.1 才顯示）
+PASS 隨機值 0.5 不顯示
+PASS 隨機值無效時不顯示
+PASS g43-cg-goodnight.jpg 存在
+PASS 素材是有效 JPEG
+PASS 素材維持 756×545（不放大）
+PASS 素材 77894 bytes ≤120 KB
+PASS story-art 登錄 36685
+PASS story-art 指向 g43-cg-goodnight.jpg
+PASS 稀有晚安 CG 使用 16:9
+PASS 淡入淡出 400ms
+PASS 設定點擊即關
+PASS 稀有晚安 CG 沒有 AI eventFlag（只由本機判定呼叫）
+PASS story-art 暴露 showRareGoodnight
+PASS 尊重系統減少動態
+PASS 只有稀有晚安 CG 點擊即關
+PASS 已有 CG 時不插隊
+PASS 等待畫面不引用 36685
+PASS __storyArt.showRareGoodnight 可用
+PASS 初始沒有 CG
+PASS 夜間呼叫成功開始顯示
+PASS CG 進入顯示狀態
+PASS CG 圖層解除 hidden
+PASS CG id 為 rare-goodnight
+PASS CG data-ratio 為 16:9
+PASS CG 載入 g43-cg-goodnight.jpg
+PASS 稀有晚安 CG 可點擊
+PASS 滑鼠游標提示可關閉
+PASS 行內淡入為 400ms
+PASS 400ms 後 CG 完整顯示
+PASS CG 不透明度為 1
+PASS 點擊後立即開始關閉
+PASS 關閉動畫後隱藏 CG
+PASS 關閉後清掉 src
+PASS 關閉後清掉點擊樣式
+PASS 關閉後回到無 CG 狀態
+PASS 純文字模式不顯示
+PASS 自訂立繪時不顯示
+PASS 場景圖時不顯示
+PASS 一般 CG 仍由 eventFlag 正常顯示
+PASS 一般 CG 不攔截點擊
+PASS 一般 CG 顯示中不插隊
+PASS 一般 CG 不會被點擊關閉
+PASS 一般 CG 700ms 後照常顯示
+PASS 一般 CG 結束後恢復
+PASS 減少動態時仍可顯示
+PASS 減少動態時直接切換
+PASS 減少動態時立即顯示
+PASS 減少動態時仍可點擊關閉
+PASS app.js 匯入夜間判定
+PASS fresh() 預設 rareGoodnightAt
+PASS undo 快照正規化 rareGoodnightAt
+PASS normalizeSlot 保留 rareGoodnightAt
+PASS serializeState 保留 rareGoodnightAt
+PASS applyTurn 記錄 rareGoodnightAt 前的值
+PASS restoreTurnUndo 還原 rareGoodnightAt
+PASS API 與網頁回覆各排一次判定（共 2 處）
+PASS API 回合存檔成功才判定
+PASS 延遲判定有 token 防止舊回合誤觸發
+PASS 產生中／待套用／錯誤時不判定
+PASS 帶入純文字模式狀態
+PASS 帶入 Game Over 狀態
+PASS 帶入終章狀態
+PASS 每個成功回合遞減暖機
+PASS 真的顯示才寫入冷卻時間
+PASS 開始新故事／讀取切換／新開／刪除／匯入會重設暖機（5 處）
+PASS 提示詞與 AI 事件旗標未開放稀有晚安
+
+100 passed, 0 failed
+
+=== 2. node tests/expression-affinity.test.cjs（WP2 回歸） ===
+22 passed, 0 failed
+
+=== 3. node tests/wait-interlude.test.cjs（等待畫面回歸） ===
+25 passed, 0 failed
+
+=== 4. 既有 21 檔故事測試（回歸） ===
+# tests 109
+# pass 109
+# fail 0
+
+=== 5. Electron 離屏煙測（app/www/index.html） ===
+SHOWN {"api":true,"called":true,"active":true,"hidden":false,"cgId":"rare-goodnight","ratio":"16:9","natural":"756x545","hasBundled":true,"pointer":"auto","transition":"opacity 400ms ease-out","opacity":"1","src":"assets/g43-cg-goodnight.jpg"}
+CLOSED {"immediately":{"hasBundled":false,"active":true},"hidden":true,"src":null,"pointer":"","active":false}
+- 點擊後立即開始 500ms 收尾，結束後隱藏、清掉 src 與點擊樣式。
+- 控制台僅 3 則 Electron 測試環境安全警告（webSecurity 關閉），無應用程式錯誤。
+- 預覽圖：tests/g43-wp5-稀有晚安CG預覽-20261111.png（16:9 cover；臉部完整，上下少量裁切）。
+
+=== 6. 文字掃描 ===
+PII hits: 0
+Simplified hits: 0
+

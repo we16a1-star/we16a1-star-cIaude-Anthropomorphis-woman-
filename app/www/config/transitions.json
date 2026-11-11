@@ -1,0 +1,41 @@
+{
+  "timings": {
+    "sameGroupCrossfade": {
+      "fadeOutMs": 150,
+      "fadeInMs": 200,
+      "totalMs": 350,
+      "method": "先淡出再淡入，不做交叉溶解（避免雙人殘影）"
+    },
+    "brightFlash": {
+      "flashMs": 250,
+      "totalMs": 250,
+      "method": "奶白閃（適用於亮圖之間，如 36377 → 36378）"
+    },
+    "dayNightTransition": {
+      "darkMs": 600,
+      "totalMs": 600,
+      "method": "深棕暗轉（適用於日夜交界）"
+    },
+    "enterCg": {
+      "darkMs": 700,
+      "totalMs": 700,
+      "method": "暗轉後進入 CG"
+    },
+    "exitCg": {
+      "fadeOutMs": 500,
+      "totalMs": 500,
+      "method": "淡出回預設（日 36378／夜 36376）"
+    }
+  },
+  "rules": {
+    "minHoldTurnsSameEmotion": 2,
+    "returnDefaultTurnsWithoutEmotion": 3,
+    "minCgHoldSeconds": 5,
+    "cgZoomRatioPercent": 4,
+    "cgZoomDurationSeconds": 8,
+    "breathingScalePercent": 1.5,
+    "headAnimationSeparated": false,
+    "faceSafetyEllipseProtected": true
+  }
+}
+

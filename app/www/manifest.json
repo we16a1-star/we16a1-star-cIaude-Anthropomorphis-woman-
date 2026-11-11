@@ -1,0 +1,12 @@
+{
+  "name": "Claude娘的圖書館｜AI互動文字小說",
+  "short_name": "Claude娘",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#19140F",
+  "theme_color": "#A8531F",
+  "lang": "zh-Hant",
+  "icons": [
+    {"src":"assets/icon.jpg","sizes":"512x512","type":"image/jpeg","purpose":"any maskable"}
+  ]
+}

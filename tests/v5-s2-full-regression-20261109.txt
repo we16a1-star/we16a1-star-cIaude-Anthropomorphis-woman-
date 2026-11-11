@@ -1,0 +1,555 @@
+TAP version 13
+# Subtest: S1: 所有 15 個設定檔啟動時成功載入並符合架構（P0-05 新增 reply_protocol.json）
+ok 1 - S1: 所有 15 個設定檔啟動時成功載入並符合架構（P0-05 新增 reply_protocol.json）
+  ---
+  duration_ms: 6.5064
+  ...
+# Subtest: S1 驗收：欄位缺漏會精確報錯並指出檔名
+ok 2 - S1 驗收：欄位缺漏會精確報錯並指出檔名
+  ---
+  duration_ms: 3.8406
+  ...
+# Subtest: D19: 空值與無效文本安全回退 neutral
+ok 3 - D19: 空值與無效文本安全回退 neutral
+  ---
+  duration_ms: 1.9442
+  ...
+# Subtest: D19: 經典對白特徵語意精準匹配白名單情緒
+ok 4 - D19: 經典對白特徵語意精準匹配白名單情緒
+  ---
+  duration_ms: 3.1727
+  ...
+# Subtest: D19: resolveEmotionWithFallback 在合法情緒時優先信任，未知時啟動文本語意
+ok 5 - D19: resolveEmotionWithFallback 在合法情緒時優先信任，未知時啟動文本語意
+  ---
+  duration_ms: 0.5987
+  ...
+# Subtest: S7: 24 小時作息排程時段判定精確
+ok 6 - S7: 24 小時作息排程時段判定精確
+  ---
+  duration_ms: 9.7222
+  ...
+# Subtest: S7 驗收：離線 8 小時後開啟，日誌合理、最多 5 筆，問候引用日誌（D13：愧疚句無限制）
+ok 7 - S7 驗收：離線 8 小時後開啟，日誌合理、最多 5 筆，問候引用日誌（D13：愧疚句無限制）
+  ---
+  duration_ms: 0.9405
+  ...
+# Subtest: S7: 動作白名單驗證與生活層提示詞區塊組裝
+ok 8 - S7: 動作白名單驗證與生活層提示詞區塊組裝
+  ---
+  duration_ms: 0.706
+  ...
+# Subtest: S7: 深夜時段（23:00–05:00）溫柔勸休息，且每夜固定勸一次
+ok 9 - S7: 深夜時段（23:00–05:00）溫柔勸休息，且每夜固定勸一次
+  ---
+  duration_ms: 0.4644
+  ...
+# Subtest: line-runner: 禁用逐句時直接完成並展示全文
+ok 10 - line-runner: 禁用逐句時直接完成並展示全文
+  ---
+  duration_ms: 6.4872
+  ...
+# Subtest: line-runner: 逐句播放打字與快進當前句
+ok 11 - line-runner: 逐句播放打字與快進當前句
+  ---
+  duration_ms: 10.1032
+  ...
+# Subtest: line-runner: skipAll 瞬間跳過所有句子
+ok 12 - line-runner: skipAll 瞬間跳過所有句子
+  ---
+  duration_ms: 0.635
+  ...
+# Subtest: line-split: 空值與異常輸入容錯
+ok 13 - line-split: 空值與異常輸入容錯
+  ---
+  duration_ms: 9.9551
+  ...
+# Subtest: line-split: 基礎 CJK 標點斷句（句號、問號、感嘆號、換行）
+ok 14 - line-split: 基礎 CJK 標點斷句（句號、問號、感嘆號、換行）
+  ---
+  duration_ms: 1.4909
+  ...
+# Subtest: line-split: 連續標點不切碎（例如……或！？）
+ok 15 - line-split: 連續標點不切碎（例如……或！？）
+  ---
+  duration_ms: 0.7721
+  ...
+# Subtest: line-split: 引號內部保護——不破壞人物對話
+ok 16 - line-split: 引號內部保護——不破壞人物對話
+  ---
+  duration_ms: 0.9462
+  ...
+# Subtest: line-split: 括號內部動作描寫保護
+ok 17 - line-split: 括號內部動作描寫保護
+  ---
+  duration_ms: 0.7436
+  ...
+# Subtest: line-split: 換行符號斷句
+ok 18 - line-split: 換行符號斷句
+  ---
+  duration_ms: 0.4282
+  ...
+# Subtest: line-split: 連續多句台詞與對白
+ok 19 - line-split: 連續多句台詞與對白
+  ---
+  duration_ms: 0.5654
+  ...
+# Subtest: S6 驗收：20 題記憶召回測試召回率 >= 90% (20/20 通過 = 100%)
+ok 20 - S6 驗收：20 題記憶召回測試召回率 >= 90% (20/20 通過 = 100%)
+  ---
+  duration_ms: 3.7888
+  ...
+# Subtest: S6: 玩家對記憶的檢視、編輯、刪除、匯出與匯入控制
+ok 21 - S6: 玩家對記憶的檢視、編輯、刪除、匯出與匯入控制
+  ---
+  duration_ms: 18.821
+  ...
+# Subtest: P0-04: S1 設定檔全數載入且驗證通過（修改後不破壞架構）
+ok 22 - P0-04: S1 設定檔全數載入且驗證通過（修改後不破壞架構）
+  ---
+  duration_ms: 4.6646
+  ...
+# Subtest: P0-04/D3: 口頭禪「再看一頁，就吃。」已自提示詞來源移除（保留「名門不出半成品。」）
+ok 23 - P0-04/D3: 口頭禪「再看一頁，就吃。」已自提示詞來源移除（保留「名門不出半成品。」）
+  ---
+  duration_ms: 7.1243
+  ...
+# Subtest: P0-04/D13: 占有／排他／愧疚（含等待句）禁令已全數移除
+ok 24 - P0-04/D13: 占有／排他／愧疚（含等待句）禁令已全數移除
+  ---
+  duration_ms: 5.3819
+  ...
+# Subtest: P0-04/D13: 保留禁令仍在——貶底／羞辱／冷暴力三項
+ok 25 - P0-04/D13: 保留禁令仍在——貶底／羞辱／冷暴力三項
+  ---
+  duration_ms: 3.7376
+  ...
+# Subtest: P0-04: 三階段區塊含【階段：…】標頭＋不代寫條款＋危機條款（附錄 C.2–C.4）
+ok 26 - P0-04: 三階段區塊含【階段：…】標頭＋不代寫條款＋危機條款（附錄 C.2–C.4）
+  ---
+  duration_ms: 0.8073
+  ...
+# Subtest: P0-04: 好感帶補充模板對齊附錄 C.5（四帶全列＋{bandName} 代入現值；D13 尾段修訂）
+ok 27 - P0-04: 好感帶補充模板對齊附錄 C.5（四帶全列＋{bandName} 代入現值；D13 尾段修訂）
+  ---
+  duration_ms: 0.4537
+  ...
+# Subtest: P0-04: 生活層模板對齊附錄 C.6（action 選填；D13退場愧疚禁令）
+ok 28 - P0-04: 生活層模板對齊附錄 C.6（action 選填；D13退場愧疚禁令）
+  ---
+  duration_ms: 0.5821
+  ...
+# Subtest: P0-04/D13: life-simulator 離線問候不再過濾愧疚字眼
+ok 29 - P0-04/D13: life-simulator 離線問候不再過濾愧疚字眼
+  ---
+  duration_ms: 11.762
+  ...
+# Subtest: P0-04: 抽樣 10 則離線渲染檢核（階段標頭／帶值／協議／禁詞）
+ok 30 - P0-04: 抽樣 10 則離線渲染檢核（階段標頭／帶值／協議／禁詞）
+  ---
+  duration_ms: 9.0453
+  ...
+# Subtest: P0-05: reply_protocol.json 載入且五欄規則合同成立
+ok 31 - P0-05: reply_protocol.json 載入且五欄規則合同成立
+  ---
+  duration_ms: 7.7945
+  ...
+# Subtest: P0-05: 協議塊由 config 組裝——白名單展開、佔位符清零、delta 範圍文字正確
+ok 32 - P0-05: 協議塊由 config 組裝——白名單展開、佔位符清零、delta 範圍文字正確
+  ---
+  duration_ms: 2.7109
+  ...
+# Subtest: P0-05/T6 三測例：缺欄位、錯誤標籤丟棄不重試、delta clamp
+ok 33 - P0-05/T6 三測例：缺欄位、錯誤標籤丟棄不重試、delta clamp
+  ---
+  duration_ms: 1.6135
+  ...
+# Subtest: P0-06/D1: life.timeBase 預設 story、可切本機時間
+ok 34 - P0-06/D1: life.timeBase 預設 story、可切本機時間
+  ---
+  duration_ms: 3.9388
+  ...
+# Subtest: P0-06/D7+D9: 用量上限預設關閉、擴充每日加成上限 +3
+ok 35 - P0-06/D7+D9: 用量上限預設關閉、擴充每日加成上限 +3
+  ---
+  duration_ms: 0.5334
+  ...
+# Subtest: P0-06/既有決策值複核: D2 和好每日回補上限＝10
+ok 36 - P0-06/既有決策值複核: D2 和好每日回補上限＝10
+  ---
+  duration_ms: 0.356
+  ...
+# Subtest: P1-01 案1: app.js 接線契約——import、bootstrap 函數（成功／失敗兩路）、啟動呼叫先於 UI 初始化
+ok 37 - P1-01 案1: app.js 接線契約——import、bootstrap 函數（成功／失敗兩路）、啟動呼叫先於 UI 初始化
+  ---
+  duration_ms: 2.9951
+  ...
+# Subtest: P1-01 案2: esbuild transformSync 全檔語法解析通過（app.js 7200+ 行接線後仍有效）
+ok 38 - P1-01 案2: esbuild transformSync 全檔語法解析通過（app.js 7200+ 行接線後仍有效）
+  ---
+  duration_ms: 373.6352
+  ...
+# Subtest: P1-01 案3: loadConfigs 一次載入 15 檔全過 schema（含 P0-05／P0-06 修改面抽樣）
+ok 39 - P1-01 案3: loadConfigs 一次載入 15 檔全過 schema（含 P0-05／P0-06 修改面抽樣）
+  ---
+  duration_ms: 1.8094
+  ...
+# Subtest: P1-02 案1：六區塊齊全，assemblePrompt＝區塊串接逐字等價（A/B/C、好感帶、注入與缺省）
+ok 40 - P1-02 案1：六區塊齊全，assemblePrompt＝區塊串接逐字等價（A/B/C、好感帶、注入與缺省）
+  ---
+  duration_ms: 11.77
+  ...
+# Subtest: P1-02 案2：切換階段→區塊正確替換、不殘留前階段；好感帶只在 C 出現；玩家名替換
+ok 41 - P1-02 案2：切換階段→區塊正確替換、不殘留前階段；好感帶只在 C 出現；玩家名替換
+  ---
+  duration_ms: 0.8148
+  ...
+# Subtest: P1-02 案3：token 估算與好感帶／預設階段對映邊界
+ok 42 - P1-02 案3：token 估算與好感帶／預設階段對映邊界
+  ---
+  duration_ms: 0.9728
+  ...
+# Subtest: P1-02 案4：區塊開關只影響檢視預覽、不影響實際組裝；偏好持久化
+ok 43 - P1-02 案4：區塊開關只影響檢視預覽、不影響實際組裝；偏好持久化
+  ---
+  duration_ms: 2.34
+  ...
+# Subtest: P1-02 案5：渲染含來源／字數／token／開關，且 HTML 轉義
+ok 44 - P1-02 案5：渲染含來源／字數／token／開關，且 HTML 轉義
+  ---
+  duration_ms: 1.1643
+  ...
+# Subtest: P1-02 案6：app.js 接線契約（import／面板建立／重新組裝／開關保存）
+ok 45 - P1-02 案6：app.js 接線契約（import／面板建立／重新組裝／開關保存）
+  ---
+  duration_ms: 1.2678
+  ...
+# Subtest: P1-03/D15 案1：Claude 已列入可驗證的臨時（無痕）對話；腳本語法可解析，不支援的網站安全失敗
+ok 46 - P1-03/D15 案1：Claude 已列入可驗證的臨時（無痕）對話；腳本語法可解析，不支援的網站安全失敗
+  ---
+  duration_ms: 6.3176
+  ...
+# Subtest: P1-03/D15 案2：Claude 頁面必須同時出現無痕字樣與「不進歷史」提示才回報成功
+ok 47 - P1-03/D15 案2：Claude 頁面必須同時出現無痕字樣與「不進歷史」提示才回報成功
+  ---
+  duration_ms: 13.7982
+  ...
+# Subtest: P1-03/D15 案3：app.js 的網頁 provider 清單與文案都含 Claude，且沒有殘留舊限制
+ok 48 - P1-03/D15 案3：app.js 的網頁 provider 清單與文案都含 Claude，且沒有殘留舊限制
+  ---
+  duration_ms: 2.1688
+  ...
+# Subtest: P1-03/D15 案4：Claude 無痕入口找不到時維持安全失敗，不退回一般對話
+ok 49 - P1-03/D15 案4：Claude 無痕入口找不到時維持安全失敗，不退回一般對話
+  ---
+  duration_ms: 3.2515
+  ...
+# Subtest: P1-03/D15 案5：Claude 帳號選單（只有 user-menu-button、沒有 aria-label）也能開啟並確認無痕對話
+ok 50 - P1-03/D15 案5：Claude 帳號選單（只有 user-menu-button、沒有 aria-label）也能開啟並確認無痕對話
+  ---
+  duration_ms: 4.4702
+  ...
+# Subtest: P1-03/D15 案6：已在無痕對話時 startNew 不再重開，避免每回合多開新對話
+ok 51 - P1-03/D15 案6：已在無痕對話時 startNew 不再重開，避免每回合多開新對話
+  ---
+  duration_ms: 3.0126
+  ...
+# Subtest: P1-03/D15 案7：Claude 登入頁、Google／Apple 驗證頁與一般對話頁可被正確辨識
+ok 52 - P1-03/D15 案7：Claude 登入頁、Google／Apple 驗證頁與一般對話頁可被正確辨識
+  ---
+  duration_ms: 11.7636
+  ...
+# Subtest: P1-03/D15 案8：Claude 由使用者登入／確認；明確 opt-in 才自動預填登入；無痕失敗只降級一回合
+ok 53 - P1-03/D15 案8：Claude 由使用者登入／確認；明確 opt-in 才自動預填登入；無痕失敗只降級一回合
+  ---
+  duration_ms: 1.852
+  ...
+# Subtest: P1-03/D15 案9：主進程使用 Claude 專用設定檔與登入等待，且保留使用者 opt-in 自動登入
+ok 54 - P1-03/D15 案9：主進程使用 Claude 專用設定檔與登入等待，且保留使用者 opt-in 自動登入
+  ---
+  duration_ms: 1.3944
+  ...
+# Subtest: P1-03/D15 案10：修改面不含常見個人信箱痕跡
+ok 55 - P1-03/D15 案10：修改面不含常見個人信箱痕跡
+  ---
+  duration_ms: 28.03
+  ...
+# Subtest: P1-03 案1：快取友善切分——system＝固定區塊、user＝動態區塊、prompt 與原組裝逐字等價
+ok 56 - P1-03 案1：快取友善切分——system＝固定區塊、user＝動態區塊、prompt 與原組裝逐字等價
+  ---
+  duration_ms: 7.4334
+  ...
+# Subtest: P1-03 案2：連續 30 輪格式穩定（含 markdown 圍欄），每輪第 1 次即成功
+ok 57 - P1-03 案2：連續 30 輪格式穩定（含 markdown 圍欄），每輪第 1 次即成功
+  ---
+  duration_ms: 5.5994
+  ...
+# Subtest: P1-03 案3：格式不合重試 1–2 次；重試帶格式修正指示，成功後不兜底
+ok 58 - P1-03 案3：格式不合重試 1–2 次；重試帶格式修正指示，成功後不兜底
+  ---
+  duration_ms: 9.8342
+  ...
+# Subtest: P1-03 案4：重試用盡→預設台詞兜底；affection_delta=0、isFallback、不丟例外
+ok 59 - P1-03 案4：重試用盡→預設台詞兜底；affection_delta=0、isFallback、不丟例外
+  ---
+  duration_ms: 3.369
+  ...
+# Subtest: P1-03 案5：傳輸丟錯也重試，用盡後兜底；maxRetries 可調 0–2
+ok 60 - P1-03 案5：傳輸丟錯也重試，用盡後兜底；maxRetries 可調 0–2
+  ---
+  duration_ms: 1.9498
+  ...
+# Subtest: P1-03 案6：欄位級降級不重試（emotion／action／delta／flag），支援物件回傳
+ok 61 - P1-03 案6：欄位級降級不重試（emotion／action／delta／flag），支援物件回傳
+  ---
+  duration_ms: 6.5799
+  ...
+# Subtest: P1-03 案7：無傳輸／空回覆→兜底；情境台詞占位符代入暱稱
+ok 62 - P1-03 案7：無傳輸／空回覆→兜底；情境台詞占位符代入暱稱
+  ---
+  duration_ms: 3.4236
+  ...
+# Subtest: P1-03 案8：修正指示長度截斷且單行化
+ok 63 - P1-03 案8：修正指示長度截斷且單行化
+  ---
+  duration_ms: 0.6024
+  ...
+# Subtest: P1-04 案1：界線常數與高傲嬌版【界線｜優先於人設】逐字相同、只一份
+ok 64 - P1-04 案1：界線常數與高傲嬌版【界線｜優先於人設】逐字相同、只一份
+  ---
+  duration_ms: 2.3114
+  ...
+# Subtest: P1-04 案2：withCharacterBoundary 冪等、空值、自訂人設保留
+ok 65 - P1-04 案2：withCharacterBoundary 冪等、空值、自訂人設保留
+  ---
+  duration_ms: 1.8728
+  ...
+# Subtest: P1-04 案3：PromptAssembler 人設區塊含界線一次，六區塊鍵序不變
+ok 66 - P1-04 案3：PromptAssembler 人設區塊含界線一次，六區塊鍵序不變
+  ---
+  duration_ms: 8.9989
+  ...
+# Subtest: P1-04 案4：app.js 的網頁提示詞與 API apiProfile 都接上界線，且開關無法關閉
+ok 67 - P1-04 案4：app.js 的網頁提示詞與 API apiProfile 都接上界線，且開關無法關閉
+  ---
+  duration_ms: 7.4042
+  ...
+# Subtest: P1-04 案5：英文 tone 對齊 D13（舊占有／愧疚禁令退場，玩家有最後決定權）
+ok 68 - P1-04 案5：英文 tone 對齊 D13（舊占有／愧疚禁令退場，玩家有最後決定權）
+  ---
+  duration_ms: 0.4997
+  ...
+# Subtest: P1-05 案1：crisis.json 新欄位齊全，config schema 通過且要求低落詞與三支熱線
+ok 69 - P1-05 案1：crisis.json 新欄位齊全，config schema 通過且要求低落詞與三支熱線
+  ---
+  duration_ms: 5.5609
+  ...
+# Subtest: P1-05 案2：現有 14 個危機詞全部命中（含空白與標點正規化）
+ok 70 - P1-05 案2：現有 14 個危機詞全部命中（含空白與標點正規化）
+  ---
+  duration_ms: 2.4255
+  ...
+# Subtest: P1-05 案3：低落詞逐條命中；中性與正面句不命中
+ok 71 - P1-05 案3：低落詞逐條命中；中性與正面句不命中
+  ---
+  duration_ms: 2.3933
+  ...
+# Subtest: P1-05 案4：危機優先於低落；分類回傳三種結果
+ok 72 - P1-05 案4：危機優先於低落；分類回傳三種結果
+  ---
+  duration_ms: 2.1451
+  ...
+# Subtest: P1-05 案5：本機安全回應含三支熱線、好感 0，中英文都有
+ok 73 - P1-05 案5：本機安全回應含三支熱線、好感 0，中英文都有
+  ---
+  duration_ms: 1.3207
+  ...
+# Subtest: P1-05 案6：安全段可重複附加但不重複；低落段只在命中時加入
+ok 74 - P1-05 案6：安全段可重複附加但不重複；低落段只在命中時加入
+  ---
+  duration_ms: 1.1484
+  ...
+# Subtest: P1-05 案7：常駐安全段要求 AI 自行轉接、危機好感 0、不假裝真人
+ok 75 - P1-05 案7：常駐安全段要求 AI 自行轉接、危機好感 0、不假裝真人
+  ---
+  duration_ms: 0.5614
+  ...
+# Subtest: P1-05 案8：安全段可接在角色界線之後，不覆蓋既有界線
+ok 76 - P1-05 案8：安全段可接在角色界線之後，不覆蓋既有界線
+  ---
+  duration_ms: 0.673
+  ...
+# Subtest: P1-05 案9：低落詞不重複、不與危機詞完全相同
+ok 77 - P1-05 案9：低落詞不重複、不與危機詞完全相同
+  ---
+  duration_ms: 1.1483
+  ...
+# Subtest: P1-05 案10：app.js 三個入口都接上危機攔截，兩條提示詞管線都接上安全段
+ok 78 - P1-05 案10：app.js 三個入口都接上危機攔截，兩條提示詞管線都接上安全段
+  ---
+  duration_ms: 10.6101
+  ...
+# Subtest: P1-05 案11：本機安全回應不呼叫 applyTurn、不寫玩家原句、不留下待辦回合
+ok 79 - P1-05 案11：本機安全回應不呼叫 applyTurn、不寫玩家原句、不留下待辦回合
+  ---
+  duration_ms: 6.3107
+  ...
+# Subtest: P1-05 案12：實際執行本機安全回應——只加一則 safety、清待辦、好感與選項不變
+ok 80 - P1-05 案12：實際執行本機安全回應——只加一則 safety、清待辦、好感與選項不變
+  ---
+  duration_ms: 9.2147
+  ...
+# Subtest: D14: 預設玩家名為 User、key 契約值
+ok 81 - D14: 預設玩家名為 User、key 契約值
+  ---
+  duration_ms: 2.2439
+  ...
+# Subtest: D14: sanitize 去控制字元與引號、trim、Unicode 上限 16
+ok 82 - D14: sanitize 去控制字元與引號、trim、Unicode 上限 16
+  ---
+  duration_ms: 1.3837
+  ...
+# Subtest: D14: normalize 清空回退預設 User、自訂名優先
+ok 83 - D14: normalize 清空回退預設 User、自訂名優先
+  ---
+  duration_ms: 1.2763
+  ...
+# Subtest: D14: 偏好存取 roundtrip
+ok 84 - D14: 偏好存取 roundtrip
+  ---
+  duration_ms: 1.1189
+  ...
+# Subtest: D14: storage 寫入／讀取失敗不擲錯、回退預設
+ok 85 - D14: storage 寫入／讀取失敗不擲錯、回退預設
+  ---
+  duration_ms: 1.0275
+  ...
+# Subtest: S2: 提示詞組裝器由上到下依序組裝且人設無眼鏡、無義大利麵
+ok 86 - S2: 提示詞組裝器由上到下依序組裝且人設無眼鏡、無義大利麵
+  ---
+  duration_ms: 3.0291
+  ...
+# Subtest: S2 驗收：連續 30 輪回覆解析無格式錯誤，數值 clamp 正確
+ok 87 - S2 驗收：連續 30 輪回覆解析無格式錯誤，數值 clamp 正確
+  ---
+  duration_ms: 1.7083
+  ...
+# Subtest: S2 驗收：故意破壞輸出仍可優雅兜底，不引發程式崩潰
+ok 88 - S2 驗收：故意破壞輸出仍可優雅兜底，不引發程式崩潰
+  ---
+  duration_ms: 0.732
+  ...
+# Subtest: story-emotion: 白名單包含 worried 與 tender
+ok 89 - story-emotion: 白名單包含 worried 與 tender
+  ---
+  duration_ms: 1.9268
+  ...
+# Subtest: story-emotion: worried 別名正常規範化
+ok 90 - story-emotion: worried 別名正常規範化
+  ---
+  duration_ms: 1.1014
+  ...
+# Subtest: story-emotion: tender 別名正常規範化
+ok 91 - story-emotion: tender 別名正常規範化
+  ---
+  duration_ms: 0.4003
+  ...
+# Subtest: story-emotion: 未知情緒回退 neutral
+ok 92 - story-emotion: 未知情緒回退 neutral
+  ---
+  duration_ms: 0.3373
+  ...
+# Subtest: story-emotion: 強度 clamp 範圍 1~3
+ok 93 - story-emotion: 強度 clamp 範圍 1~3
+  ---
+  duration_ms: 0.6472
+  ...
+# Subtest: v5 Step 1：art_distribution.json 已補十筆，欄位依 xlsx
+ok 94 - v5 Step 1：art_distribution.json 已補十筆，欄位依 xlsx
+  ---
+  duration_ms: 2.259
+  ...
+# Subtest: v5 Step 1：36455 缺檔已補，尺寸與 entry 相符
+ok 95 - v5 Step 1：36455 缺檔已補，尺寸與 entry 相符
+  ---
+  duration_ms: 9.8813
+  ...
+# Subtest: v5 Step 1：可用圖片已入庫，尺寸、大小與 SHA256 相符
+ok 96 - v5 Step 1：可用圖片已入庫，尺寸、大小與 SHA256 相符
+  ---
+  duration_ms: 14.3278
+  ...
+# Subtest: v5 Step 1：不使用圖不進 assets
+ok 97 - v5 Step 1：不使用圖不進 assets
+  ---
+  duration_ms: 0.9756
+  ...
+# Subtest: v5 Step 1：schema 會擋下缺漏、尺寸錯誤與誤用
+ok 98 - v5 Step 1：schema 會擋下缺漏、尺寸錯誤與誤用
+  ---
+  duration_ms: 3.0805
+  ...
+# Subtest: v5 Step 2 (D16): art_distribution.json 正確標記橫直比與晚安/夜間聊天角色
+ok 99 - v5 Step 2 (D16): art_distribution.json 正確標記橫直比與晚安/夜間聊天角色
+  ---
+  duration_ms: 2.4433
+  ...
+# Subtest: v5 Step 2 (D16): StoryEngine 晚安時刻支援 36455 主 CG 與 36628 夜間 CG 雙路徑
+ok 100 - v5 Step 2 (D16): StoryEngine 晚安時刻支援 36455 主 CG 與 36628 夜間 CG 雙路徑
+  ---
+  duration_ms: 0.4948
+  ...
+# Subtest: v5 Step 2: StoryEngine 支援觸碰反應（捏臉 36627）與湖畔夕陽（36622）事件
+ok 101 - v5 Step 2: StoryEngine 支援觸碰反應（捏臉 36627）與湖畔夕陽（36622）事件
+  ---
+  duration_ms: 0.3343
+  ...
+# Subtest: v5 Step 2: style.css 包含直式圖版型、模糊背景與矮橫條樣式規則
+ok 102 - v5 Step 2: style.css 包含直式圖版型、模糊背景與矮橫條樣式規則
+  ---
+  duration_ms: 2.0933
+  ...
+# Subtest: D18: scenePacks.json 佔位檔結構與 loadScenePacks 驗證通過
+ok 103 - D18: scenePacks.json 佔位檔結構與 loadScenePacks 驗證通過
+  ---
+  duration_ms: 0.4881
+  ...
+# Subtest: v5 Step 2 (app): story-events 已加入四個新旗標與好感／時段閘門
+ok 104 - v5 Step 2 (app): story-events 已加入四個新旗標與好感／時段閘門
+  ---
+  duration_ms: 0.9808
+  ...
+# Subtest: v5 Step 2 (app): story-art 的 CG 對照已接上新圖與直式版型
+ok 105 - v5 Step 2 (app): story-art 的 CG 對照已接上新圖與直式版型
+  ---
+  duration_ms: 1.0367
+  ...
+# Subtest: v5 Step 2 (app): app.js 提示詞、核准呼叫與狀態已接上四個新旗標
+ok 106 - v5 Step 2 (app): app.js 提示詞、核准呼叫與狀態已接上四個新旗標
+  ---
+  duration_ms: 5.7388
+  ...
+# Subtest: 介面設定整合: app.js 包含視覺小說演出與多媒體群組
+ok 107 - 介面設定整合: app.js 包含視覺小說演出與多媒體群組
+  ---
+  duration_ms: 10.0009
+  ...
+# Subtest: 介面設定整合 (D17): LineRunner 速度讀寫與持久化
+ok 108 - 介面設定整合 (D17): LineRunner 速度讀寫與持久化
+  ---
+  duration_ms: 0.7596
+  ...
+# Subtest: 介面設定整合: style.css 包含設定面板視覺美化樣式
+ok 109 - 介面設定整合: style.css 包含設定面板視覺美化樣式
+  ---
+  duration_ms: 4.9997
+  ...
+1..109
+# tests 109
+# suites 0
+# pass 109
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 749.6152

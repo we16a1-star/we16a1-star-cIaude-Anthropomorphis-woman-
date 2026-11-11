@@ -1,0 +1,27 @@
+等待圖統一測試紀錄（2026-11-09）
+
+環境：Node v22.14.0（temp）、Windows、Electron 測試包
+指令：
+- node tests/wait-interlude.test.cjs（cwd=v2.0-modifications；需 NODE_PATH=%TEMP%\opencode\node_modules）
+- node %TEMP%\opencode\wait-interlude-g44-check-20261109.cjs
+
+結果：
+- 等待圖測試 25/25 PASS
+- G44 共存 6/6 PASS
+- 完整故事回歸 75/75 PASS
+- Electron 煙測 ok:true（exit 0）
+
+等待圖：
+- 檔案：app/www/assets/g43-wait-writing.jpg
+- 尺寸：1024×1536
+- 大小：388,972 bytes
+- SHA256：C787A498B189922B3D41B4DB577BEC7615A481B6BEEE5B4AAC22E9AE9E90357D
+- g44-writing.jpg 同檔同 SHA
+
+移除：
+- 檔案：app/www/assets/g43-wait-night.jpg（36455_1 舊夜間等待圖變體）
+- 移除前 SHA256：F7C4B8534E3F19369B80C4325A8B3B308554B80949693A9F321E90BBB79D5806
+- 備份：%TEMP%\opencode\backup-wait-uniform-20261109\app\www\assets\g43-wait-night.jpg
+
+保留：
+- 36455 本體是 P2-11 夜間事件 CG，不在本次刪除範圍；v5 Step 1 依 xlsx 計畫入庫。

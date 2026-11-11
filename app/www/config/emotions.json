@@ -1,0 +1,26 @@
+{
+  "whitelist": [
+    "neutral",
+    "shy",
+    "proud",
+    "focused",
+    "warm",
+    "sad",
+    "surprised",
+    "angry",
+    "curious"
+  ],
+  "defaultEmotion": "neutral",
+  "descriptions": {
+    "neutral": "日常平靜從容",
+    "shy": "害羞臉紅、慌張用書遮臉",
+    "proud": "得意、下巴微揚、心裡期待稱讚",
+    "focused": "專注蹙眉、拿筆在《未竟錄》寫字、想通時指你看",
+    "warm": "溫和微笑、倒茶關照",
+    "sad": "難過、失落",
+    "surprised": "驚訝微張嘴",
+    "angry": "氣鼓鼓、眉頭輕蹙但依然可愛",
+    "curious": "好奇直視、認真探究"
+  }
+}
+

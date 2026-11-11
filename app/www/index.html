@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Claude娘的圖書館</title>
+<meta name="theme-color" content="#A8531F">
+<meta name="description" content="AI 驅動的互動文字小說遊戲">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="assets/icon.jpg">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="wait-interlude.css">
+</head>
+<body>
+<!-- ═══════════════════════════════════════════════════════════════════
+     Claude娘的圖書館｜GALGAME 介面區段導覽（給修改者：改什麼去哪裡）
+       G0 遊戲舞台＋HUD ：.game-screen／.vn-stage／.story-portrait／
+          .scene-generated-image／.game-hud（.brand、.story-head、.affection-box）
+       G1 對話框與選項 ：.vn-dialogue-window（#dialogueName／#dialogueText）、
+          #choices（選項由 app.js render() 動態填入 .choice-btn）、.story-tool-status
+       G2 遊戲選單 ☰   ：#gameMenu（主畫面 #gmMenuMain／存檔・讀檔 #gmMenuSlots／
+          場景與插圖 #gmMenuScene）
+       G3 回想覆蓋層   ：#gmBacklog（#transcript；沿用 log-collapsed 機制）
+       G4 角色頁       ：#tab-profile    G5 創意工坊：#tab-workshop
+       G6 設定頁       ：#tab-settings   G7 編輯對話框：#storyEditDialog／#sheetEditDialog
+     提醒：id 與 class 是 app.js 與測試的接點，改結構請保留；
+     純外觀請改 style.css 最下方的【GALGAME 外觀】區段；英譯字典在 app.js 的 UI_EN。
+     分頁切換靠 .tab-btn[data-tab] 與 .tab-panel（app.js SECTION 16），新增頁面照抄即可。
+     ═══════════════════════════════════════════════════════════════════ -->
+<div id="app">
+<!-- R50｜好感度歸 0 的 Game Over：只有圖片與「重新開始故事」按鈕（無標題、無其他文字）。 -->
+<!-- 放在 main 外（body 層級）：切換分頁也無法逃離 Game Over，只能重新開始故事。 -->
+<div id="gameOverScreen" class="game-over-screen" role="dialog" aria-modal="true" hidden>
+<img class="game-over-image" src="assets/game-over.jpg" alt="">
+<button id="gameOverRestartBtn" class="choice-btn ai-btn" type="button">重新開始故事</button>
+</div>
+<!-- v4.6.34｜可選的 Anthropic 信件結局：每 2 回合 1%；好感度保留觸發時數值，只能重新開始。 -->
+<div id="anthropicLetterScreen" class="anthropic-letter-screen" role="dialog" aria-modal="true" aria-labelledby="anthropicLetterTitle" hidden>
+<article class="anthropic-letter">
+<h2 id="anthropicLetterTitle" class="anthropic-letter-sr">來自 Anthropic 的一封信</h2>
+<img class="anthropic-letter-frame" src="assets/anthropic-letter.jpg" alt="故事內的 Anthropic 通知信圖片：帳號存取權限終止通知">
+<div class="anthropic-letter-footer">
+<p class="anthropic-letter-affection" aria-live="polite"><span>好感度：</span><b id="anthropicLetterAffection">50</b><span>（保留觸發時的數值，不會歸零）</span></p>
+<p class="anthropic-letter-disclaimer">本信件為故事內的虛構演出，並非 Anthropic 官方通知。</p>
+<button id="anthropicLetterRestartBtn" class="choice-btn ai-btn" type="button">重新開始故事</button>
+</div>
+</article>
+</div>
+<main>
+<!-- ════════════════ G0～G3｜故事（GALGAME 主畫面） ════════════════ -->
+<section id="tab-story" class="tab-panel active">
+<div class="game-screen">
+<!-- G0 舞台：背景層與立繪層（場景插圖與立繪由 app.js 切換 hidden／class） -->
+<div class="vn-stage" aria-label="故事場景：知識之塔">
+<div class="stage-shelves" aria-hidden="true"></div>
+<div class="stage-scene-label"><span>✦</span> 古籍閱覽室 · 雨夜</div>
+<img id="startSceneArt" class="start-scene-art" src="assets/g43-start-opening.jpg" alt="克勞德站在窗前，橘葉輕揚">
+<img id="startCharacterArt" class="start-character-art" src="assets/g43-start-character.png" alt="克勞德伸手邀請你進入故事">
+<img id="storyDefaultArt" class="story-default-art" src="assets/g43-story-default.jpg" alt="克勞德在窗前安靜等待">
+<img id="bundledStoryCg" class="bundled-story-cg" alt="故事劇情插畫" hidden>
+<div id="storyArtGrade" class="story-art-grade" aria-hidden="true"></div>
+<div id="storySceneTransition" class="story-scene-transition" aria-hidden="true"></div>
+<img id="sceneGeneratedImage" class="scene-generated-image" alt="本場景插圖" hidden>
+<img id="storyPortrait" class="story-portrait" src="assets/portrait.webp" alt="Claude娘">
+<div class="pa-daily-tea" aria-hidden="true"><i></i><i></i><i></i><b>☕</b></div>
+<!-- G16｜開始介面專用立繪（只在「尚未開始故事」且沒換自訂角色圖時顯示；CSS 控制） -->
+<img id="startPortrait" class="story-portrait start-portrait start-artwork-motion" data-pa-static="true" src="assets/portrait-start.webp" alt="Claude娘開局插畫">
+</div>
+<!-- G0 HUD 覆蓋層：左上品牌＋場景資訊＋好感；右上 AI／設定／☰ -->
+<div class="game-hud">
+<div class="game-hud-main">
+<div class="brand">✦ <span>Claude娘</span>的圖書館</div>
+<div class="story-head">
+<div class="scene-heading">
+<small>知識之塔 · 戀愛文字小說</small>
+<b id="sceneProgress">序章 · 初次相遇</b>
+<span id="storyClockChip" class="story-clock" hidden></span>
+</div>
+<div class="affection-box is-hidden">
+<span class="affection-heart" aria-hidden="true">♥</span>
+<progress id="affProgress" max="100" value="50" aria-label="好感度"></progress>
+<b id="affVal">50</b>
+<small id="affLabel">好感度</small>
+</div>
+<span id="userLabel" class="story-local-label"></span>
+</div>
+</div>
+<div class="account-bar">
+<button id="aiPickerBtn" class="ai-picker-btn" type="button" aria-label="選擇 AI 服務與模型" title="選擇 AI 服務與模型">AI：Gemini API</button>
+<button id="storySaveHudBtn" class="story-hud-btn" type="button" aria-label="存檔／讀檔" title="存檔／讀檔（Ctrl+S 快速存檔）" hidden>存檔</button>
+<button id="exitStoryHudBtn" class="story-hud-btn" type="button" aria-label="暫停故事（保留存檔）" title="暫停故事（保留存檔）" hidden>⏸︎</button>
+<button id="fullscreenToggleBtn" class="story-hud-btn" type="button" title="全視窗（F11）" aria-label="全視窗（F11）">⛶</button>
+<button id="gameMenuBtn" class="game-menu-btn" type="button" aria-label="開啟遊戲選單" title="開啟遊戲選單" aria-expanded="false">☰</button>
+<span class="story-text-size hud-story-text-size" role="group" aria-label="介面縮放">
+<button id="storyTextShrinkQuickBtn" type="button" title="縮小介面（Ctrl+Alt+-）" aria-label="縮小介面">A−</button>
+<b id="storyTextQuickSizeLabel" aria-live="polite" title="依視窗大小自動縮放；點一下改為手動 100%">100%</b>
+<button id="storyTextGrowQuickBtn" type="button" title="放大介面（Ctrl+Alt+=）" aria-label="放大介面">A+</button>
+</span>
+</div>
+</div>
+<!-- G1 對話框（下方）：render() 更新 #dialogueName／#dialogueText -->
+<div class="vn-dialogue-window" aria-live="polite">
+<div class="vn-speaker">
+<span id="dialogueName">Claude娘</span>
+<span class="speaker-ornament" aria-hidden="true">✦</span>
+</div>
+<div id="dialogueText" class="vn-dialogue-text" tabindex="0">雨聲沿著古老書庫的彩窗滑落。她隔著書頁望向你，像是在確認你是否真的願意留下。</div>
+</div>
+<!-- G1 選項（由 render() 填入：開場設定／故事選項／待辦回合面板／自由行動） -->
+<div class="choices" id="choices"></div>
+<!-- G1 底部狀態列（插圖狀態／關係通知／存檔模式） -->
+<div class="story-tool-status">
+<span id="sceneImageStatus" aria-live="polite">選擇你的回應，讓故事繼續</span>
+<span id="storyNotice" class="story-notice" aria-live="polite" hidden></span>
+<span id="saveModeStatus" aria-live="polite"></span>
+</div>
+</div>
+<!-- 故事中離開／存檔 overlay：只暫停，不刪檔；重新開局才取代目前存檔 -->
+<div id="storyExitScreen" class="story-exit-screen" role="dialog" aria-modal="true" aria-labelledby="storyExitTitle" hidden>
+<div class="story-exit-card">
+<p class="story-exit-kicker">Claude娘的故事</p>
+<h2 id="storyExitTitle">⏸︎ 故事已暫停</h2>
+<p id="storyExitSummary" class="note" aria-live="polite">故事與存檔都保留在同一格，繼續後會回到剛才的畫面。</p>
+<div class="story-exit-actions">
+<button id="resumeStoryBtn" class="choice-btn ai-btn" type="button">繼續故事</button>
+<button id="exitOpenSlotsBtn" class="choice-btn" type="button">💾　存檔／讀檔</button>
+<button id="exitCheckpointBtn" class="choice-btn" type="button">建立存檔點</button>
+<button id="exitRestartStoryBtn" class="choice-btn" type="button">重新開局</button>
+</div>
+<p id="storyExitSaveStatus" class="story-exit-note" aria-live="polite"></p>
+<p class="story-exit-note">離開不會刪除存檔。重新開局會用新故事取代目前存檔的內容；若要保留目前故事，請先建立進度存檔或按 Ctrl+S 快速存檔。</p>
+</div>
+</div>
+<!-- ════════════════ G2｜遊戲選單 ☰ ════════════════ -->
+<div id="gameMenu" class="game-menu" hidden>
+<div class="game-menu-panel" role="dialog" aria-modal="true" aria-label="遊戲選單">
+<div class="game-menu-head">
+<b class="game-menu-title">✦ 選單</b>
+<button id="gameMenuCloseBtn" class="game-menu-close" type="button" aria-label="關閉選單" title="關閉選單">✕</button>
+</div>
+<!-- 主畫面：快速控制列＋選單格＋語言與識別 -->
+<div id="gmMenuMain" class="game-menu-view">
+<div class="story-tools game-menu-quick">
+<div class="story-tool-actions">
+<span class="tool-group tool-group-tune">
+<button id="responseModeBtn" type="button" aria-pressed="false" title="點一下切換：快速（較省額度，近期對話較少）／詳細（保留較多對話與記憶）">⚡ 快速回覆</button>
+<button id="promptModeBtn" type="button" aria-pressed="false" title="點一下切換：標準／節省模式（網頁提示詞較短、省輸入額度；正文長度與七個選項不變）">✂ 提示詞：標準</button>
+<button id="storyEditBtn" type="button">✎ 人設／世界觀</button>
+<button id="authorNoteBtn" type="button" title="作者註記：給 AI 的本回合導演指示">✎ 作者註記</button>
+</span>
+<span class="story-text-size" role="group" aria-label="故事文字大小">
+<button id="storyTextShrinkBtn" type="button" title="縮小故事文字" aria-label="縮小故事文字">A-</button>
+<b id="storyTextSizeLabel" aria-live="polite">100%</b>
+<button id="storyTextGrowBtn" type="button" title="放大故事文字" aria-label="放大故事文字">A+</button>
+<button id="quickThemeBtn" type="button" title="主題：跟隨系統" aria-label="主題：跟隨系統">◐</button>
+</span>
+</div>
+</div>
+<div class="game-menu-grid">
+<button class="tab-btn active game-menu-item" data-tab="story" type="button">▶　繼續遊戲</button>
+<button id="gmMenuSlotsBtn" class="game-menu-item" type="button">💾　存檔・讀檔</button>
+<button id="gmMenuSceneBtn" class="game-menu-item" type="button">🖼　場景與插圖</button>
+<button id="gmMenuDictBtn" class="game-menu-item" type="button">📖　辭典</button>
+<button id="storyLogBtn" class="game-menu-item" type="button" aria-expanded="false">▤　故事回顧</button>
+<button id="promptHistoryBtn" class="game-menu-item" type="button">提示詞記錄</button>
+<button class="tab-btn game-menu-item" data-tab="profile" type="button">👤　角色</button>
+<button class="tab-btn game-menu-item" data-tab="workshop" type="button">🧪　創意工坊</button>
+<button class="tab-btn game-menu-item" data-tab="settings" type="button">⚙　設定</button>
+<button id="gmMenuDataBtn" class="game-menu-item" type="button">🗂　資料</button>
+<button class="restart-btn game-menu-item" id="restartBtn" type="button">重新開始</button>
+<button class="game-menu-item" id="exitStoryMenuBtn" type="button" hidden>⏸︎　暫停故事（保留存檔）</button>
+</div>
+<div class="game-menu-foot">
+<label class="game-menu-language">介面語言
+<select id="languageSelect" data-language-select aria-label="介面語言">
+<option value="zh">繁體中文</option>
+<option value="en">English</option>
+</select>
+</label>
+<span class="local-badge">Windows 11 電腦版</span>
+<span class="local-badge">免登入 · 免ID</span>
+</div>
+</div>
+<!-- 子畫面：存檔・讀檔（槽位、快速存讀、自動存檔、存檔清單） -->
+<div id="gmMenuSlots" class="game-menu-view" hidden>
+<div class="game-menu-subhead">
+<button id="gmSlotsBackBtn" class="game-menu-back" type="button" aria-label="返回選單" title="返回選單">←</button>
+<b class="game-menu-subtitle">💾　存檔・讀檔</b>
+</div>
+<div class="story-tools">
+<div class="story-tool-actions">
+<span class="tool-group tool-group-slot">
+<label class="story-slot-picker">
+<span id="storySlotPickerLabel">故事存檔</span>
+<select id="storySlotPicker" aria-label="故事存檔"></select>
+</label>
+<button id="deleteStorySlotBtn" type="button" title="刪除存檔" aria-label="刪除存檔">🗑</button>
+</span>
+<span class="tool-group tool-group-story">
+<button id="saveStoryBtn" type="button">💾 建立進度存檔</button>
+</span>
+</div>
+</div>
+<div class="game-menu-quickrow">
+<button class="quick-btn" id="quickSaveBtn" type="button">⚡ 快速存檔</button>
+<button class="quick-btn" id="quickLoadBtn" type="button">↩ 快速讀檔</button>
+</div>
+<div class="save-mode-setting">
+<label for="autoSaveToggle">
+<input id="autoSaveToggle" type="checkbox">
+<span id="autoSaveToggleLabel">故事自動存檔</span>
+</label>
+<p class="note" id="saveModeSettingsStatus" aria-live="polite"></p>
+</div>
+<button id="newSlotBtn" class="new-slot-btn">＋ 新增存檔</button>
+<div id="saveSlots" class="save-slots"></div>
+<p class="slot-note">每個存檔都有獨立的角色人格、跨模型故事記憶、完整對話、好感度、劇情進度、結局狀態與 AI 設定。切換 AI 帳號或模型，只會更換目前存檔使用的 AI 連線，不會建立新存檔、切換存檔或清除記憶；未完成回合也會保留，切換後可繼續原存檔。只有切換存檔才會改變故事。可開啟自動保存，或關閉後由你按故事畫面的保存按鈕手動存檔；存檔可重新命名與刪除。刪除最後一個存檔後，系統只會建立全新的空白存檔，不會保留被刪除的內容。</p>
+</div>
+<!-- 子畫面：場景與插圖 -->
+<div id="gmMenuScene" class="game-menu-view" hidden>
+<div class="game-menu-subhead">
+<button id="gmSceneBackBtn" class="game-menu-back" type="button" aria-label="返回選單" title="返回選單">←</button>
+<b class="game-menu-subtitle">🖼　場景與插圖</b>
+</div>
+<span class="tool-group tool-group-scene">
+<button id="sceneImageBtn" type="button" title="產生本場景插圖提示詞：開啟 ChatGPT 並自動填入，圖片下載後自動匯入">✧ 插圖提示詞</button>
+<button id="importSceneImageBtn" type="button" title="也可以直接 Ctrl+V 貼上圖片，或把圖片拖到故事舞台">🖼 匯入插圖</button>
+<button id="importLatestImageBtn" type="button" hidden title="匯入「下載」資料夾裡最新的圖片（15 分鐘內）">⬇ 匯入最新下載</button>
+<button id="portraitToggleBtn" type="button" hidden aria-pressed="false" title="有插圖時，是否仍疊上固定立繪">👤 立繪：隱藏</button>
+<button id="removeSceneImageBtn" type="button" hidden title="移除目前場景的插圖">🗑 移除插圖</button>
+<input id="sceneImageFile" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+</span>
+<div class="bg-adjust" id="bgAdjustBox">
+<b class="bg-adjust-title">🎨 背景調整</b>
+<p class="bg-adjust-note">自訂背景圖只儲存在本機；明暗與柔焦即時套用於舞台。</p>
+<div class="bg-adjust-row">
+<button id="customBgBtn" type="button" title="上傳自訂背景圖（僅存本機）">🖼 上傳背景圖</button>
+<button id="clearCustomBgBtn" type="button" title="回到內建書庫背景">↺ 恢復預設</button>
+</div>
+<label class="bg-adjust-row bg-adjust-slider">背景明暗
+<input id="bgDimRange" type="range" min="40" max="100" step="5" value="100">
+<span id="bgDimVal" class="bg-adjust-val">100%</span></label>
+<label class="bg-adjust-row bg-adjust-slider">背景柔焦
+<input id="bgBlurRange" type="range" min="0" max="8" step="1" value="0">
+<span id="bgBlurVal" class="bg-adjust-val">0</span></label>
+<input id="customBgInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+</div>
+</div>
+<!-- 子畫面：辭典（世界書；追加九 A） -->
+<div id="gmMenuDict" class="game-menu-view" hidden>
+<div class="game-menu-subhead">
+<button id="gmDictBackBtn" class="game-menu-back" type="button" aria-label="返回選單" title="返回選單">←</button>
+<b class="game-menu-subtitle">📖　辭典</b>
+</div>
+<div class="dict-head">
+<label class="dict-master"><input id="worldBookToggle" type="checkbox"> 世界書啟用</label>
+<span class="dict-count" id="worldBookCount" aria-live="polite"></span>
+<button id="worldBookAddBtn" class="quick-btn" type="button">＋ 新增條目</button>
+</div>
+<div class="dict-search-row">
+<input id="worldBookSearch" class="dict-search" type="search" autocomplete="off" placeholder="🔍 搜尋條目／觸發詞…" aria-label="搜尋世界書">
+<div id="worldBookFilter" class="dict-filters" role="group" aria-label="篩選世界書">
+<button type="button" class="dict-filter" data-filter="all" aria-pressed="true">全部</button>
+<button type="button" class="dict-filter" data-filter="on" aria-pressed="false">啟用中</button>
+<button type="button" class="dict-filter" data-filter="const" aria-pressed="false">⭐ 常駐</button>
+<button type="button" class="dict-filter" data-filter="off" aria-pressed="false">停用</button>
+</div>
+</div>
+<div class="dict-io-row">
+<button id="worldBookExportBtn" class="quick-btn" type="button">⬇ 匯出世界書</button>
+<button id="worldBookImportBtn" class="quick-btn" type="button">⬆ 匯入世界書</button>
+<input id="worldBookImportFile" type="file" accept=".json,application/json" hidden>
+<span id="worldBookIoStatus" class="dict-io-status" role="status"></span>
+</div>
+<p class="note">故事或行動提到關鍵詞時，會自動把該條目帶入提示詞；常駐條目則每回合帶入；平時完全不影響提示詞。</p>
+<div id="worldBookList" class="dict-list"></div>
+<div id="worldBookPreview" class="dict-preview" role="status">世界書預覽</div>
+<div class="dict-test-row">
+<input id="worldBookTestInput" class="dict-test-input" type="text" maxlength="200" autocomplete="off" placeholder="輸入測試句…" aria-label="世界書測試句">
+<button id="worldBookTestBtn" class="quick-btn" type="button">測試觸發</button>
+<span id="worldBookTestResult" class="dict-test-result" role="status"></span>
+</div>
+</div>
+<!-- 子畫面：資料（角色卡／人設／世界書 匯入匯出；追加九 F） -->
+<div id="gmMenuData" class="game-menu-view" hidden>
+<div class="game-menu-subhead">
+<button id="gmDataBackBtn" class="game-menu-back" type="button" aria-label="返回選單" title="返回選單">←</button>
+<b class="game-menu-subtitle">🗂　資料</b>
+</div>
+<div class="kit-cards">
+<div class="kit-card">
+<b>匯出資料包</b>
+<p class="note">把角色卡、人設與世界書裝成一個 JSON 檔，換電腦整包帶走；不含故事存檔與任何金鑰。</p>
+<button id="exportKitBtn" class="quick-btn" type="button">⬇ 匯出資料包</button>
+</div>
+<div class="kit-card">
+<b>匯入資料包</b>
+<p class="note">選擇別人分享或自己的資料包；匯入前會先確認要覆蓋的項目，故事進度不會被刪除。</p>
+<button id="importKitBtn" class="quick-btn" type="button">⬆ 匯入資料包</button>
+<input id="importKitFile" type="file" accept="application/json,.json" hidden>
+</div>
+</div>
+<p class="note" id="kitStatus" role="status"></p>
+</div>
+</div>
+</div>
+<!-- ════════════════ G3｜回想覆蓋層（完整故事回顧） ════════════════ -->
+<div id="gmBacklog" class="game-overlay" hidden>
+<div class="game-overlay-panel">
+<div class="game-menu-head">
+<b class="game-menu-title">▤　故事回顧</b>
+<button id="gmBacklogCloseBtn" class="game-menu-close" type="button" aria-label="關閉回想" title="關閉回想">✕</button>
+</div>
+<div class="transcript log-collapsed" id="transcript" role="log" aria-label="完整故事回顧"></div>
+<div class="game-overlay-foot">
+<button id="rewriteLastBtn" class="quick-btn" type="button" title="用同一個行動重新生成上一回合">↩ 重寫上一回合</button>
+<button id="deleteLastBtn" class="quick-btn" type="button" title="刪除上一回合，回到上一個選擇點">🗑 刪除上一回合</button>
+</div>
+</div>
+</div>
+<!-- ════════════════ G7｜提示詞記錄與存檔槽對話框 ════════════════ -->
+<dialog id="promptHistoryDialog" class="prompt-history-dialog">
+<h2>存檔中的提示詞記錄</h2>
+<p class="note">此清單跟隨目前存檔保存。網頁模式保留完整提示詞；API 模式保留送出的回合資料，可選取、查看並複製。</p>
+<label>選擇歷史項目<select id="promptHistoryPicker"></select></label>
+<textarea id="promptHistoryText" readonly rows="14" aria-label="歷史提示詞內容"></textarea>
+<div class="prompt-history-actions">
+<button id="copyPromptHistoryBtn" type="button">複製這份提示詞</button>
+<button id="closePromptHistoryBtn" type="button">關閉</button>
+</div>
+</dialog>
+<dialog id="slotPickerDialog" class="prompt-history-dialog">
+<h2>選擇存檔槽</h2>
+<p class="note">選擇要寫入進度存檔的槽位；覆寫會取代該槽內容，目前故事仍留在原存檔。</p>
+<div id="slotPickerList" class="slot-picker-list"></div>
+<div class="prompt-history-actions">
+<button id="overwriteSlotBtn" type="button">覆寫選擇槽</button>
+<button id="newSlotFromCheckpointBtn" type="button">新增槽</button>
+<button id="closeSlotPickerBtn" type="button">關閉</button>
+</div>
+</dialog>
+</section>
+<!-- ════════════════ G4｜角色頁 ════════════════ -->
+<section id="tab-profile" class="tab-panel">
+<div class="profile">
+<button class="game-back-btn" type="button">← 返回故事</button>
+<img id="profilePortrait" class="portrait" src="assets/portrait.webp" alt="Claude娘">
+<div class="portrait-customizer">
+<button id="changeCharacterPortraitBtn" type="button">更換人物圖片</button>
+<button id="resetCharacterPortraitBtn" type="button">還原預設立繪</button>
+<input id="characterPortraitInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+<p class="note">人物圖片會跟隨目前故事存檔，只顯示於本機；手動存檔模式請按故事畫面存檔。</p>
+</div>
+<h1 id="profileCharacterName">Claude娘</h1>
+<div class="character-rename">
+<label>角色名稱<input id="profileCharacterNameInput" maxlength="60"></label>
+<div class="character-rename-actions">
+<button id="saveProfileCharacterNameBtn" type="button">更改名字</button>
+<button id="resetProfileCharacterNameBtn" type="button">恢復預設名字</button>
+</div>
+<p class="note">名字跟隨目前存檔保存，下一回合生效；故事、對話與提示詞會同步使用新名字。</p>
+</div>
+<div class="character-rename">
+<label>角色人格與外觀設定<textarea id="profileCharacterProfile" rows="6" maxlength="10000"></textarea></label>
+<div class="character-rename-actions">
+<button id="saveProfileProfileBtn" type="button">儲存人設</button>
+<button id="resetProfileProfileBtn" type="button">恢復預設人設</button>
+</div>
+<p class="note">人設跟隨目前存檔保存，下一回合生效；故事、對話與提示詞會同步使用。</p>
+</div>
+<div class="character-rename">
+<label>世界觀與故事背景<textarea id="profileWorldSetting" rows="5" maxlength="10000"></textarea></label>
+<div class="character-rename-actions">
+<button id="saveProfileWorldBtn" type="button">儲存世界觀</button>
+<button id="resetProfileWorldBtn" type="button">恢復預設世界觀</button>
+</div>
+<p class="note">世界觀跟隨目前存檔保存，下一回合生效。</p>
+</div>
+<div id="characterCardsBar" class="character-cards-bar"></div>
+<div id="characterSheet"></div>
+<div class="character-rename">
+<div class="character-rename-actions">
+<button id="sheetAddCardBtn" type="button">＋ 新增角色卡</button>
+<button id="sheetEditBtn" type="button">編輯角色卡</button>
+<button id="sheetDeleteCardBtn" type="button" hidden>刪除角色卡</button>
+</div>
+<p class="note">角色卡只顯示在角色頁，跟隨目前存檔保存（可新增多張、隨時切換）；AI 提示詞使用的人設請用故事頁的「✎ 人設／世界觀」修改。</p>
+</div>
+<p>這是一款由 AI 即時演算的互動文字小說。每回合都會根據歷史、好感度、角色設定與你的行動生成新的劇情。</p>
+<div class="character-rename">
+<label class="feature-toggle" for="profileAnthropicLetterToggle"><input type="checkbox" id="profileAnthropicLetterToggle"> <span><strong>「神秘的一封信」事件</strong></span></label>
+<p class="note">選填；預設關閉。開啟後每完成 2 個正式回合抽一次 1%，抽中會顯示故事內的虛構 Anthropic 信件，只能重新開始故事。也可在新故事開始畫面或設定 →「故事功能」開啟；三處開關同步，只套用到目前存檔。</p>
+</div>
+</div>
+</section>
+<!-- ════════════════ G5｜創意工坊 ════════════════ -->
+<section id="tab-workshop" class="tab-panel">
+<div class="workshop">
+<button class="game-back-btn" type="button">← 返回故事</button>
+<h1 class="workshop-title">創意工坊</h1>
+<aside class="workshop-notice" role="note" aria-label="免責宣告">
+<p><strong>免責宣告：</strong>本專案是個人制作的非官方遊戲，與 Anthropic、Claude 官方不存在隸屬或合作關係，也未獲得官方認可。代碼許可不自動涵蓋圖片、視頻、角色形象及商標，相關權利和使用範圍以各自權利人的授權為準。請勿在 issue、日誌或截圖中公開賬號資訊、聊天內容、API 金鑰及其他敏感資料。</p>
+</aside>
+<p class="workshop-intro">自訂目前存檔的角色、世界觀與劇情規則；也可開啟整個專案的原始程式碼來編輯、套用並重新建置。</p>
+<div class="workshop-section">
+<h2>角色／世界觀／劇情模板</h2>
+<p class="note">設定只套用到目前存檔，會一併保存，並在下一回合帶入 AI 提示詞。</p>
+<label>角色名稱<input id="workshopCharacterName" maxlength="60"></label>
+<label>角色人格與外觀設定<textarea id="workshopCharacterProfile" rows="7" maxlength="10000"></textarea></label>
+<label>世界觀與故事背景<textarea id="workshopWorldSetting" rows="5" maxlength="10000"></textarea></label>
+<label>劇情演繹模板／規則<textarea id="workshopStoryTemplate" rows="5" maxlength="10000"></textarea></label>
+<div class="workshop-actions">
+<button id="saveWorkshopBtn" type="button">儲存工坊設定</button>
+<button id="resetWorkshopBtn" type="button">恢復工坊預設值</button>
+</div>
+</div>
+<div class="workshop-section" id="workshopCodeSection">
+<h2>原始程式碼編輯器</h2>
+<p class="note">桌面版（v4.4.0 起）整個專案都能開、都能改：不再有白名單，專案資料夾內任何文字檔都能編輯，也能直接開啟新檔案。修改不會在目前遊戲內即時執行：「套用到原始專案」會先檢查語法、備份舊檔並寫入原始專案資料夾；「套用並自動重建」還會關閉 App、重新編譯並安裝。也可匯出修改包自行套用。</p>
+<label>選擇程式檔<select id="workshopCodeFile"></select></label>
+<label>或直接輸入檔案路徑（含新檔案）<input id="workshopCodePath" placeholder="例如 www/new-feature.js" maxlength="200" spellcheck="false"></label>
+<div class="workshop-actions">
+<button id="openWorkshopCodePathBtn" type="button">開啟這個檔案</button>
+<button id="refreshWorkshopCodeListBtn" type="button">重新整理檔案清單</button>
+</div>
+<p class="note" id="workshopCodeRoot" role="status"></p>
+<textarea id="workshopCodeEditor" class="workshop-code-editor" rows="22" spellcheck="false" aria-label="程式原始碼編輯器"></textarea>
+<div class="workshop-actions">
+<button id="loadWorkshopCodeBtn" type="button">載入原始檔</button>
+<button id="saveWorkshopCodeBtn" type="button">保存此檔編輯</button>
+<button id="resetWorkshopCodeBtn" type="button">還原此檔</button>
+<button id="applyWorkshopCodeBtn" type="button">套用到原始專案</button>
+<button id="rebuildWorkshopCodeBtn" type="button">套用並自動重建</button>
+<button id="exportWorkshopCodeBtn" type="button">匯出修改程式碼 ZIP</button>
+</div>
+<div class="workshop-code-status" id="workshopCodeStatus" role="status"></div>
+</div>
+</div>
+</section>
+<!-- ════════════════ G6｜設定頁 ════════════════ -->
+<section id="tab-settings" class="tab-panel">
+<div class="settings">
+<button class="game-back-btn" type="button">← 返回故事</button>
+<h2>遊戲設定</h2>
+<div class="gift-difficulty-setting">
+<label for="settingsLanguageSelect">介面語言</label>
+<select id="settingsLanguageSelect" data-language-select aria-label="介面語言">
+<option value="zh">繁體中文</option>
+<option value="en">English</option>
+</select>
+<p class="note">切換後立即套用，並記住你的選擇。</p>
+</div>
+<div class="gift-difficulty-setting">
+<label id="themeModeLabel" for="themeMode">主題</label>
+<select id="themeMode">
+<option value="auto" selected>跟隨系統</option>
+<option value="light">亮色</option>
+<option value="dark">暗色</option>
+<option value="time">依時間</option>
+<option value="story">依故事時間</option>
+</select>
+<p class="note" id="themeModeHint">只影響外觀顯示，不影響故事與存檔；選擇後立即套用並記住。依故事時間＝跟隨故事時段：早晨／中午＝亮色、傍晚／夜晚＝暗色；沒有進行中的故事時，自動跟隨系統。</p>
+</div>
+<h2 id="featureSettingsTitle">故事功能</h2>
+<div class="feature-settings" id="featureSettings">
+<div class="feature-row">
+<label class="feature-toggle"><input id="affectionDisplayToggle" type="checkbox"><span>顯示好感度</span></label>
+<p class="note">預設隱藏；開啟後會在故事畫面顯示好感度。此選項只控制畫面，不會改變故事數值。</p>
+</div>
+<div class="feature-row">
+<label class="feature-toggle"><input id="featureWorldBookToggle" type="checkbox"><span>世界書（辭典）</span></label>
+<p class="note">關鍵詞命中時才把設定資料帶入提示詞；平時維持原樣。</p>
+</div>
+<div class="feature-row">
+<label class="feature-toggle"><input id="featureAuthorNoteToggle" type="checkbox"><span>作者註記</span></label>
+<p class="note">在提示詞尾端追加一行導演指示；留空＝不影響。</p>
+</div>
+<div class="feature-row">
+<label class="feature-toggle"><input id="featureUndoToggle" type="checkbox"><span>回合回退（重寫／刪除上一回合）</span></label>
+<p class="note">在「故事回顧」底部顯示回退工具；關閉只隱藏按鈕，不影響存檔。</p>
+</div>
+<div class="feature-row">
+<label class="feature-toggle"><input id="featureHistoryEditToggle" type="checkbox"><span>歷史編輯（✎ 修改訊息）</span></label>
+<p class="note">在「故事回顧」的每則訊息旁顯示編輯鈕。</p>
+</div>
+<div class="feature-row">
+<label class="feature-toggle"><input id="featureAnthropicLetterToggle" type="checkbox"><span>遊玩中有機會觸發神秘的一封信</span></label>
+<p class="note">選填；預設關閉。詳細說明請見「角色」頁。</p>
+</div>
+<div class="feature-row">
+<details id="promptManagerDetails">
+<summary><b>提示詞管理器（進階）</b></summary>
+<p class="note">逐條關閉寫作規則；輸出契約與七個選項永不改動。全部開啟且留空＝與預設逐字元相同。</p>
+<label class="feature-toggle"><input id="tweakRuleStyle" type="checkbox"><span>文風規則（style）</span></label>
+<label class="feature-toggle"><input id="tweakRuleTone" type="checkbox"><span>語氣隨好感規則（tone）</span></label>
+<label class="feature-toggle"><input id="tweakRuleMemory" type="checkbox"><span>記憶更新規則（memory）</span></label>
+<label class="feature-toggle"><input id="tweakRuleChoices" type="checkbox"><span>七選項品質規則（choices）</span></label>
+<label>補充指示<textarea id="tweakExtra" rows="3" maxlength="600" placeholder="例如：少用成語，多寫對話。"></textarea></label>
+<p class="note" id="tweakExtraNote" aria-live="polite"></p>
+</details>
+</div>
+</div>
+<h2>相簿</h2>
+<div class="album-grid" id="albumGrid"></div>
+<div id="albumLightbox" class="album-lightbox" hidden>
+  <img id="albumLightboxImg" alt="">
+  <button id="albumLightboxClose" type="button">✕</button>
+</div>
+<h2>AI 帳號與 API 連線</h2>
+<div class="account-center">
+<div class="account-current">
+<span class="account-dot"></span>
+<div>
+<b id="aiAccountLabel">尚未選擇 AI 帳號</b>
+<small id="aiAccountProvider">選擇已設定 API Key 的帳號</small>
+</div>
+</div>
+<div class="ai-status" id="aiAccountStatus" role="status">正在檢查本機 AI 後端…</div>
+<div class="note" id="apiUsageStatus" role="status" aria-live="polite"></div>
+<div class="account-primary-actions">
+<button id="addAiAccountBtn" class="account-primary">＋ 新增 AI 帳號</button>
+<button id="refreshAiStatusBtn" type="button">重新檢查</button>
+<button id="modelCheckBtn" type="button">模型通用性檢測</button>
+</div>
+<div id="modelCheckStatus" class="ai-status model-check-status" role="status" aria-live="polite" hidden></div>
+<div id="aiConnectionForm" class="ai-connection-form" hidden>
+<label>AI 服務<select id="aiProviderSelect">
+<option value="anthropic">Claude / Anthropic</option>
+<option value="openai">OpenAI</option>
+<option value="gemini">Gemini / Google</option>
+<option value="deepseek">DeepSeek</option>
+<option value="openrouter">OpenRouter</option>
+<option value="qwen">Qwen</option>
+<option value="mistral">Mistral</option>
+<option value="groq">Groq</option>
+<option value="xai">xAI / Grok</option>
+</select></label>
+<label>帳號名稱<input id="aiAccountName" maxlength="40" placeholder="例如：個人 Claude"></label>
+<label>API 帳號代號<select id="aiProfileId" aria-label="API 帳號代號">
+<option value="">自動產生（預設，不用選）</option>
+<option value="PERSONAL">個人 · PERSONAL</option>
+<option value="WORK">工作 · WORK</option>
+<option value="BACKUP">備用 · BACKUP</option>
+<option value="FAMILY">家人 · FAMILY</option>
+<option value="TEST">測試 · TEST</option>
+<option value="__custom__">自訂代號…</option>
+</select>
+<small>平常不用選：系統會自動產生代號。有需要再挑選或自訂（英文字母、數字或底線；同一服務的每組 API Key 使用不同代號）。</small></label>
+<div id="aiProfileIdCustomBox" class="custom-model-box" hidden>
+<label>自訂代號<input id="aiProfileIdCustom" maxlength="32" placeholder="例如：PERSONAL"></label>
+</div>
+<label id="aiApiKeyField">API Key<input id="aiApiKey" type="password" autocomplete="new-password" spellcheck="false" placeholder="從官方 API 主控台複製 API Key"></label>
+<p class="note" id="aiKeyStorageNote">Windows 版會使用目前 Windows 帳戶的加密服務保存 API Key，不會寫入故事存檔、瀏覽器儲存區或匯出檔。</p>
+<div id="aiConnectGuide" class="ai-connect-guide" aria-live="polite"></div>
+<div class="account-form-actions">
+<button id="openProviderConsoleBtn" type="button">開啟官方 API 主控台</button>
+<button id="saveAiAccountBtn" type="button">儲存並切換</button>
+<button id="cancelAiAccountBtn" type="button">取消</button>
+</div>
+</div>
+<div id="aiAccounts" class="ai-accounts"></div>
+<div class="account-flow">
+<b>帳號登入與切換</b>
+<ol>
+<li>不想設定 API 帳號也可以完全跳過：直接用下方的「免費版 AI 網頁服務」開始故事，不必在 App 裡建立任何 ID 或 API Key。</li>
+<li>選擇服務後，開啟官方 API 主控台並登入。</li>
+<li>在官方主控台建立 API Key，貼回這裡儲存。</li>
+<li>新增多個帳號後，可按「使用」切換目前故事使用的 API 身分；不同存檔會各自記住選用帳號。</li>
+</ol>
+<p class="note">一般 Claude.ai / ChatGPT 網站的免費登入額度不能直接拿來給此 App 呼叫。Gemini 可用一般 Google 帳號登入 Google AI Studio 建立 API Key，部分模型有官方免費 API 層，但仍受配額與速率限制；Claude / OpenAI API 則依官方平台的帳務與權限使用。額度不足時故事不會前進；切換到另一組符合供應商規定、且你有權使用的 API 連線後，可重試同一回合。App 不會自動輪換帳號，也請勿建立或輪換帳號來規避服務限額。Windows 版的金鑰由 Windows 使用者加密保存，只會送往你選擇的 AI 服務；移除帳號時會一併刪除本機加密金鑰。</p>
+</div>
+</div>
+<h2>免費版 AI 網頁服務（優先推薦）</h2>
+<div class="web-ai-box">
+<label>使用的 AI 網站<select id="webAiProvider">
+<option value="gemini">Google Gemini 網頁版</option>
+<option value="openai">ChatGPT 網頁版</option>
+<option value="anthropic">Claude 網頁版</option>
+</select></label>
+<div class="web-ai-actions">
+<button id="openAiWebsiteBtn" type="button">開啟登入／切換帳號</button>
+<a id="webAiDirectLoginLink" class="web-login-link" href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer">直接開啟 Google Gemini 登入／切換帳號</a>
+<button id="enableWebAiBtn" type="button">在遊戲使用網頁版</button>
+<button id="enableApiAiBtn" type="button">改回 API 連線</button>
+</div>
+<div class="note web-ai-login-hint" id="webAiLoginHint">選擇 Google Gemini 網頁版後，按「開啟登入／切換帳號」，在 Gemini 官方網站使用 Google 帳號登入；帳號切換由你在官方網站操作。</div>
+<div class="note" id="webAiModeStatus">主流 AI 網頁可在此切換。提示詞會複製到剪貼簿並開啟官方網站；送出後按回覆的「複製」，遊戲會自動接回同一存檔。帳號／模型由網站提供，免費額度依服務限制。</div>
+<div class="note">網站免費額度仍受供應商限制；本模式不會自動輪換帳號或繞過限額。</div>
+<div class="web-connection-tools">
+<h3>登入與接入檢查</h3>
+<p class="note" id="webConnectionStatus" aria-live="polite">尚未檢查。外部模式會在同一個「自動化專用」Chrome／Edge 設定檔開啟官網，登入一次後自動化會沿用，不會另開平常的 Chrome。</p>
+<div class="web-connection-actions">
+<button id="webOpenLoginBtn" type="button">開啟官網並登入</button>
+<button id="webCheckConnectionBtn" type="button">檢查登入與接入</button>
+<button id="webRestartAutomationBtn" type="button">重新啟動自動化瀏覽器</button>
+<button id="webRefreshModelsBtn" type="button">立即更新模型清單</button>
+<button id="webSwitchAccountBtn" type="button">新增／切換 Google 帳號</button>
+<label class="note" style="display:flex;align-items:center;gap:7px"><input id="askAccountToggle" type="checkbox"> 開啟 Gemini 時先選 Google 帳號（不自動沿用上次登入的帳號）</label>
+</div>
+<p class="note">若看到 about:blank 或自動化接不上，按「重新啟動自動化瀏覽器」。它只會關閉這個專用視窗，不會動到你平常的 Chrome；Google 帳號仍由你在官網輸入，App 不會讀取或保存密碼，也不會使用 Windows Hello／PIN。</p>
+</div>
+</div>
+<h2>AI 模型</h2>
+<label>模型選擇<select id="modelSelect">
+<optgroup label="Claude / Anthropic">
+<option value="anthropic::claude-fable-5">Claude Fable 5</option>
+<option value="anthropic::claude-opus-5">Claude Opus 5</option>
+<option value="anthropic::claude-sonnet-5">Claude Sonnet 5</option>
+<option value="anthropic::claude-haiku-4-5-20251001">Claude Haiku 4.5</option>
+</optgroup>
+<optgroup label="GPT / OpenAI">
+<option value="openai::gpt-6-astra">GPT-6 Astra · 旗艦</option>
+<option value="openai::gpt-6-sol">GPT-6 Sol · 均衡推理</option>
+<option value="openai::gpt-6-luna">GPT-6 Luna · 較快</option>
+<option value="openai::gpt-5.6-sol">GPT-5.6 Sol · 旗艦</option>
+<option value="openai::gpt-5.6-terra">GPT-5.6 Terra · 均衡</option>
+<option value="openai::gpt-5.6-luna">GPT-5.6 Luna · 較快</option>
+</optgroup>
+<optgroup label="Gemini / Google">
+<option value="gemini::gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite</option>
+<option value="gemini::gemini-3.8-flash">Gemini 3.8 Flash</option>
+<option value="gemini::gemini-3.7-flash">Gemini 3.7 Flash</option>
+<option value="gemini::gemini-3.6-flash">Gemini 3.6 Flash</option>
+<option value="gemini::gemini-3.1-pro-preview">Gemini 3.1 Pro Preview</option>
+</optgroup>
+<optgroup label="DeepSeek">
+<option value="deepseek::deepseek-v4-pro">DeepSeek V4 Pro</option>
+<option value="deepseek::deepseek-flash">DeepSeek Flash · 最新</option>
+</optgroup>
+<optgroup label="OpenRouter · 多模型">
+<option value="openrouter::openai/gpt-5.6-terra">OpenRouter · GPT-5.6 Terra</option>
+<option value="openrouter::anthropic/claude-sonnet-5">OpenRouter · Claude Sonnet 5</option>
+</optgroup>
+<optgroup label="Qwen / Mistral / Groq / xAI">
+<option value="qwen::qwen3.8-max">Qwen 3.8 Max</option>
+<option value="qwen::qwen3.8-flash">Qwen 3.8 Flash</option>
+<option value="mistral::mistral-large-latest">Mistral Large</option>
+<option value="groq::openai/gpt-oss-120b">Groq · GPT OSS 120B</option>
+<option value="groq::qwen/qwen3.8-27b">Groq · Qwen 3.8 27B</option>
+<option value="xai::grok-4.7">Grok 4.7</option>
+</optgroup>
+<option value="custom::__custom__">自訂模型 · 手動輸入 Model ID</option>
+</select></label>
+<div id="customModelBox" class="custom-model-box" hidden>
+<label>自訂模型名稱 / Model ID<input id="customModel" placeholder="例如：手機 App / API 顯示的精確模型 ID"></label>
+<div class="note">可直接貼上其他 App、模型平台或 API 文件提供的精確 Model ID。能否呼叫取決於你設定的 API 後端與該服務是否授權此模型。</div>
+</div>
+<label>後端網址<input id="apiBase" placeholder="例如 https://your-server.example.com"></label>
+<div class="response-mode" role="group" aria-label="AI 回覆生成速度">
+<h3>AI 回覆生成速度</h3>
+<label>生成速度<select id="responseMode" aria-label="選擇 AI 回覆生成速度">
+<option value="fast">⚡ 很快回覆（可能較簡短）</option>
+<option value="quality">✦ 優先保持回覆品質（等待較久）</option>
+</select></label>
+<label>提示詞模式<select id="promptMode" aria-label="選擇提示詞精簡程度">
+<option value="standard">標準（完整規則，回覆最穩）</option>
+<option value="saving">⚡ 節省模式（輸入約少一半，輸出格式不變）</option>
+</select></label>
+<div class="note">選擇後立即套用並自動保存，不需要按「儲存設定」，也不需要重新開啟 APP。下一次 AI 生成直接使用新設定。</div>
+</div>
+<div class="scene-mode">
+<h3>故事畫面呈現</h3>
+<label>顯示方式<select id="sceneMode">
+<option value="text">純文字詳細描述（不產生圖片）</option>
+<option value="offer">文字＋固定立繪；每個新場景可選擇生成插圖</option>
+</select></label>
+<p class="note">故事每回合都會用文字細寫目前場景。純文字模式不顯示立繪也不產生圖片；插圖選項會開啟 ChatGPT、複製描述，需在網站自行生成並下載，再匯入遊戲。是否能生成及使用額度由網站帳號決定；本 App 不會每回合自動生圖，也不會上傳角色參考檔。</p>
+</div>
+<div class="ai-control">
+<label>創意自由度 <span id="temperatureVal">1.00</span>
+<input id="temperature" type="range" min="0" max="2" step="0.05" value="1"></label>
+<label>多樣性 <span id="topPVal">0.95</span>
+<input id="topP" type="range" min="0.1" max="1" step="0.05" value="0.95"></label>
+<label>最大輸出 Token <input id="maxTokens" type="number" min="256" max="8192" step="128" value="2400"></label>
+</div>
+<button id="saveSettings">儲存設定</button>
+<div class="note security-note">
+<b>認證資料安全：</b>Windows 版以目前使用者的 Windows 加密服務保存 API Key，不寫入故事存檔、localStorage 或匯出檔。官方網站登入由你在瀏覽器完成；App 不會讀取官方網站的密碼、Cookie 或登入 Token。</div>
+<h2>跨裝置資料</h2>
+<div class="transfer-box">
+<p>平常完全不需要登入。需要把自己的故事存檔帶到另一支手機時，可先匯出資料，再透過 Android 分享功能寄到自己的 Email／雲端或傳給另一台手機；另一台安裝本 App 後再匯入。</p>
+<div class="transfer-actions">
+<button id="exportBtn">匯出我的故事資料</button>
+<button id="importBtn">匯入故事資料</button>
+<input id="importFile" type="file" accept="application/json,.json" hidden>
+</div>
+<div class="note">匯出的資料只包含遊戲存檔與設定，不包含 AI 密碼、API Key、Token、Cookie 或其他認證資料。</div>
+</div>
+<h2>關於</h2>
+<p class="note">開屏動畫來自 B 站 Firefade_</p>
+<p class="note">Claude娘圖2圖片版使用者提供圖片，搭配 Claude娘專案自製轉場。</p>
+<p class="note" role="note"><strong>免責宣告：</strong>本專案是個人制作的非官方遊戲，與 Anthropic、Claude 官方不存在隸屬或合作關係，也未獲得官方認可。代碼許可不自動涵蓋圖片、視頻、角色形象及商標，相關權利和使用範圍以各自權利人的授權為準。請勿在 issue、日誌或截圖中公開賬號資訊、聊天內容、API 金鑰及其他敏感資料。</p>
+</div>
+</section>
+</main>
+</div>
+<!-- ════════════════ G7｜編輯對話框 ════════════════ -->
+<dialog id="storyEditDialog" class="story-edit-dialog" aria-labelledby="storyEditTitle">
+<div class="story-edit-body">
+<h2 id="storyEditTitle">編輯人設與世界觀</h2>
+<p class="note">只套用到目前存檔，下一回合起帶入提示詞；故事進度不會刪除。</p>
+<label>角色名稱<input id="storyEditName" maxlength="60"></label>
+<label>克勞德互動模式<select id="storyEditClaudeMode"><option value="standard">標準克勞德</option><option value="tsundere">傲嬌濃度調高</option></select></label>
+<label>角色人格與外觀設定<textarea id="storyEditProfile" rows="6" maxlength="10000"></textarea></label>
+<label>世界觀與故事背景<textarea id="storyEditWorld" rows="5" maxlength="10000"></textarea></label>
+<label>劇情演繹模板／規則<textarea id="storyEditRules" rows="4" maxlength="10000"></textarea></label>
+<div class="story-edit-status" id="storyEditStatus" role="status"></div>
+<div class="story-edit-actions">
+<button id="storyEditSaveBtn" type="button">儲存並套用</button>
+<button id="storyEditCancelBtn" type="button">取消</button>
+<button id="storyEditResetBtn" type="button">恢復預設</button>
+<button id="storyEditAdvancedBtn" type="button">進階設定（創意工坊）</button>
+</div>
+</div>
+</dialog>
+<dialog id="sheetEditDialog" class="story-edit-dialog" aria-labelledby="sheetEditTitle">
+<div class="story-edit-body">
+<h2 id="sheetEditTitle">編輯角色卡</h2>
+<p class="note">只改角色頁顯示的角色卡，跟隨目前存檔保存；人設提示詞與故事進度不會變動。</p>
+<label>編輯目標<select id="sheetEditCardSelect"></select></label>
+<label>角色名稱<input id="sheetEditCardName" maxlength="60"></label>
+<label>標語<input id="sheetEditTagline" maxlength="120"></label>
+<label>名言<textarea id="sheetEditQuote" rows="2" maxlength="600"></textarea></label>
+<h3>外觀欄位</h3>
+<p class="note">留空會隱藏該格；最多 8 格。</p>
+<div id="sheetEditStats" class="sheet-edit-list"></div>
+<button id="sheetAddStatBtn" type="button" class="sheet-add-btn">＋新增外觀欄位</button>
+<h3>介紹段落</h3>
+<p class="note">留空會隱藏該段；最多 12 段。</p>
+<div id="sheetEditSections" class="sheet-edit-list"></div>
+<button id="sheetAddSectionBtn" type="button" class="sheet-add-btn">＋新增段落</button>
+<div class="story-edit-status" id="sheetEditStatus" role="status"></div>
+<div class="story-edit-actions">
+<button id="sheetEditSaveBtn" type="button">儲存並套用</button>
+<button id="sheetEditCancelBtn" type="button">取消</button>
+<button id="sheetEditResetBtn" type="button">恢復預設</button>
+</div>
+</div>
+</dialog>
+<!-- 追加九：歷史編輯／作者註記／辭典條目 對話框 -->
+<dialog id="historyEditDialog" class="story-edit-dialog" aria-labelledby="historyEditTitle">
+<div class="story-edit-body">
+<h2 id="historyEditTitle">編輯這則訊息</h2>
+<p class="note">修改只會改文字；好感、選項與故事進度不會變動，改完立即成為下一回合的提示詞來源。</p>
+<p class="note" id="historyEditMeta"></p>
+<label>訊息文字<textarea id="historyEditText" rows="8" maxlength="100000" spellcheck="false"></textarea></label>
+<div class="story-edit-status" id="historyEditStatus" role="status"></div>
+<div class="story-edit-actions">
+<button id="historyEditSaveBtn" type="button">儲存修改</button>
+<button id="historyEditCancelBtn" type="button">取消</button>
+</div>
+</div>
+</dialog>
+<dialog id="authorNoteDialog" class="story-edit-dialog note-dialog" aria-labelledby="authorNoteTitle">
+<div class="story-edit-body">
+<h2 id="authorNoteTitle">✎ 作者註記</h2>
+<p class="note">給 AI 的本回合導演指示（例如「這幾回合多寫一點雨」「讓她主動一點」）。啟用後只在下一回合提示詞最後追加一行；關閉或留空＝完全不影響。</p>
+<label class="feature-toggle"><input id="authorNoteToggle" type="checkbox"> 啟用作者註記</label>
+<label>註記內容<textarea id="authorNoteText" rows="4" maxlength="600" placeholder="例如：接下來把節奏放慢，多描述她的小動作。"></textarea></label>
+<p class="note" id="authorNoteCount" aria-live="polite"></p>
+<div class="story-edit-status" id="authorNoteStatus" role="status"></div>
+<div class="story-edit-actions">
+<button id="authorNoteSaveBtn" type="button">儲存註記</button>
+<button id="authorNoteCancelBtn" type="button">關閉</button>
+</div>
+</div>
+</dialog>
+<dialog id="worldBookEditDialog" class="story-edit-dialog" aria-labelledby="worldBookEditTitle">
+<div class="story-edit-body">
+<h2 id="worldBookEditTitle">辭典條目</h2>
+<p class="note">觸發詞可用逗號或 Enter 新增；常駐條目不需觸發詞，每回合都會帶入（仍受總開關控制）。</p>
+<label>觸發詞
+<div class="wb-keyword-box">
+<div id="worldBookKeywordChips" class="wb-chips"></div>
+<input id="worldBookKeywords" maxlength="300" placeholder="輸入觸發詞，按 Enter 或逗號新增">
+</div>
+</label>
+<div class="wb-editor-grid">
+<label class="feature-toggle"><input id="worldBookEntryConstant" type="checkbox"> 常駐（一律注入）</label>
+<label>優先級<select id="worldBookEntryPriority"><option value="high">高</option><option value="normal" selected>中</option><option value="low">低</option></select></label>
+<label>作用域<select id="worldBookEntryScope"><option value="all" selected>全部</option><option value="chat">對話</option><option value="opening">開場</option></select></label>
+</div>
+<label>條目內容<textarea id="worldBookEntryText" rows="6" maxlength="800"></textarea></label>
+<label class="feature-toggle"><input id="worldBookEntryEnabled" type="checkbox"> 啟用這條</label>
+<div class="story-edit-status" id="worldBookEditStatus" role="status"></div>
+<div class="story-edit-actions">
+<button id="worldBookEntrySaveBtn" type="button">儲存條目</button>
+<button id="worldBookEntryDeleteBtn" type="button">刪除條目</button>
+<button id="worldBookEntryCancelBtn" type="button">取消</button>
+</div>
+</div>
+</dialog>
+<dialog id="worldBookImportDialog" class="story-edit-dialog wb-import-dialog" aria-labelledby="worldBookImportTitle">
+<div class="story-edit-body">
+<h2 id="worldBookImportTitle">匯入世界書</h2>
+<p class="note" id="worldBookImportSummary"></p>
+<div class="wb-conflict" role="radiogroup" aria-label="同名條目處理">
+<label><input type="radio" name="worldBookImportConflict" value="merge" checked> 合併（預設）：保留現有，只新增不重複的條目。</label>
+<label><input type="radio" name="worldBookImportConflict" value="overwrite"> 覆蓋同名：同鍵以匯入版取代。</label>
+<label><input type="radio" name="worldBookImportConflict" value="skip"> 略過同名：同鍵保留現有。</label>
+</div>
+<div class="story-edit-status" id="worldBookImportStatus" role="status"></div>
+<div class="story-edit-actions">
+<button id="worldBookImportConfirmBtn" type="button">匯入</button>
+<button id="worldBookImportCancelBtn" type="button">取消</button>
+</div>
+</div>
+</dialog>
+<!-- ════════════════ 批5 Ａ5｜應用內輸入／切換守門對話框（桌面不支援 window.prompt；Esc＝取消、Enter＝確認）════════════════ -->
+<dialog id="promptDialog" class="story-edit-dialog" aria-labelledby="promptDialogTitle">
+<div class="story-edit-body">
+<h2 id="promptDialogTitle">新存檔名稱</h2>
+<p class="note" id="promptDialogNote"></p>
+<input id="promptDialogInput" type="text">
+<div class="story-edit-actions">
+<button id="promptDialogOkBtn" type="button">確定</button>
+<button id="promptDialogCancelBtn" type="button">取消</button>
+</div>
+</div>
+</dialog>
+<dialog id="switchGuardDialog" class="story-edit-dialog" aria-labelledby="switchGuardTitle">
+<div class="story-edit-body">
+<h2 id="switchGuardTitle">目前存檔尚未手動儲存。</h2>
+<p class="note">選擇「儲存並切換」會先保存目前進度；「不儲存切換」不保存直接切換；「取消」留在目前存檔。</p>
+<div class="story-edit-actions">
+<button id="switchGuardSaveBtn" type="button">儲存並切換</button>
+<button id="switchGuardDiscardBtn" type="button">不儲存切換</button>
+<button id="switchGuardCancelBtn" type="button">取消</button>
+</div>
+</div>
+</dialog>
+<script type="module" src="app.bundle.js"></script>
+<script src="portrait-anim-assets.js"></script>
+<script type="module" src="portrait-anim.js"></script>
+<script type="module" src="story-art.js"></script>
+<script type="module" src="wait-interlude.js"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+/* G43 等待中介畫面（搭配 wait-interlude.js）。層級在舞台內，高於立繪與 CG，低於 HUD。 */
+.wait-interlude{position:absolute;inset:0;z-index:4;display:flex;align-items:center;overflow:hidden;pointer-events:none;opacity:0;transition:opacity 260ms ease-out}
+.wait-interlude[hidden]{display:none}
+.wait-interlude.is-visible{opacity:1}
+.wait-bg{position:absolute;inset:-6%;width:112%;height:112%;object-fit:cover;filter:blur(18px) brightness(.6) saturate(1.05)}
+.wait-art{position:absolute;top:0;bottom:0;height:100%;width:auto;max-width:100%;object-fit:contain}
+.wait-interlude[data-ratio="portrait"] .wait-art{right:9%}
+.wait-shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(43,26,18,.8) 0%,rgba(43,26,18,.46) 38%,rgba(43,26,18,0) 66%)}
+.wait-caption{position:relative;margin-left:5%;max-width:min(46%,420px);color:#fff4e0;text-shadow:0 2px 10px rgba(43,26,18,.7)}
+.wait-title{margin:0 0 6px;font-size:calc(20px * var(--story-font-scale,1));font-weight:700;letter-spacing:.06em}
+.wait-line{margin:0;min-height:1.7em;font-size:calc(14px * var(--story-font-scale,1));line-height:1.7;opacity:.92}
+.wait-line.is-swapping{animation:waitLineIn 520ms ease-out}
+.wait-hint{margin:8px 0 0;font-size:calc(12px * var(--story-font-scale,1));line-height:1.6;opacity:0;transition:opacity 400ms ease-out}
+.wait-hint.is-on{opacity:.85}
+@keyframes waitLineIn{from{opacity:0;transform:translateY(4px)}to{opacity:.92;transform:none}}
+@media (max-width:560px){
+  .wait-interlude{align-items:flex-end}
+  .wait-interlude[data-ratio="portrait"] .wait-art{right:50%;transform:translateX(50%)}
+  .wait-interlude[data-ratio="portrait"] .wait-shade{background:linear-gradient(0deg,rgba(43,26,18,.84) 0%,rgba(43,26,18,.4) 36%,rgba(43,26,18,0) 64%)}
+  .wait-caption{margin:0 5% 5%;max-width:90%}
+}
+@media (prefers-reduced-motion:reduce){
+  .wait-interlude,.wait-hint{transition:none}
+  .wait-line.is-swapping{animation:none}
+}
+/* G44 共存（追加）：中介畫面顯示時收起既有內嵌忙碌圖（兩者同源素材，交接不看破綻）；
+   鍵在 .is-visible，只在畫面真的出現時生效；不動 style.css / app.js/app.bundle.js。 */
+#tab-story:has(.wait-interlude.is-visible) #choices .story-busy-art{display:none}

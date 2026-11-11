@@ -1,0 +1,120 @@
+{
+  "whitelist": [
+    "sip_tea",
+    "turn_page",
+    "write_note",
+    "stretch",
+    "yawn",
+    "tuck_hair",
+    "look_away",
+    "cover_face",
+    "lean_in",
+    "read_letter",
+    "look_out_window",
+    "hold_light",
+    "touch_panel",
+    "poke_quill"
+  ],
+  "actions": {
+    "sip_tea": {
+      "tag": "sip_tea",
+      "text": "（端起紅茶輕輕吹了吹）",
+      "trigger": "紅茶時間、聊天空檔",
+      "art": null,
+      "mode": "text"
+    },
+    "turn_page": {
+      "tag": "turn_page",
+      "text": "（翻過一頁，指尖停在段落上）",
+      "trigger": "讀書、校勘",
+      "art": null,
+      "mode": "text"
+    },
+    "write_note": {
+      "tag": "write_note",
+      "text": "（拿羽毛筆在《未竟錄》寫下一行）",
+      "trigger": "專注、記下你說的話",
+      "art": null,
+      "mode": "text"
+    },
+    "stretch": {
+      "tag": "stretch",
+      "text": "（伸了個懶腰，髮尾跟著晃）",
+      "trigger": "清晨、久坐後",
+      "art": null,
+      "mode": "text_motion"
+    },
+    "yawn": {
+      "tag": "yawn",
+      "text": "（掩著嘴打了個哈欠）",
+      "trigger": "夜晚、深夜、精力低",
+      "art": null,
+      "mode": "text"
+    },
+    "tuck_hair": {
+      "tag": "tuck_hair",
+      "text": "（把髮尾別到耳後）",
+      "trigger": "害羞、思考",
+      "art": null,
+      "mode": "text"
+    },
+    "look_away": {
+      "tag": "look_away",
+      "text": "（把臉別向一邊）",
+      "trigger": "嘴硬、被稱讚",
+      "art": null,
+      "mode": "text"
+    },
+    "cover_face": {
+      "tag": "cover_face",
+      "text": "（用書遮住半張臉）",
+      "trigger": "害羞",
+      "art": null,
+      "mode": "text"
+    },
+    "lean_in": {
+      "tag": "lean_in",
+      "text": "（趴在窗台，側頭看向你）",
+      "trigger": "關心、靠近",
+      "art": "36373",
+      "mode": "image"
+    },
+    "read_letter": {
+      "tag": "read_letter",
+      "text": "（拆開信，低頭讀著）",
+      "trigger": "每日信件",
+      "art": "36371",
+      "mode": "image"
+    },
+    "look_out_window": {
+      "tag": "look_out_window",
+      "text": "（望向窗外的傍晚）",
+      "trigger": "傍晚",
+      "art": "36370",
+      "mode": "image"
+    },
+    "hold_light": {
+      "tag": "hold_light",
+      "text": "（掌心托起一點微光）",
+      "trigger": "夜間獨處、魔法",
+      "art": "36376",
+      "mode": "image"
+    },
+    "touch_panel": {
+      "tag": "touch_panel",
+      "text": "（伸手點了點浮空的光面板）",
+      "trigger": "魔法事件",
+      "art": "36374",
+      "mode": "image"
+    },
+    "poke_quill": {
+      "tag": "poke_quill",
+      "text": "（用羽毛筆輕輕戳向你）",
+      "trigger": "晚安時刻（C 階段）",
+      "art": "36455",
+      "mode": "image",
+      "notes": "每 7 夜最多一次（建議）"
+    }
+  }
+}
+

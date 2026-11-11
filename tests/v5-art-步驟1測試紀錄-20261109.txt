@@ -1,0 +1,35 @@
+﻿TAP version 13
+# Subtest: v5 Step 1：art_distribution.json 已補十筆，欄位依 xlsx
+ok 1 - v5 Step 1：art_distribution.json 已補十筆，欄位依 xlsx
+  ---
+  duration_ms: 2.0923
+  ...
+# Subtest: v5 Step 1：36455 缺檔已補，尺寸與 entry 相符
+ok 2 - v5 Step 1：36455 缺檔已補，尺寸與 entry 相符
+  ---
+  duration_ms: 3.0026
+  ...
+# Subtest: v5 Step 1：可用圖片已入庫，尺寸、大小與 SHA256 相符
+ok 3 - v5 Step 1：可用圖片已入庫，尺寸、大小與 SHA256 相符
+  ---
+  duration_ms: 5.7744
+  ...
+# Subtest: v5 Step 1：不使用圖不進 assets
+ok 4 - v5 Step 1：不使用圖不進 assets
+  ---
+  duration_ms: 0.654
+  ...
+# Subtest: v5 Step 1：schema 會擋下缺漏、尺寸錯誤與誤用
+ok 5 - v5 Step 1：schema 會擋下缺漏、尺寸錯誤與誤用
+  ---
+  duration_ms: 1.6533
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 130.9309
