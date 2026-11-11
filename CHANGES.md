@@ -569,3 +569,10 @@ PII 掃描 0 處。
 | `app/tests/story/p1-01-config-bootstrap.test.js` | 修改 | 移除硬編碼的使用者家目錄路徑，改用 `process.env.USERPROFILE` 組合基準樹位置，避免帳號名稱進入版控 | 單檔 3／3 PASS；全體故事測試 109／109 PASS |
 | `V5-美術-完整術材清單.md` | 修改 | 來源路徑中的使用者名稱取代為 `<使用者>` | PII 掃描 0 命中 |
 
+## 2026-11-11（安裝包建置完成）
+
+| 檔案 | 動作 | 改了什麼 | 如何測試 |
+|---|---|---|---|
+| `Claude娘 - Windows 11 電腦版-Setup-4.6.38-x64.exe` | 新增（交付） | 以乾淨 npm 依賴樹（`npm ci`，541 packages）重建 NSIS 安裝包；122.99 MB；SHA256 `8D7A493B…6B087D`；未設定程式碼簽章憑證，electron-builder 跳過簽章 | `app.asar` 內 `www/app.bundle.js` 為 770,807 bytes、SHA256 `FEF24218…30A84408`，含 albumUnlocked／bedroomSceneAt／rareGoodnightAt／doubao，且無 `settingsBtn` |
+| `SHA256-4.6.38-G43-v2.1.txt` | 新增（交付） | 安裝包檔名、大小、SHA256 與 bundle 校驗資訊 | 與實際安裝檔 `Get-FileHash` 一致 |
+
