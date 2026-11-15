@@ -721,3 +721,9 @@ PII 掃描 0 處。
 - 安裝包：127,589,682 bytes，SHA256 `A44DDA96E7532D4CFF2E14240C9755DBD66A09F391904B4DD7EFAB6376787263`。
 - asar 驗證：`www/app.js` `4B5D60773632BFD014E684E5EDD94CE902722668639B0038A7D36A978360FB72`；`www/night-cg.js` `B09D98BDB83BF58424856144C2C19A712E4688012E2F4A3582590FF8BA67FC41`；`electron-main.cjs` `360DA28960EF8527C3DF7B2562A178677D60556CAA16A5940F8C6C7260DD1E41`；`ai-web-flow.cjs` `7CF00A255A7AC61DAF17FF3EF5F9FEF65FA500359FC489F019108555DC29FBE5`。
 - 交付桌面兩個安裝包檔名（空格版／連字號版）皆已更新為同一新檔。
+
+### 推送
+- GitHub：`we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-`（`main`）。
+- 提交：`dc59c25`（G43 v2.5d：窄視窗滿版背景、工作列圖示修復、Doubao 接入與測試修正）。
+- Release：`v4.6.38-g43-v2.5d`，資產 `ClaudeNiang-Windows11-Setup-4.6.38-G43-v2.5d-x64.exe`（127,589,682 bytes；GitHub digest `sha256:a44dda96e7532d4cff2e14240c9755dbd66a09f391904b4dd7efab6376787263`）。
+- 下載：`https://github.com/we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-/releases/tag/v4.6.38-g43-v2.5d`。

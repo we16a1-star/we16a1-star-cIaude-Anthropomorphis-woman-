@@ -28,3 +28,11 @@ SHA256：360DA28960EF8527C3DF7B2562A178677D60556CAA16A5940F8C6C7260DD1E41
 ai-web-flow.cjs
 大小：55,941 bytes
 SHA256：7CF00A255A7AC61DAF17FF3EF5F9FEF65FA500359FC489F019108555DC29FBE5
+
+推送
+GitHub：we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-（main）
+Commit：dc59c2504371e6c98801041817f9ca5ee583dbe5
+Release：v4.6.38-g43-v2.5d
+資產：ClaudeNiang-Windows11-Setup-4.6.38-G43-v2.5d-x64.exe
+GitHub digest：sha256:a44dda96e7532d4cff2e14240c9755dbd66a09f391904b4dd7efab6376787263
+URL：https://github.com/we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-/releases/tag/v4.6.38-g43-v2.5d
