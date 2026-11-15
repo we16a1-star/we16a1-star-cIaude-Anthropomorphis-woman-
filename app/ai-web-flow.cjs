@@ -7,7 +7,7 @@
 //
 // ── 官網改版時要改哪裡？（給要修改程式碼的人）──────────────────────────────
 // 下面 SITE_HINTS 是唯一要動的地方：支援的官網（ChatGPT／Claude／Gemini／DeepSeek／
-// Grok／Qwen／Mistral／Copilot／Perplexity／Meta AI／Kimi／Z.ai 共 12 家）的送出鈕
+// Grok／Qwen／Mistral／Copilot／Perplexity／Meta AI／Kimi／Z.ai／Doubao 共 13 家）的送出鈕
 // 字樣、回覆容器、停止鈕字樣、複製鈕字樣與輸入框選擇器全部集中在這裡。
 // 改完請跑 `npm test`（app/tests/web-auto-flow.test.js 會驗證腳本語法與判斷邏輯），
 // 再做一次真實瀏覽器端到端測試：`node verify-web-auto.cjs`（專案最上層）。
@@ -27,7 +27,7 @@
 const SITE_HINTS = {
   editorSelectors: 'textarea,[contenteditable="true"],[role="textbox"]',
   editorSearchFilter: '(search|搜尋|搜索|filter|篩選)',
-  sendWords: '(send|submit|送出|傳送|发送|發送|提交|送信|send message)',
+  sendWords: '(send|submit|送出|傳送|\u53d1\u9001|發送|提交|送信|send message)',
   sendBlockWords: '(stop|停止|中止|voice|mic|microphone|語音|麥克風|attach|attachment|上傳|附件|檔案|file|image|圖片|model|模型|new chat|新對話|新規|speech|dictate|讀取|聽寫)',
   strictSendSelectors: '[data-testid="send-button"],[data-testid*="send" i],[class*="sendmessage" i],[class*="send-button" i],[class*="send-btn" i],[class*="send-message" i],[class*="button-send" i]',
   buttonSelectors: 'button,[role="button"],input[type="submit"]',
@@ -47,8 +47,8 @@ const SITE_HINTS = {
   ],
   streamingSelector: '[data-is-streaming="true"]',
   stopWords: '(^|[^a-z])(stop|stop generating|stop streaming|停止|停止生成|中止)([^a-z]|$)',
-  copyWords: '^(copy|copy reply|copy response|複製|複製回覆|コピー|拷贝|复制)',
-  copyBlockWords: '(code|程式碼|代码|link|連結|链接|prompt|提示)'
+  copyWords: '^(copy|copy reply|copy response|複製|複製回覆|コピー|\u62f7\u8d1d|\u590d\u5236)',
+  copyBlockWords: '(code|程式碼|\u4ee3\u7801|link|連結|\u94fe\u63a5|prompt|提示)'
 };
 
 // Gemini 的回覆容器在 2024～2026 之間換過好幾次標記（model-response → message-content
@@ -751,6 +751,34 @@ function buildSceneDownloadClickScript() {
   })()`;
 }
 
+// ── 完整 JSON 回覆判斷（主程序與 renderer 共用）────────────────────────────
+// 回覆必須含 narration 與 choices 兩個欄位，且 JSON 物件已閉合（括號平衡）。
+// 用於避免在串流中途就採收／套用不完整回覆。
+function extractCompleteJsonObject(text) {
+  const s = String(text || '');
+  const start = s.indexOf('{');
+  if (start < 0) return null;
+  let depth = 0, inStr = false, esc = false;
+  for (let i = start; i < s.length; i++) {
+    const c = s[i];
+    if (inStr) {
+      if (esc) { esc = false; continue; }
+      if (c === '\\') { esc = true; continue; }
+      if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') { inStr = true; continue; }
+    if (c === '{') depth++;
+    else if (c === '}') { depth--; if (depth === 0) return s.slice(start, i + 1); }
+  }
+  return null;
+}
+function isCompleteWebReply(text) {
+  const obj = extractCompleteJsonObject(text);
+  if (!obj) return false;
+  return /"narration"\s*:/.test(obj) && /"choices"\s*:/.test(obj);
+}
+
 module.exports = {
   SITE_HINTS,
   SITE_MATRIX,
@@ -767,5 +795,7 @@ module.exports = {
   buildHealthScript,
   buildLoginGateScript,
   buildSceneDownloadClickScript,
-  replyProgress
+  replyProgress,
+  isCompleteWebReply,
+  extractCompleteJsonObject
 };

@@ -18,7 +18,7 @@
   #cam canvas { object-fit: cover; object-position: center; opacity: .003; will-change: opacity; }
   #bloom { background: radial-gradient(55% 70% at 42% 34%, rgba(255,196,120,.8), rgba(255,170,90,0) 70%); opacity: .003; }
 
-  /* 文字放在右上角的空白处，不压住人物 */
+  /* 文字放在右上角的空白處，不壓住人物 */
   #hud { position: absolute; left: 63vw; top: 9vh; width: 33vw; color: var(--ink); }
   .tag { font: 600 clamp(10px, .85vw, 15px)/1 "Consolas", "Cascadia Mono", monospace; letter-spacing: .38em; color: var(--orange); opacity: 0; }
   .title { margin-top: 1.4vh; font-weight: 300; font-size: clamp(26px, 3.5vw, 64px); letter-spacing: .05em; line-height: 1.15; min-height: 1.2em; white-space: nowrap; }
@@ -60,24 +60,24 @@
 <script src="assets/claude-splash/eyes-frames.js"></script>
 <script>
 (() => {
-  // ================= 配置（想改文案/节奏就改这里） =================
+  // ================= 配置（想改文案/節奏就改這裡） =================
   const CFG = { title: 'Claude娘啟動', boldPrefix: 7, total: 9.3 };
   const T = {
     ribbons: 0.7,
-    lineStart: 1.9, lineEnd: 3.7,     // 1) 先勾勒脸、头发、嘴、身体
-    eyesIn: 3.4, eyesInEnd: 4.1,      // 2) 再亮起眼睑和睫毛
-    dawn: 4.0, dawnEnd: 5.5,          // 3) 闭眼彩图从线稿里浮现（线稿留着）
-    linesOut: 5.0, linesOutEnd: 6.1,  //    线稿渐隐
-    open: 5.9, openEnd: 6.9,          // 4) 睁眼（闭眼 -> 01 -> 02 -> 03）
-    text: 6.9, end: 8.6               // 文字 / 整体淡出
+    lineStart: 1.9, lineEnd: 3.7,     // 1) 先勾勒臉、頭髮、嘴、身體
+    eyesIn: 3.4, eyesInEnd: 4.1,      // 2) 再亮起眼瞼和睫毛
+    dawn: 4.0, dawnEnd: 5.5,          // 3) 閉眼彩圖從線稿裡浮現（線稿留著）
+    linesOut: 5.0, linesOutEnd: 6.1,  //    線稿漸隱
+    open: 5.9, openEnd: 6.9,          // 4) 睜眼（閉眼 -> 01 -> 02 -> 03）
+    text: 6.9, end: 8.6               // 文字 / 整體淡出
   };
-  const FACE = { x: 42, y: 32 };      // 线稿/彩图扩散的起点（图的百分比位置）
+  const FACE = { x: 42, y: 32 };      // 線稿/彩圖擴散的起點（圖的百分比位置）
 
-  // ---------- 底图 = 闭眼图（浮现阶段、线稿、整幅画面都用它，脸/头发/背景全程不换） ----------
-  // ---------- 睁眼：四张眼睛画面 [0 闭眼底图, 01, 02, 03]，只替换两只眼睛的小窗口 ----------
-  //   01~03 来自 assets/eyes-frames.js（由 build_eye_crops.py 从 01.png~03.png 裁出），它们和底图几乎像素对齐
-  //   相邻两张之间不用交叠，而是让“上睫毛带”像刚体一样随眼睑整体上滑，眼睑下方逐渐露出后一张的眼珠
-  //   tops[k]：第 k 张里上睫毛带的上缘曲线 [[x, y], ...]（底图像素坐标，自动检测后人工核对）；win：眼睛窗口 [x, y, w, h]
+  // ---------- 底圖 = 閉眼圖（浮現階段、線稿、整幅畫面都用它，臉/頭髮/背景全程不換） ----------
+  // ---------- 睜眼：四張眼睛畫面 [0 閉眼底圖, 01, 02, 03]，只替換兩隻眼睛的小窗口 ----------
+  //   01~03 來自 assets/eyes-frames.js（由 build_eye_crops.py 從 01.png~03.png 裁出），它們和底圖幾乎像素對齊
+  //   相鄰兩張之間不用交疊，而是讓“上睫毛帶”像剛體一樣隨眼瞼整體上滑，眼瞼下方逐漸露出後一張的眼珠
+  //   tops[k]：第 k 張裡上睫毛帶的上緣曲線 [[x, y], ...]（底圖像素座標，自動檢測後人工核對）；win：眼睛窗口 [x, y, w, h]
   const RIG = {
     L: { win: [365, 282, 220, 124], xa: 423, xb: 537, tops: [
       [[423,351.3],[429,352],[435,353],[441,348],[447,347.7],[453,349],[459,349],[465,349],[471,347.7],[477,346],[483,343.7],[489,343],[495,341],[501,339.3],[507,337.7],[513,336],[519,338],[525,338],[531,339],[537,339]],
@@ -90,28 +90,28 @@
       [[634,309.3],[640,300.3],[646,296.7],[652,293.3],[658,290.7],[664,287.7],[670,286.3],[676,285],[682,283.7],[688,283],[694,282],[700,280.3],[706,282],[712,282],[718,279],[724,283],[730,281.3],[736,278.3]],
       [[634,304.3],[640,297],[646,293.3],[652,291],[658,288.7],[664,287],[670,285.7],[676,284],[682,283],[688,282],[694,281],[700,280],[706,281],[712,280.3],[718,277.3],[724,281],[730,280.3],[736,278]] ] }
   };
-  const BAND = [18, 14, 14, 14];     // 各张里“上睫毛带”的厚度（像素）；闭眼那张含向下的睫毛尖，所以更厚
-  // 睁眼进度曲线：时间进度 u(0~1) -> 画面进度 p(0=闭眼, 1=01, 2=02, 3=03)。开头慢、中间快、结尾缓
+  const BAND = [18, 14, 14, 14];     // 各張裡“上睫毛帶”的厚度（像素）；閉眼那張含向下的睫毛尖，所以更厚
+  // 睜眼進度曲線：時間進度 u(0~1) -> 畫面進度 p(0=閉眼, 1=01, 2=02, 3=03)。開頭慢、中間快、結尾緩
   const OPEN_KEYS = [[0, 0], [.14, .12], [.50, 1], [.75, 1.95], [1, 3]];
-  // 眼睛在【底图】里的位置：lash = 闭眼睫毛带（用来把线稿拆成“脸”和“眼睛”两层）
+  // 眼睛在【底圖】裡的位置：lash = 閉眼睫毛帶（用來把線稿拆成“臉”和“眼睛”兩層）
   const EYES = [
     { lash: { c: [476, 352], rx: 74, ry: 32, th: -.18 } },
     { lash: { c: [697, 305], rx: 84, ry: 30, th: -.23 } }
   ];
 
   const q = new URLSearchParams(location.search);
-  const FREEZE = q.has('t') ? parseFloat(q.get('t')) : null;     // ?t=3.2 定格某一帧（调试）
-  const FORCE_P = q.has('p') ? parseFloat(q.get('p')) : null;    // ?p=1.5 固定睁眼进度（调试：0 闭眼, 1=01, 2=02, 3=03）
-  const ZOOM = q.has('zoom') ? parseFloat(q.get('zoom')) : null; // ?zoom=2.6 放大看眼睛（调试）
+  const FREEZE = q.has('t') ? parseFloat(q.get('t')) : null;     // ?t=3.2 定格某一幀（調試）
+  const FORCE_P = q.has('p') ? parseFloat(q.get('p')) : null;    // ?p=1.5 固定睜眼進度（調試：0 閉眼, 1=01, 2=02, 3=03）
+  const ZOOM = q.has('zoom') ? parseFloat(q.get('zoom')) : null; // ?zoom=2.6 放大看眼睛（調試）
   const AUTOCLOSE = q.has('autoclose');
   const APP_URL = q.get('appUrl') || '';
-  // ?launcher：由启动脚本全屏打开。不在页面里做黑色淡出（启动器会让整个窗口渐隐，露出后面的 Claude）；
-  // 播放状态通过窗口标题告诉启动器：CLAUDE_SPLASH_PLAYING -> CLAUDE_SPLASH_DONE；Esc / 点击 / 空格 可跳过
+  // ?launcher：由啟動腳本全屏打開。不在頁面裡做黑色淡出（啟動器會讓整個窗口漸隱，露出後面的 Claude）；
+  // 播放狀態通過窗口標題告訴啟動器：CLAUDE_SPLASH_PLAYING -> CLAUDE_SPLASH_DONE；Esc / 點擊 / 空格 可跳過
   const LAUNCHER = q.has('launcher'); let doneSet = false;
   let appTransitioning = false;
   document.body.classList.toggle('launcher-mode', Boolean(APP_URL));
-  // PLAYING 时附带“浏览器自绘标题栏的高度（物理像素）”：启动器据此把窗口做得更高一截，再把这一截裁掉，只留下与 Claude 窗口重合的部分
-  // 调试：?dbg 把“帧间隔超过 100 ms”的卡顿记录（播放时间:间隔ms）附在窗口标题后面，便于从外面读出
+  // PLAYING 時附帶“瀏覽器自繪標題欄的高度（物理像素）”：啟動器據此把窗口做得更高一截，再把這一截裁掉，只留下與 Claude 窗口重合的部分
+  // 調試：?dbg 把“幀間隔超過 100 ms”的卡頓記錄（播放時間:間隔ms）附在窗口標題後面，便於從外面讀出
   const DBG = q.has('dbg'), gaps = [];
   const setState = s => { document.title = APP_URL && s !== 'VISIBLE' ? 'Claude娘啟動' : 'CLAUDE_SPLASH_' + s + (s === 'PLAYING' || s === 'READY' ? '|nc=' + Math.max(0, Math.round((outerHeight - innerHeight) * devicePixelRatio)) : '') + (DBG ? '|gaps=' + gaps.join(';') : ''); };
   const TUNE = { lo: +(q.get('lo') || 48), hi: +(q.get('hi') || 150), blur: +(q.get('blur') || 1.5) };
@@ -127,21 +127,21 @@
   const rc = rib.getContext('2d'), fc = fx.getContext('2d'), cc = color.getContext('2d');
   let W = 0, H = 0, DPR = 1;
   function resize() {
-    // 流光/粒子都是柔和的光晕，不需要物理像素精度：把这两块画布的宽度限制在 ~1400px 以内，高分屏上能省下 3/4 以上的填充量
+    // 流光/粒子都是柔和的光暈，不需要物理像素精度：把這兩塊畫布的寬度限制在 ~1400px 以內，高分屏上能省下 3/4 以上的填充量
     DPR = Math.max(.6, Math.min(devicePixelRatio || 1, 1400 / innerWidth, 1.5));
     W = Math.round(innerWidth * DPR); H = Math.round(innerHeight * DPR);
-    if (typeof RIBBONS !== 'undefined') for (const R of RIBBONS) R.spl = null;     // 画布比例变了，丝带路径的法向要重算
+    if (typeof RIBBONS !== 'undefined') for (const R of RIBBONS) R.spl = null;     // 畫布比例變了，絲帶路徑的法向要重算
     rib.width = fx.width = W; rib.height = fx.height = H;
     seedStars();
   }
 
-  // ================= 睁眼：上睫毛带随眼睑整体上滑，下方露出后一张的眼珠 =================
+  // ================= 睜眼：上睫毛帶隨眼瞼整體上滑，下方露出後一張的眼珠 =================
   let baseImg = null;
-  const rigs = {};          // 每只眼：{ win, frames: [ImageData ×4], top: [Float32Array ×4], wx: Float32Array, out: ImageData, cv, g }
+  const rigs = {};          // 每隻眼：{ win, frames: [ImageData ×4], top: [Float32Array ×4], wx: Float32Array, out: ImageData, cv, g }
   const loadImg = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('load ' + src.slice(0, 40))); i.src = src; });
   const scratch = document.createElement('canvas'), sg = scratch.getContext('2d', { willReadFrequently: true });
   const winData = (img, srcRect, w, h) => { scratch.width = w; scratch.height = h; sg.clearRect(0, 0, w, h); if (srcRect) sg.drawImage(img, srcRect[0], srcRect[1], w, h, 0, 0, w, h); else sg.drawImage(img, 0, 0); return sg.getImageData(0, 0, w, h); };
-  // 把稀疏的曲线点按 x 线性插值成“每列一个值”，范围外取端点
+  // 把稀疏的曲線點按 x 線性插值成“每列一個值”，範圍外取端點
   function colCurve(pts, x0, n) {
     const a = new Float32Array(n); let j = 0;
     for (let i = 0; i < n; i++) {
@@ -150,7 +150,7 @@
     }
     return a;
   }
-  // ---- 光流（Horn–Schunck + 金字塔 + 逐层 warp）：用来让 01→02→03 里眼珠、下眼睑的位置变化变成平滑移动，而不是重影后突变 ----
+  // ---- 光流（Horn–Schunck + 金字塔 + 逐層 warp）：用來讓 01→02→03 裡眼珠、下眼瞼的位置變化變成平滑移動，而不是重影后突變 ----
   const fgray = (d, n) => { const g = new Float32Array(n); for (let i = 0, p = 0; i < n; i++, p += 4) g[i] = .3 * d[p] + .59 * d[p + 1] + .11 * d[p + 2]; return g; };
   const fdown = (g, w, h) => { const w2 = w >> 1, h2 = h >> 1, o = new Float32Array(w2 * h2); for (let y = 0; y < h2; y++) for (let x = 0; x < w2; x++) o[y * w2 + x] = (g[2*y*w+2*x] + g[2*y*w+2*x+1] + g[(2*y+1)*w+2*x] + g[(2*y+1)*w+2*x+1]) / 4; return o; };
   const fbil = (g, w, h, x, y) => { x = x < 0 ? 0 : x > w - 1 ? w - 1 : x; y = y < 0 ? 0 : y > h - 1 ? h - 1 : y; const x0 = x | 0, y0 = y | 0, x1 = Math.min(w - 1, x0 + 1), y1 = Math.min(h - 1, y0 + 1), fx = x - x0, fy = y - y0; return (g[y0*w+x0]*(1-fx) + g[y0*w+x1]*fx) * (1-fy) + (g[y1*w+x0]*(1-fx) + g[y1*w+x1]*fx) * fy; };
@@ -172,7 +172,7 @@
       for (let i = 0; i < n; i++) { u[i] += du[i]; v[i] += dv[i]; }
     }
   }
-  // 返回 A -> B 的稠密光流 {u, v}（位移上限 lim 像素，防止在无纹理区域发散）
+  // 返回 A -> B 的稠密光流 {u, v}（位移上限 lim 像素，防止在無紋理區域發散）
   function pyrFlow(dA, dB, w, h, levels = 4, alpha = 20, iters = 32, warps = 2, lim = 7) {
     const n = w * h, pa = [fgray(dA, n)], pb = [fgray(dB, n)], sz = [[w, h]];
     for (let l = 1; l < levels; l++) { const [cw, ch] = sz[l - 1]; pa.push(fdown(pa[l - 1], cw, ch)); pb.push(fdown(pb[l - 1], cw, ch)); sz.push([cw >> 1, ch >> 1]); }
@@ -188,50 +188,50 @@
       const R = RIG[key], [wx, wy, w, h] = R.win;
       const frames = [winData(base, R.win, w, h), ...imgs.map(im => winData(im[key], null, w, h))];
       const top = R.tops.map(p => colCurve(p, wx, w));
-      for (const t of top) for (let i = 0; i < w; i++) t[i] -= wy;                         // 转成窗口内的 y
-      // 只在睫毛范围内生效，两端各用 8 像素渐入渐出
+      for (const t of top) for (let i = 0; i < w; i++) t[i] -= wy;                         // 轉成窗口內的 y
+      // 只在睫毛範圍內生效，兩端各用 8 像素漸入漸出
       const wcol = new Float32Array(w); for (let i = 0; i < w; i++) wcol[i] = smooth(R.xa - 8, R.xa + 2, wx + i) * (1 - smooth(R.xb - 2, R.xb + 8, wx + i));
       const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
-      // 01→02、02→03 两步：先算好光流（第一步 闭眼→01 变化太大，用睫毛带滑动，不用光流）
+      // 01→02、02→03 兩步：先算好光流（第一步 閉眼→01 變化太大，用睫毛帶滑動，不用光流）
       const flow = [null]; for (let k = 1; k < frames.length - 1; k++) flow.push(q.has('noflow') ? null : pyrFlow(frames[k].data, frames[k + 1].data, w, h));
       rigs[key] = { win: R.win, frames, top, wx: wcol, flow, out: new ImageData(w, h), cv, g: cv.getContext('2d') };
     }
   }
-  // 纵向双线性取样（x 为整数列）
+  // 縱向雙線性取樣（x 為整數列）
   function samp(d, w, h, i, y, o) {
     y = y < 0 ? 0 : y > h - 1 ? h - 1 : y; const y0 = y | 0, y1 = Math.min(h - 1, y0 + 1), f = y - y0, p0 = (y0 * w + i) * 4, p1 = (y1 * w + i) * 4;
     o[0] = d[p0] + (d[p1] - d[p0]) * f; o[1] = d[p0 + 1] + (d[p1 + 1] - d[p0 + 1]) * f; o[2] = d[p0 + 2] + (d[p1 + 2] - d[p0 + 2]) * f;
   }
-  // 二维双线性取样（RGBA）
+  // 二維雙線性取樣（RGBA）
   function samp2(d, w, h, x, y, o) {
     x = x < 0 ? 0 : x > w - 1 ? w - 1 : x; y = y < 0 ? 0 : y > h - 1 ? h - 1 : y;
     const x0 = x | 0, y0 = y | 0, x1 = Math.min(w - 1, x0 + 1), y1 = Math.min(h - 1, y0 + 1), fx = x - x0, fy = y - y0;
     const p00 = (y0 * w + x0) * 4, p10 = (y0 * w + x1) * 4, p01 = (y1 * w + x0) * 4, p11 = (y1 * w + x1) * 4;
     for (let c = 0; c < 3; c++) o[c] = (d[p00 + c] * (1 - fx) + d[p10 + c] * fx) * (1 - fy) + (d[p01 + c] * (1 - fx) + d[p11 + c] * fx) * fy;
   }
-  // 当前画面进度 p（0 闭眼 … 3 = 03）下，合成一只眼的窗口
+  // 當前畫面進度 p（0 閉眼 … 3 = 03）下，合成一隻眼的窗口
   function composeEye(E, p) {
     const [, wy, w, h] = E.win, k = Math.min(2, Math.floor(p)), s = p - k;
     const A = E.frames[k].data, B = E.frames[k + 1].data, C = E.frames[0].data, tA = E.top[k], tB = E.top[k + 1], out = E.out.data;
     const bh = lerp(BAND[k], BAND[k + 1], s);
-    const wz3 = k === 0 ? smooth(0, .25, s) : s;          // 眼睑下方：后一张的权重（第一步里更快过渡，避免闭眼睫毛尖残留）
-    const gate = k === 0 ? smooth(0, .1, s) : 1, lashMix = smooth(0, 1, s); // 刚开始睁时，从“纯闭眼底图”平滑过渡
-    const pa = [0, 0, 0], pb = [0, 0, 0], F = E.flow[k];     // F：01→02、02→03 的光流，第一步为 null
+    const wz3 = k === 0 ? smooth(0, .25, s) : s;          // 眼瞼下方：後一張的權重（第一步裡更快過渡，避免閉眼睫毛尖殘留）
+    const gate = k === 0 ? smooth(0, .1, s) : 1, lashMix = smooth(0, 1, s); // 剛開始睜時，從“純閉眼底圖”平滑過渡
+    const pa = [0, 0, 0], pb = [0, 0, 0], F = E.flow[k];     // F：01→02、02→03 的光流，第一步為 null
     for (let i = 0; i < w; i++) {
       const ye = lerp(tA[i], tB[i], s), wgt = gate * E.wx[i];
       for (let y = 0; y < h; y++) {
         const o = (y * w + i) * 4, c0 = (y * w + i) * 4;
         let r, g, b;
-        if (y < ye - 1) {                                   // 眼睑上方：皮肤，两张几乎一样
+        if (y < ye - 1) {                                   // 眼瞼上方：皮膚，兩張幾乎一樣
           r = lerp(A[o], B[o], s); g = lerp(A[o + 1], B[o + 1], s); b = lerp(A[o + 2], B[o + 2], s);
-        } else if (y < ye + bh) {                           // 睫毛带：刚体整体平移
+        } else if (y < ye + bh) {                           // 睫毛帶：剛體整體平移
           samp(A, w, h, i, tA[i] + (y - ye), pa); samp(B, w, h, i, tB[i] + (y - ye), pb);
           r = lerp(pa[0], pb[0], lashMix); g = lerp(pa[1], pb[1], lashMix); b = lerp(pa[2], pb[2], lashMix);
-        } else if (F) {                                     // 眼睑下方（01→02→03）：沿光流把两张图的眼珠/下眼睑“推”到同一位置再混合，避免重影
+        } else if (F) {                                     // 眼瞼下方（01→02→03）：沿光流把兩張圖的眼珠/下眼瞼“推”到同一位置再混合，避免重影
           const fu = F.u[y * w + i], fv = F.v[y * w + i];
           samp2(A, w, h, i - s * fu, y - s * fv, pa); samp2(B, w, h, i + (1 - s) * fu, y + (1 - s) * fv, pb);
           r = lerp(pa[0], pb[0], s); g = lerp(pa[1], pb[1], s); b = lerp(pa[2], pb[2], s);
-        } else {                                            // 眼睑下方（闭眼→01）：眼珠、下眼睑
+        } else {                                            // 眼瞼下方（閉眼→01）：眼珠、下眼瞼
           r = lerp(A[o], B[o], wz3); g = lerp(A[o + 1], B[o + 1], wz3); b = lerp(A[o + 2], B[o + 2], wz3);
         }
         out[o] = lerp(C[c0], r, wgt); out[o + 1] = lerp(C[c0 + 1], g, wgt); out[o + 2] = lerp(C[c0 + 2], b, wgt); out[o + 3] = 255;
@@ -245,7 +245,7 @@
     for (const key of ['L', 'R']) {
       const E = rigs[key], [wx, wy, w, h] = E.win;
       composeEye(E, Math.min(3, p)); E.g.putImageData(E.out, 0, 0);
-      // 窗口边缘羽化，和底图自然衔接
+      // 窗口邊緣羽化，和底圖自然銜接
       feather.width = w; feather.height = h; fg.clearRect(0, 0, w, h); fg.drawImage(E.cv, 0, 0);
       fg.globalCompositeOperation = 'destination-in';
       const gr = fg.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); gr.addColorStop(0, '#000'); gr.addColorStop(.78, '#000'); gr.addColorStop(1, 'rgba(0,0,0,0)');
@@ -253,12 +253,12 @@
       ctx.drawImage(feather, wx, wy);
     }
   }
-  // 时间进度 u -> 画面进度 p（关键点之间用平滑插值）
-  // 保单调的三次 Hermite 插值（Fritsch–Carlson）：经过每个关键点时速度是连续的，不会像逐段缓动那样在每个关键帧处“顿一下”
+  // 時間進度 u -> 畫面進度 p（關鍵點之間用平滑插值）
+  // 保單調的三次 Hermite 插值（Fritsch–Carlson）：經過每個關鍵點時速度是連續的，不會像逐段緩動那樣在每個關鍵幀處“頓一下”
   const OPEN_TAN = (() => {
     const K = OPEN_KEYS, n = K.length, d = [], m = new Array(n).fill(0);
     for (let i = 0; i < n - 1; i++) d[i] = (K[i + 1][1] - K[i][1]) / (K[i + 1][0] - K[i][0]);
-    for (let i = 1; i < n - 1; i++) m[i] = d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2;      // 两端速度为 0：起步缓、收尾缓
+    for (let i = 1; i < n - 1; i++) m[i] = d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2;      // 兩端速度為 0：起步緩、收尾緩
     for (let i = 0; i < n - 1; i++) { if (d[i] === 0) { m[i] = m[i + 1] = 0; continue; } const a = m[i] / d[i], b = m[i + 1] / d[i], s2 = a * a + b * b; if (s2 > 9) { const t = 3 / Math.sqrt(s2); m[i] = t * a * d[i]; m[i + 1] = t * b * d[i]; } }
     return m;
   })();
@@ -268,9 +268,9 @@
     return (2 * t3 - 3 * t2 + 1) * y0 + (t3 - 2 * t2 + t) * h * OPEN_TAN[i] + (-2 * t3 + 3 * t2) * y1 + (t3 - t2) * h * OPEN_TAN[i + 1];
   }
 
-  // ================= 线稿：从闭眼底图实时提取 + 发光；脸和眼睛分两层 =================
+  // ================= 線稿：從閉眼底圖實時提取 + 發光；臉和眼睛分兩層 =================
   function buildLineart(srcCv) {
-    const SC = 1.2, w = Math.round(srcCv.width * SC), h = Math.round(srcCv.height * SC);   // 线稿层比原来小一圈（原 1.6），GPU 合成快很多，发光线条依然清晰
+    const SC = 1.2, w = Math.round(srcCv.width * SC), h = Math.round(srcCv.height * SC);   // 線稿層比原來小一圈（原 1.6），GPU 合成快很多，發光線條依然清晰
     const mk = () => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
     const src = mk(), sx = src.getContext('2d', { willReadFrequently: true });
     sx.imageSmoothingQuality = 'high'; sx.filter = `blur(${TUNE.blur}px)`; sx.drawImage(srcCv, 0, 0, w, h); sx.filter = 'none';
@@ -296,7 +296,7 @@
       }
     }
     ex.putImageData(out, 0, 0);
-    // 眼部遮罩（羽化椭圆）：把线稿拆成“脸”和“眼睛”两层，眼睛晚一点亮起
+    // 眼部遮罩（羽化橢圓）：把線稿拆成“臉”和“眼睛”兩層，眼睛晚一點亮起
     const mask = mk(), mx = mask.getContext('2d');
     for (const E of EYES) {
       const Z = E.lash;
@@ -307,14 +307,14 @@
     }
     const edgeEyes = mk(), ee = edgeEyes.getContext('2d'); ee.drawImage(edge, 0, 0);
     ee.globalCompositeOperation = 'destination-in'; ee.drawImage(mask, 0, 0);
-    const ebx = edge.getContext('2d'); ebx.globalCompositeOperation = 'destination-out'; ebx.drawImage(mask, 0, 0);   // edge 变成“不含眼睛”
+    const ebx = edge.getContext('2d'); ebx.globalCompositeOperation = 'destination-out'; ebx.drawImage(mask, 0, 0);   // edge 變成“不含眼睛”
     mask.width = 0;
     const glowOf = (edgeCv, target, bright) => {
       const glow = mk(), gx = glow.getContext('2d'); gx.drawImage(edgeCv, 0, 0);
       gx.globalCompositeOperation = 'source-in'; gx.fillStyle = 'rgb(255,128,40)'; gx.fillRect(0, 0, w, h);
       target.width = w; target.height = h;
       const lc = target.getContext('2d'); lc.globalCompositeOperation = 'lighter';
-      lc.filter = 'blur(16px)'; lc.globalAlpha = Math.min(1, .8 * bright); lc.drawImage(glow, 0, 0); lc.drawImage(glow, 0, 0); if (bright > 1) { lc.drawImage(glow, 0, 0); lc.drawImage(glow, 0, 0); }   // bright>1：眼睛层额外加亮（原来靠 CSS brightness 做，很费）
+      lc.filter = 'blur(16px)'; lc.globalAlpha = Math.min(1, .8 * bright); lc.drawImage(glow, 0, 0); lc.drawImage(glow, 0, 0); if (bright > 1) { lc.drawImage(glow, 0, 0); lc.drawImage(glow, 0, 0); }   // bright>1：眼睛層額外加亮（原來靠 CSS brightness 做，很費）
       lc.filter = 'blur(5px)'; lc.globalAlpha = .95; lc.drawImage(glow, 0, 0);
       lc.filter = 'none'; lc.globalAlpha = 1; lc.drawImage(edgeCv, 0, 0); lc.drawImage(edgeCv, 0, 0);
       glow.width = 0;
@@ -323,19 +323,19 @@
     edge.width = 0; edgeEyes.width = 0;
   }
 
-  // ================= 流光丝带 =================
-  // 参考：尖锐明亮的前端 + 向后逐渐变宽的半透明多层丝带（尾部在画面外）+ 边缘颗粒状光点拖尾。
-  // 每条丝带是一条很长的路径（起点在画面外）；“头部”沿路径前进，路径上头部以后的整段就是丝带。
-  // 宽度：头部为 0（尖），往后在 d0 的距离内逐渐变宽；多层薄带随距离逐渐散开。配色取 Claude 主题：陶土橙 / 杏色 / 象牙白。
-  // 退场：头部继续沿路径流出画面，尾部追上来，丝带变短、变细、变淡；各条丝带错开离场（中央先清空，边缘残光最后消退）。
+  // ================= 流光絲帶 =================
+  // 參考：尖銳明亮的前端 + 向後逐漸變寬的半透明多層絲帶（尾部在畫面外）+ 邊緣顆粒狀光點拖尾。
+  // 每條絲帶是一條很長的路徑（起點在畫面外）；“頭部”沿路徑前進，路徑上頭部以後的整段就是絲帶。
+  // 寬度：頭部為 0（尖），往後在 d0 的距離內逐漸變寬；多層薄帶隨距離逐漸散開。配色取 Claude 主題：陶土橙 / 杏色 / 象牙白。
+  // 退場：頭部繼續沿路徑流出畫面，尾部追上來，絲帶變短、變細、變淡；各條絲帶錯開離場（中央先清空，邊緣殘光最後消退）。
   const SILK_COL = {
     orange:  { tip: [255, 238, 214], mid: [240, 148, 92], tail: [200, 98, 68] },       // 陶土橙
     ivory:   { tip: [255, 252, 244], mid: [255, 238, 216], tail: [240, 208, 172] },    // 象牙白 / 奶油
     apricot: { tip: [255, 232, 204], mid: [246, 176, 122], tail: [222, 124, 92] },     // 杏色
     cream:   { tip: [255, 250, 240], mid: [255, 226, 188], tail: [236, 180, 138] }     // 奶油金
   };
-  //   pts：路径控制点（相对画面的比例，可超出 0~1）；h0→h1：第一阶段头部走到的位置（路径参数 0~1）；h2：第二阶段继续走到的位置
-  //   w：最宽处（占画面高度）；d0：从尖端变到最宽所需的距离（占画面宽度）；amp/freq/speed：丝带的起伏摆动；ex0~ex1：退场时间段
+  //   pts：路徑控制點（相對畫面的比例，可超出 0~1）；h0→h1：第一階段頭部走到的位置（路徑參數 0~1）；h2：第二階段繼續走到的位置
+  //   w：最寬處（佔畫面高度）；d0：從尖端變到最寬所需的距離（佔畫面寬度）；amp/freq/speed：絲帶的起伏擺動；ex0~ex1：退場時間段
   const RIBBONS = [
     { col: 'orange', pts: [[-.55,.28],[-.2,.34],[.1,.42],[.34,.56],[.58,.55],[.80,.40],[1.0,.20],[1.22,.04]],
       t0: .50, dur: 1.5, h0: .20, h1: .71, dur2: 1.4, h2: 1, w: .17, d0: .40, amp: .030, freq: 1.3, speed: 1.1, ph: 0, seed: 11, ex0: 2.9, ex1: 4.1 },
@@ -350,7 +350,7 @@
   ];
   const SILK_N = 128;
   const rand32 = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-  // Catmull-Rom 采样出 SILK_N+1 个点及法向（未摆动）
+  // Catmull-Rom 採樣出 SILK_N+1 個點及法向（未擺動）
   function silkSpline(R) {
     const P = R.pts, per = SILK_N / (P.length - 1), out = [];
     for (let i = 0; i <= SILK_N; i++) {
@@ -364,17 +364,17 @@
   }
   const rgba = (c, a) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${clamp(a, 0, 1).toFixed(3)})`;
   const mixc = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
-  // 画一条丝带；返回头部位置（还在前进时），否则 null
+  // 畫一條絲帶；返回頭部位置（還在前進時），否則 null
   function drawRibbon(R, tt, alpha) {
     const k = (tt - R.t0) / R.dur; if (k <= 0) return null;
     const e = clamp((tt - R.ex0) / (R.ex1 - R.ex0)); if (e >= 1) return null;
     if (!R.spl) silkSpline(R);
     const k2 = (tt - R.t0 - R.dur) / R.dur2, es = e * e * (3 - 2 * e);
     let hf = k < 1 ? lerp(R.h0, R.h1, 1 - Math.pow(1 - clamp(k), 1.9)) : lerp(R.h1, R.h2, smooth(0, 1, k2));
-    if (e > 0) hf = lerp(hf, 1, smooth(0, .8, e));                     // 退场：头部继续流出画面
-    const tf = hf * Math.pow(es, 1.2);                                  //       尾部追上来
-    alpha *= 1 - smooth(.5, 1, e);                                      //       同时逐渐淡去
-    // 采样路径（叠加摆动），只取 [尾, 头] 之间的一段
+    if (e > 0) hf = lerp(hf, 1, smooth(0, .8, e));                     // 退場：頭部繼續流出畫面
+    const tf = hf * Math.pow(es, 1.2);                                  //       尾部追上來
+    alpha *= 1 - smooth(.5, 1, e);                                      //       同時逐漸淡去
+    // 採樣路徑（疊加擺動），只取 [尾, 頭] 之間的一段
     const N = SILK_N, ihf = hf * N, ih = Math.floor(ihf), fr = ihf - ih, i0 = Math.min(Math.floor(tf * N), N - 3), col = SILK_COL[R.col];
     const last = Math.min(N, ih + 1), work = R.work, X = work.X, Y = work.Y, NX = work.NX, NY = work.NY, L = work.L, hw = work.hw, fan = work.fan;
     let n = 0; L[0] = 0;
@@ -405,22 +405,22 @@
       rc.strokeStyle = grad(a); rc.lineWidth = wpx; rc.stroke();
     };
     rc.save(); rc.globalCompositeOperation = 'lighter'; rc.lineJoin = 'round'; rc.lineCap = 'round';
-    alpha *= .78 * (R.col === 'ivory' || R.col === 'cream' ? 1.4 : 1);  // 整体收一点避免过曝；象牙白/奶油在深色底上显得偏灰，单独提亮
-    // 柔和外晕 + 多层半透明薄带（越往后越散开）
+    alpha *= .78 * (R.col === 'ivory' || R.col === 'cream' ? 1.4 : 1);  // 整體收一點避免過曝；象牙白/奶油在深色底上顯得偏灰，單獨提亮
+    // 柔和外暈 + 多層半透明薄帶（越往後越散開）
     strand(0, 1.35, alpha * .06);
     strand(0, 1.0, alpha * .17);
     strand(-.50, .52, alpha * .20);
     strand(.46, .46, alpha * .18);
     strand(.02, .20, alpha * .26);
-    // 内部清晰的细亮线
+    // 內部清晰的細亮線
     for (const o of [-.7, -.28, .3, .74]) line(o, Math.max(1, DPR), alpha * .40);
     // 亮芯：靠近尖端最亮
     line(0, 6 * DPR, alpha * .10);
     line(0, 2 * DPR, alpha * .62);
     const moving = e === 0 && (k < 1 || k2 < 1);
-    // 前端亮点（很小，不要光晕球）
+    // 前端亮點（很小，不要光暈球）
     if (moving) { const r0 = .012 * H, g = rc.createRadialGradient(hx, hy, 0, hx, hy, r0); g.addColorStop(0, rgba(col.tip, alpha)); g.addColorStop(1, rgba(col.tip, 0)); rc.fillStyle = g; rc.beginPath(); rc.arc(hx, hy, r0, 0, 6.283); rc.fill(); }
-    // 边缘颗粒光点：沿丝带两侧缓缓流动、闪烁、逐渐消散
+    // 邊緣顆粒光點：沿絲帶兩側緩緩流動、閃爍、逐漸消散
     const span = Math.min(Lh, 1.3 * W);
     for (const p of R.parts) {
       const f = (p.f + tt * p.sp) % 1, d = f * span; if (d >= Lh || d < 2) continue;
@@ -435,11 +435,11 @@
     return moving ? [hx, hy] : null;
   }
 
-  // ================= 星点 / 光点 / 花瓣 / 星芒 =================
-  // 气泡换成了更贴 Claude 的东西：暖色花瓣（呼应角色发饰上的橙色花）+ 小星芒（呼应 Claude 的放射星芒标志），随暖风缓缓飘升
+  // ================= 星點 / 光點 / 花瓣 / 星芒 =================
+  // 氣泡換成了更貼 Claude 的東西：暖色花瓣（呼應角色髮飾上的橙色花）+ 小星芒（呼應 Claude 的放射星芒標誌），隨暖風緩緩飄升
   let stars = [], dust = [], petals = [], sparks = [];
   const makeGlow = rgb => { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'), gr = g.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, `rgba(${rgb},1)`); gr.addColorStop(.35, `rgba(${rgb},.45)`); gr.addColorStop(1, `rgba(${rgb},0)`); g.fillStyle = gr; g.fillRect(0, 0, 32, 32); return c; };
-  const SPR = [makeGlow('255,214,160'), makeGlow('255,150,80')];     // 预渲染的光点贴图：一次 drawImage 就能画，比每帧新建径向渐变快得多
+  const SPR = [makeGlow('255,214,160'), makeGlow('255,150,80')];     // 預渲染的光點貼圖：一次 drawImage 就能畫，比每幀新建徑向漸變快得多
   const PETAL_COL = [[222, 124, 92], [240, 160, 108], [232, 138, 100], [246, 190, 140]];
   function seedStars() {
     const rnd = rand32(7);
@@ -457,7 +457,7 @@
       fc.fillStyle = `rgba(255,240,225,${(s.a * tw * night * smooth(.2, 1.2, tt)).toFixed(3)})`;
       fc.fillRect(s.x, s.y, s.r * 2, s.r * 2);
     }
-    // 流光头部拖出的光点（贴图）
+    // 流光頭部拖出的光點（貼圖）
     fc.globalCompositeOperation = 'lighter';
     for (let i = dust.length - 1; i >= 0; i--) {
       const p = dust[i]; p.age += dt; if (p.age > p.life) { dust[i] = dust[dust.length - 1]; dust.pop(); continue; }
@@ -465,7 +465,7 @@
       fc.globalAlpha = (1 - p.age / p.life) * .9; const s = p.r * 6; fc.drawImage(SPR[p.c], p.x - s / 2, p.y - s / 2, s, s);
     }
     fc.globalAlpha = 1; fc.globalCompositeOperation = 'source-over';
-    // 花瓣 + 星芒：彩图浮现之后出现，退场前淡出
+    // 花瓣 + 星芒：彩圖浮現之後出現，退場前淡出
     const ba = smooth(4.8, 5.8, tt) * (1 - smooth(T.end + .3, T.end + .9, tt));
     if (ba > 0) {
       for (const p of petals) {
@@ -493,17 +493,17 @@
     for (let i = 0; i < 2; i++) dust.push({ x, y, vx: (Math.random() - .5) * 60 * DPR, vy: (Math.random() - .5) * 60 * DPR, age: 0, life: .5 + Math.random() * .7, r: (Math.random() * 2 + .8) * DPR, c: Math.random() < .5 ? 0 : 1 });
   }
 
-  // ================= 渲染一帧 =================
+  // ================= 渲染一幀 =================
   const typed = $('typed'), caret = $('caret'), rule = $('rule'), welcome = $('welcome'), tag = $('tag');
   let typedN = -1, lastP = -1, ribOn = false;
   const setMask = (el, m) => { el.style.webkitMaskImage = m; el.style.maskImage = m; };
-  // 调试：?perf 统计每个阶段每帧在 JS 里花的时间（ms），每 0.5 秒输出一行到控制台（需配合 ?tick）
+  // 調試：?perf 統計每個階段每幀在 JS 裡花的時間（ms），每 0.5 秒輸出一行到控制台（需配合 ?tick）
   const PERF = q.has('perf'), perfAcc = { n: 0, max: 0 }; let perfT = 0, perfLast = 0;
   const lap = k => { if (!PERF) return; const n = performance.now(); perfAcc[k] = (perfAcc[k] || 0) + (n - perfT); perfT = n; };
   function render(tt) {
     if (PERF) perfT = performance.now();
     const perfStart = perfT;
-    // 光带：各自按自己的时间退场；全部退场后不再绘制（只清一次画布）
+    // 光帶：各自按自己的時間退場；全部退場後不再繪製（只清一次畫布）
     if (tt < 5.2) {
       rc.clearRect(0, 0, W, H); ribOn = true;
       for (const R of RIBBONS) {
@@ -512,27 +512,27 @@
       }
     } else if (ribOn) { rc.clearRect(0, 0, W, H); ribOn = false; }
     lap('ribbons');
-    // 1) 线稿（脸/发/嘴/身体）：从头部向外画出
+    // 1) 線稿（臉/發/嘴/身體）：從頭部向外畫出
     const lineOut = 1 - smooth(T.linesOut, T.linesOutEnd, tt);
     const r = easeInOut((tt - T.lineStart) / (T.lineEnd - T.lineStart)) * 118;
-    // 注意：这几层的透明度最低保持在 0.003（肉眼不可见）而不是 0。浏览器对 opacity:0 的图层不会上传显存，
-    // 第一次变得可见时才一次性上传几 MB 的纹理，会让动画突然卡一下；保持极低透明度可以在加载阶段就“预热”好。
+    // 注意：這幾層的透明度最低保持在 0.003（肉眼不可見）而不是 0。瀏覽器對 opacity:0 的圖層不會上傳顯存，
+    // 第一次變得可見時才一次性上傳幾 MB 的紋理，會讓動畫突然卡一下；保持極低透明度可以在加載階段就“預熱”好。
     line.style.opacity = Math.max(.003, smooth(T.lineStart - .1, T.lineStart + .5, tt) * lineOut);
     setMask(line, `radial-gradient(ellipse at ${FACE.x}% ${FACE.y}%, #000 ${r}%, transparent ${r + 10}%)`);
-    // 2) 眼睑/睫毛线稿：稍后亮起（亮闪效果在生成这一层时已经烘进去了，运行时不再用 CSS filter）
+    // 2) 眼瞼/睫毛線稿：稍後亮起（亮閃效果在生成這一層時已經烘進去了，運行時不再用 CSS filter）
     lineEyes.style.opacity = Math.max(.003, smooth(T.eyesIn, T.eyesInEnd, tt) * lineOut);
-    // 3) 闭眼底图：从线稿里浮现（先淡入，同时从头部向外铺开）
+    // 3) 閉眼底圖：從線稿裡浮現（先淡入，同時從頭部向外鋪開）
     const ci = easeInOut((tt - T.dawn) / (T.dawnEnd - T.dawn));
     color.style.opacity = Math.max(.003, ci);
     const cr = ci * 150;
     setMask(color, `radial-gradient(ellipse at ${FACE.x}% ${FACE.y}%, #000 ${cr}%, transparent ${cr + 35}%)`);
     $('bloom').style.opacity = Math.max(.003, Math.sin(Math.PI * clamp((tt - 4.0) / 1.8)) * .28);
-    // 4) 睁眼：画面进度 p（0 闭眼 … 3 = 03）
+    // 4) 睜眼：畫面進度 p（0 閉眼 … 3 = 03）
     lap('styles');
     const pr = FORCE_P !== null ? FORCE_P : openProgress((tt - T.open) / (T.openEnd - T.open));
     if (baseImg && Math.abs(pr - lastP) > .003) { lastP = pr; paintFace(cc, pr); }
     lap('eyes');
-    // 镜头
+    // 鏡頭
     $('cam').style.transform = ZOOM ? `scale(${ZOOM})` : `scale(${1.06 - .06 * easeOut((tt - 2.0) / 6)})`;
     // 文字
     const tn = Math.max(-1, Math.floor((tt - T.text) / .085));
@@ -548,7 +548,7 @@
     drawFx(tt);
     lap('fx');
     $('fade').style.opacity = LAUNCHER && !APP_URL ? 0 : smooth(T.end, CFG.total, tt);
-    if (LAUNCHER && !doneSet && tt >= T.end) { doneSet = true; setState('DONE'); }       // 到了淡出时间，通知启动器开始渐隐窗口
+    if (LAUNCHER && !doneSet && tt >= T.end) { doneSet = true; setState('DONE'); }       // 到了淡出時間，通知啟動器開始漸隱窗口
     if (PERF) {
       const dtf = performance.now() - perfStart; perfAcc.n++; perfAcc.max = Math.max(perfAcc.max, dtf);
       if (tt - perfLast >= .5) {
@@ -558,7 +558,7 @@
     }
   }
 
-  // 调试：把两只眼在若干进度下的合成结果并排放大显示（?strip=0,0.4,0.8,1,2,3&s=1.5）
+  // 調試：把兩隻眼在若干進度下的合成結果並排放大顯示（?strip=0,0.4,0.8,1,2,3&s=1.5）
   function showStrip(ps, S) {
     const full = document.createElement('canvas'); full.width = baseImg.naturalWidth; full.height = baseImg.naturalHeight; const fx2 = full.getContext('2d');
     const cv = document.createElement('canvas'), w = 190, h = 100; cv.width = ps.length * w * S; cv.height = 2 * h * S;
@@ -579,10 +579,10 @@
   }
 
   // ================= 播放控制 =================
-  // 调试：?tick 用定时器驱动（页面被隐藏时 rAF 会暂停）；?pauseAt=6.4 播到该秒后停住，便于截图
+  // 調試：?tick 用定時器驅動（頁面被隱藏時 rAF 會暫停）；?pauseAt=6.4 播到該秒後停住，便於截圖
   const TICK = q.has('tick'), PAUSE_AT = q.has('pauseAt') ? parseFloat(q.get('pauseAt')) : null;
-  // 播放时钟自己累加，而不是用“现在 - 起点”：窗口白屏 / 被系统暂停绘制 / CPU 被抢占时帧间隔会突然很大，
-  // 如果直接按真实时间算，动画会整段跳过去；这里每帧最多前进 50 ms，卡住的那段时间动画就停在原地，恢复后接着播。
+  // 播放時鐘自己累加，而不是用“現在 - 起點”：窗口白屏 / 被系統暫停繪製 / CPU 被搶佔時幀間隔會突然很大，
+  // 如果直接按真實時間算，動畫會整段跳過去；這裡每幀最多前進 50 ms，卡住的那段時間動畫就停在原地，恢復後接著播。
   let clock = 0, lastNow = 0, raf = 0, tickId = 0;
   function loop(now) {
     const dt = now - lastNow; lastNow = now;
@@ -597,13 +597,13 @@
   function start() {
     cancelAnimationFrame(raf); clearInterval(tickId); typedN = -1; lastP = -1; dust = []; lastT = 0;
     doneSet = false; setState('PLAYING');
-    typed.textContent = '';          // 重播时必须手动清空：打字逻辑只在字数变化时才更新，开头的字数 (-1) 和重置值相同，不会自己清掉上一轮的整行文字
-    clock = -.15; lastNow = performance.now();       // 开头先停 0.15 s，给窗口显示出来后的第一帧留余量
+    typed.textContent = '';          // 重播時必須手動清空：打字邏輯只在字數變化時才更新，開頭的字數 (-1) 和重置值相同，不會自己清掉上一輪的整行文字
+    clock = -.15; lastNow = performance.now();       // 開頭先停 0.15 s，給窗口顯示出來後的第一幀留餘量
     if (TICK) tickId = setInterval(() => loop(performance.now()), 16); else raf = requestAnimationFrame(loop);
   }
-  // 启动器模式：先告诉启动器“页面加载好了”(READY)，启动器把窗口（仍然透明）摆到 Claude 窗口的位置和大小；
-  // 等窗口尺寸稳定、并在最终尺寸下画出第一帧之后才真正开始播放(PLAYING)，启动器此时才让窗口显示出来——
-  // 这样显示出来的第一刻就已经有画面，不会先白屏一会儿。
+  // 啟動器模式：先告訴啟動器“頁面加載好了”(READY)，啟動器把窗口（仍然透明）擺到 Claude 窗口的位置和大小；
+  // 等窗口尺寸穩定、並在最終尺寸下畫出第一幀之後才真正開始播放(PLAYING)，啟動器此時才讓窗口顯示出來——
+  // 這樣顯示出來的第一刻就已經有畫面，不會先白屏一會兒。
   function whenWindowReady() {
     return new Promise(res => {
       setState('READY');
@@ -617,18 +617,18 @@
     });
   }
 
-  // ================= 载入 =================
+  // ================= 載入 =================
   resize(); addEventListener('resize', () => { resize(); if (FREEZE !== null) render(FREEZE); });
   loadImg(window.CLAUDE_CLOSED_IMG).then(async base => {
     baseImg = base;
     color.width = base.naturalWidth; color.height = base.naturalHeight;
-    await buildRigs(base);                                  // 眼睛的四张窗口 + 眼睑曲线
-    // 线稿直接从闭眼底图提取
+    await buildRigs(base);                                  // 眼睛的四張窗口 + 眼瞼曲線
+    // 線稿直接從閉眼底圖提取
     const src = document.createElement('canvas'); src.width = base.naturalWidth; src.height = base.naturalHeight;
     src.getContext('2d').drawImage(base, 0, 0);
     buildLineart(src); src.width = 0;
-    if (q.has('strip')) { showStrip(q.get('strip').split(',').map(Number), +(q.get('s') || 1.5)); return; }   // 调试：眼睛特写序列
-    if (q.has('smooth')) { // 调试：把睁眼过程按 0.05 步长合成，输出相邻两步之间眼睛窗口的平均像素变化；尖峰 = 过渡里有突变/跳动
+    if (q.has('strip')) { showStrip(q.get('strip').split(',').map(Number), +(q.get('s') || 1.5)); return; }   // 調試：眼睛特寫序列
+    if (q.has('smooth')) { // 調試：把睜眼過程按 0.05 步長合成，輸出相鄰兩步之間眼睛窗口的平均像素變化；尖峰 = 過渡裡有突變/跳動
       const rows = []; let prev = null;
       for (let p = 0; p <= 3.0001; p += .05) {
         const cur = ['L', 'R'].map(k => { composeEye(rigs[k], p); return new Uint8ClampedArray(rigs[k].out.data); });
@@ -640,7 +640,7 @@
       return;
     }
     const p0 = FORCE_P !== null ? FORCE_P : 0; paintFace(cc, p0); lastP = p0;
-    if (q.has('perf')) console.log('READY after ' + performance.now().toFixed(0) + ' ms (页面加载 + 线稿提取 + 光流预计算)');
+    if (q.has('perf')) console.log('READY after ' + performance.now().toFixed(0) + ' ms (頁面加載 + 線稿提取 + 光流預計算)');
     if (FREEZE !== null) { resize(); render(FREEZE); return; }
     if (LAUNCHER) whenWindowReady().then(start); else start();
   }).catch(e => console.error(e));
@@ -649,7 +649,7 @@
   addEventListener('keydown', e => {
     const k = e.key.toLowerCase();
     if (APP_URL && (k === 'escape' || k === ' ' || k === 'enter')) { e.preventDefault(); finishInAppSplash(); return; }
-    if (LAUNCHER) { if (k === 'escape' || k === ' ' || k === 'enter') { doneSet = true; setState('DONE'); } return; }   // 启动器模式：这些键 = 跳过
+    if (LAUNCHER) { if (k === 'escape' || k === ' ' || k === 'enter') { doneSet = true; setState('DONE'); } return; }   // 啟動器模式：這些鍵 = 跳過
     if ((k === ' ' || k === 'r') && FREEZE === null) start();
     if (k === 'f') (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => {});
   });

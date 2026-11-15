@@ -1,4 +1,4 @@
-﻿const { app, BrowserWindow, shell, dialog, ipcMain, safeStorage, clipboard, screen, session, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, shell, dialog, ipcMain, safeStorage, clipboard, screen, session, Menu, nativeImage } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { spawn, execFileSync } = require('child_process');
@@ -72,12 +72,12 @@ const AI_WEBSITE_URLS = {
   openai:'https://chatgpt.com/auth/login',anthropic:'https://claude.ai/login',gemini:'https://gemini.google.com/app',
   deepseek:'https://chat.deepseek.com/',grok:'https://grok.com/',qwen:'https://chat.qwen.ai/',
   mistral:'https://chat.mistral.ai/chat',copilot:'https://copilot.com/',perplexity:'https://www.perplexity.ai/',
-  meta:'https://www.meta.ai/',kimi:'https://www.kimi.com/',glm:'https://chat.z.ai/'
+  meta:'https://www.meta.ai/',kimi:'https://www.kimi.com/',glm:'https://chat.z.ai/',doubao:'https://www.doubao.com/'
 };
 const AI_AUTH_HOSTS = Object.freeze(['google.com','googleusercontent.com','gstatic.com','youtube.com','ytimg.com','googleapis.com','microsoft.com','microsoftonline.com','live.com','apple.com','cloudflare.com','openai.com','facebook.com','x.com','twitter.com',
-  // 支援的 12 家官網「註冊域」：登入常跳到同公司的兄弟子網域（例如 auth.deepseek.com、login.qwen.ai），
+  // 支援的 13 家官網「註冊域」：登入常跳到同公司的兄弟子網域（例如 auth.deepseek.com、login.qwen.ai），
   // 只列官網本身主機會被內建模式的導覽白名單擋掉，造成登入被踢到外部瀏覽器。
-  'anthropic.com','deepseek.com','x.ai','qwen.ai','aliyun.com','alibaba.com','taobao.com','alipay.com','mistral.ai','copilot.com','perplexity.ai','meta.ai','meta.com','kimi.com','moonshot.cn','z.ai','zhipuai.cn']);
+  'anthropic.com','deepseek.com','x.ai','qwen.ai','aliyun.com','alibaba.com','taobao.com','alipay.com','mistral.ai','copilot.com','perplexity.ai','meta.ai','meta.com','kimi.com','moonshot.cn','z.ai','zhipuai.cn','doubao.com']);
 const AI_ALLOWED_HOSTS = Object.freeze([...new Set([
   ...Object.values(AI_WEBSITE_URLS).map(value => new URL(value).hostname),
   ...AI_AUTH_HOSTS
@@ -133,7 +133,7 @@ function isAllowedAiWebsiteUrl(value) {
 // App 不會保存、讀取或自動填入 Google 帳密，也不會呼叫 Windows Hello／PIN。
 const webLoginCredentialCache=new Map();
 const aiWebsiteWindowProviders=new WeakMap();
-const WEB_PASSWORD_HOSTS=Object.freeze({openai:['openai.com'],anthropic:['claude.ai','anthropic.com'],gemini:[],deepseek:['deepseek.com'],grok:['grok.com','x.com'],qwen:['qwen.ai'],mistral:['mistral.ai'],copilot:['copilot.com'],perplexity:['perplexity.ai'],meta:['meta.ai','meta.com'],kimi:['kimi.com','moonshot.cn'],glm:['z.ai','zhipuai.cn']});
+const WEB_PASSWORD_HOSTS=Object.freeze({openai:['openai.com'],anthropic:['claude.ai','anthropic.com'],gemini:[],deepseek:['deepseek.com'],grok:['grok.com','x.com'],qwen:['qwen.ai'],mistral:['mistral.ai'],copilot:['copilot.com'],perplexity:['perplexity.ai'],meta:['meta.ai','meta.com'],kimi:['kimi.com','moonshot.cn'],glm:['z.ai','zhipuai.cn'],doubao:['doubao.com']});
 function prefillWebLoginCredential(win, provider) {
   // Gemini／Google 登入只在使用者親自操作的外部 Chrome／Edge 視窗完成。
   if(String(provider||'').toLowerCase()==='gemini')return;
@@ -1257,16 +1257,26 @@ async function submitViaRunner(runner, prompt = '') {
 }
 async function harvestWebReply(runner, probeText) {
   // 優先按官網自己的「複製」鈕：讓網站把乾淨的答覆寫進剪貼簿（也避開思考過程的文字）。
+  // 穩定度：只採收「完整 JSON」回覆；不完整時回傳空字串，讓監看流程繼續等待。
+  const isComplete = (t) => {
+    try { return !!aiWebFlow.isCompleteWebReply(t); } catch { return false; }
+  };
   const before = clipboard.readText();
   try {
     const clicked = await runner.evaluate(aiWebFlow.buildCopyClickScript());
     if (clicked && clicked.clicked) {
-      await new Promise(resolve => setTimeout(resolve, 420));
-      const after = clipboard.readText();
-      if (after && after !== before && after.length >= 20) return after;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 300 + attempt * 100));
+        const after = clipboard.readText();
+        if (after && after !== before && after.length >= 20) {
+          if (isComplete(after)) return after;
+        }
+      }
     }
   } catch {}
-  return String(probeText || '');
+  const probe = String(probeText || '');
+  if (probe.trim() && isComplete(probe)) return probe;
+  return '';
 }
 function stopWebAutoWatch() {
   if (!webAutoWatch) return false;
@@ -2168,8 +2178,10 @@ function createWindow() {
     minHeight: 640,
     autoHideMenuBar: true,
     show: false,
-    skipTaskbar: true,
-    backgroundColor: '#030308',
+    // 工作列圖標必須在視窗第一次顯示時就帶上自訂 icon；若建立時 skipTaskbar:true，
+    // Windows 會用預設 Electron 圖標建立按鈕，之後 setSkipTaskbar(false) 也來不及。
+    skipTaskbar: false,
+    backgroundColor: '#090706',
     webPreferences: {
       preload: path.join(__dirname, 'electron-preload.cjs'),
       contextIsolation: true,
@@ -2184,6 +2196,7 @@ function createWindow() {
   let splashBounds = null;
   let splashMaximized = false;
   let splashShown = false;
+  let inSplashPhase = true;
   let startupFinished = false;
   let appReady = false;
   let appLoadStarted = false;
@@ -2252,6 +2265,11 @@ try { if (windowIcon) win.setIcon(windowIcon); } catch {}
     return {action: 'deny'};
   });
   win.webContents.on('will-navigate', (event, url) => {
+    if (inSplashPhase && (url === appUrl || String(url).startsWith(indexUrl))) {
+      event.preventDefault();
+      finishStartup();
+      return;
+    }
     if (!isRendererPageUrl(url) && !isStartupSplashPageUrl(url)) event.preventDefault();
   });
   // 開場動畫與主畫面分離：主畫面在背景預載，9.4 秒動畫結束後只切換視窗。
@@ -2261,51 +2279,36 @@ try { if (windowIcon) win.setIcon(windowIcon); } catch {}
     appLoadStarted = true;
     try { win.webContents.setBackgroundThrottling(false); } catch {}
     win.loadURL(appUrl).catch(error => {
-      console.error('主畫面載入失敗：', error?.message || error);
+      console.error('主視窗載入失敗：', error?.message || error);
       appReady = true;
       revealAppWindow();
     });
   };
-  const captureSplashState = () => {
-    const splash = splashWindow;
-    if (!splash || splash.isDestroyed()) return;
-    try { splashBounds = splash.getNormalBounds(); } catch {}
-    try { splashMaximized = splash.isMaximized(); } catch {}
-  };
+  const captureSplashState = () => {};
   const revealAppWindow = () => {
     if (appRevealed || win.isDestroyed() || !startupFinished || !appReady) return;
     appRevealed = true;
     if (revealTimer) { clearTimeout(revealTimer); revealTimer = 0; }
     try {
-      if (splashBounds) {
-        if (splashMaximized) win.maximize();
-        else win.setBounds(splashBounds);
-      } else if (savedState && savedState.maximized) {
-        win.maximize();
-      }
+      if (savedState && savedState.maximized) win.maximize();
     } catch {}
     try { win.setSkipTaskbar(false); win.show(); win.focus(); } catch {}
-    // 背景預載期間關閉節流；顯示後恢復，最小化時才不會一直吃計時器。
     setTimeout(() => {
       try { if (!win.isDestroyed()) win.webContents.setBackgroundThrottling(true); } catch {}
     }, 2500);
-    const splash = splashWindow;
-    splashWindow = null;
-    if (splash && !splash.isDestroyed()) { try { splash.destroy(); } catch {} }
   };
   const finishStartup = () => {
     if (startupFinished) return;
+    inSplashPhase = false;
     startupFinished = true;
     captureSplashState();
     startAppLoad();
     revealAppWindow();
     if (!appReady) {
-      // 保險：即使 ready-to-show 沒有觸發，也不讓使用者卡在開場畫面。
       revealTimer = setTimeout(() => { appReady = true; revealAppWindow(); }, 8000);
     }
   };
   win.once('ready-to-show', () => {
-    // 避免初始 about:blank 的第一次繪製被誤判成主畫面已就緒。
     if (!appLoadStarted) return;
     appReady = true;
     revealAppWindow();
@@ -2313,81 +2316,16 @@ try { if (windowIcon) win.setIcon(windowIcon); } catch {}
   win.webContents.on('did-finish-load', () => {
     if (appReady) return;
     const url = win.webContents.getURL();
-    if (url !== indexUrl && !url.startsWith(indexUrl + '?')) return;
+    if (url !== indexUrl && !String(url).startsWith(indexUrl + '?')) return;
     setTimeout(() => { appReady = true; revealAppWindow(); }, 500);
   });
-  const createStartupSplash = () => {
-    if (win.isDestroyed() || startupFinished) return;
-    const splash = new BrowserWindow({
-      icon: windowIcon || (windowIconPath ? windowIconPath : undefined),
-      x: Number.isFinite(bounds.x) ? Math.round(bounds.x) : undefined,
-      y: Number.isFinite(bounds.y) ? Math.round(bounds.y) : undefined,
-      width: Math.max(500, Math.round(bounds.width || DEFAULT_WINDOW_BOUNDS.width)),
-      height: Math.max(640, Math.round(bounds.height || DEFAULT_WINDOW_BOUNDS.height)),
-      minWidth: 500,
-      minHeight: 640,
-      autoHideMenuBar: true,
-      show: false,
-      backgroundColor: '#090706',
-      title: 'Claude娘啟動',
-      webPreferences: {
-        contextIsolation: true,
-        nodeIntegration: false,
-        sandbox: true
-      }
-    });
-    splashWindow = splash;
-    if (savedState && savedState.maximized) { try { splash.maximize(); } catch {} }
-    const applySplashIdentity = () => {
-      try {
-        if (process.platform !== 'win32' || splash.isDestroyed()) return;
-        splash.setAppDetails({appId: APP_USER_MODEL_ID, appIconPath: windowIconPath || process.execPath, appIconIndex: 0});
-        if (windowIcon) splash.setIcon(windowIcon);
-      } catch {}
-    };
-    const showStartupSplash = () => {
-      if (startupFinished || splashShown || splash.isDestroyed()) return;
-      splashShown = true;
-      try { splash.show(); splash.focus(); } catch {}
-      setTimeout(startAppLoad, 350);
-    };
-    splash.once('ready-to-show', () => {
-      applySplashIdentity();
-      // 正常會由開場頁的 title 訊號顯示；這裡只是避免頁面例外時整片黑。
-      setTimeout(showStartupSplash, 2000);
-    });
-    splash.on('show', () => {
-      applySplashIdentity();
-      setTimeout(applySplashIdentity, 350);
-    });
-    splash.webContents.on('did-finish-load', applySplashIdentity);
-    splash.webContents.on('page-title-updated', (event, title) => {
-      if (title !== 'CLAUDE_SPLASH_VISIBLE') return;
-      event.preventDefault();
-      try { splash.setTitle('Claude娘啟動'); } catch {}
-      showStartupSplash();
-    });
-    splash.webContents.setWindowOpenHandler(({url}) => {
-      if (/^https?:/i.test(url)) shell.openExternal(url);
-      return {action: 'deny'};
-    });
-    splash.webContents.on('will-navigate', event => {
-      event.preventDefault();
-      finishStartup();
-    });
-    splash.on('close', captureSplashState);
-    splash.on('closed', () => {
-      splashWindow = null;
-      startupFinished = true;
-      startAppLoad();
-      revealAppWindow();
-    });
-    splash.webContents.on('render-process-gone', finishStartup);
-    const splashTimeout = setTimeout(finishStartup, 15000);
-    splash.once('closed', () => clearTimeout(splashTimeout));
-    splash.loadURL(`${startupSplashUrl}?launcher=1&appUrl=${encodeURIComponent(appUrl)}`).catch(() => finishStartup());
-  };
-  createStartupSplash();
+  // 單一視窗：直接在主視窗播放開場動畫，動畫結束後同一視窗切換到開始介面。
+  win.loadURL(startupSplashUrl + '?launcher=1&appUrl=' + encodeURIComponent(appUrl)).catch(() => finishStartup());
+  // 部分 Windows 11 的 Explorer 不會在第一次 show() 時建立工作列按鈕；
+  // 先最小化／還原再顯示，強制 Shell 建立按鈕（實測按鈕與圖示會一起正確出現）。
+  try { win.minimize(); win.restore(); win.show(); win.focus(); } catch {}
+  const splashTimeout = setTimeout(finishStartup, 15000);
+  win.once('closed', () => clearTimeout(splashTimeout));
 }
 
 // 桌面捷徑自我修復：安裝程式會建立桌面捷徑，但捷徑可能被使用者或清理工具刪掉，
@@ -2483,6 +2421,52 @@ function ensureStartMenuShortcut() {
   } catch { return 'failed'; }
 }
 
+// 舊安裝可能在 Start Menu 留下同一個 AppUserModelID、但目標已失效的捷徑。
+// 工作列會依 AUMID 選用捷徑圖示，這種殘留捷徑會讓按鈕變成空白圖示；
+// 掃描整個 Programs 目錄，就地修復（保留名稱與位置）。
+function repairStaleStartMenuShortcuts(target, iconPath) {
+  try {
+    if (process.platform !== 'win32' || !app.isPackaged) return 0;
+    const programsDir = path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs');
+    if (!fs.existsSync(programsDir)) return 0;
+    let repaired = 0;
+    const stack = [programsDir];
+    while (stack.length) {
+      const dir = stack.pop();
+      let entries;
+      try { entries = fs.readdirSync(dir, {withFileTypes: true}); } catch { continue; }
+      for (const entry of entries) {
+        const linkPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) { stack.push(linkPath); continue; }
+        if (!entry.isFile() || path.extname(entry.name).toLowerCase() !== '.lnk') continue;
+        let details;
+        try { details = shell.readShortcutLink(linkPath); } catch { continue; }
+        if (String(details?.appUserModelId || '') !== APP_USER_MODEL_ID) continue;
+        const currentTarget = String(details?.target || '');
+        let targetOk = false;
+        try { targetOk = Boolean(currentTarget) && path.resolve(currentTarget).toLowerCase() === path.resolve(target).toLowerCase(); } catch {}
+        let iconOk = false;
+        try { iconOk = Boolean(details?.icon) && path.resolve(String(details.icon)).toLowerCase() === path.resolve(iconPath).toLowerCase(); } catch {}
+        if (targetOk && iconOk) continue;
+        const options = {
+          target,
+          cwd: path.dirname(target),
+          args: String(details?.args || ''),
+          description: String(details?.description || 'Claude娘 - Windows 11 電腦版'),
+          icon: iconPath,
+          iconIndex: 0,
+          appUserModelId: APP_USER_MODEL_ID
+        };
+        let updated = false;
+        try { updated = shell.writeShortcutLink(linkPath, 'update', options); } catch {}
+        if (!updated) { try { updated = shell.writeShortcutLink(linkPath, 'replace', options); } catch {} }
+        if (updated) repaired++;
+      }
+    }
+    return repaired;
+  } catch { return 0; }
+}
+
 // R47｜自動排版：App 視窗佔螢幕左 2/3，自動化瀏覽器（Google）佔右 1/3。
 // App 用 setBounds；Chrome 用 CDP Browser.setWindowBounds（外部模式開啟官網時自動套用，best-effort）。
 async function applyExternalCompanionThirds() {
@@ -2540,6 +2524,7 @@ app.whenReady().then(async () => {
     localApiBase = `http://127.0.0.1:${localApiServer.address().port}`;
     ensureDesktopShortcut();
     ensureStartMenuShortcut();
+    repairStaleStartMenuShortcuts(process.execPath, appIconPath() || process.execPath);
     createWindow();
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();

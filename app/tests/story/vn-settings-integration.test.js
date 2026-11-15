@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LineRunner, STORAGE_KEY_LINE_MODE, STORAGE_KEY_LINE_SPEED } from '../../www/line-runner.js';
+import { LineRunner, STORAGE_KEY_LINE_MODE, STORAGE_KEY_LINE_SPEED, STORAGE_KEY_LINE_AUTOPLAY, STORAGE_KEY_LINE_AUTO_DELAY } from '../../www/line-runner.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,6 +16,9 @@ test('介面設定整合: app.js 包含視覺小說演出與多媒體群組', ()
   assert.ok(code.includes('vnPerformanceSettingGroup'), '含多媒體演出設定容器 ID');
   assert.ok(code.includes('vnLineModeToggle'), '含逐句演出開關 ID');
   assert.ok(code.includes('vnLineSpeedSlider'), '含逐句打字速度滑桿 ID');
+  assert.ok(code.includes('vnAutoPlayToggle'), '含自動播放開關 ID');
+  assert.ok(code.includes('vnAutoDelaySlider'), '含自動播放停留滑桿 ID');
+  assert.ok(code.includes('vnAutoDelayValue'), '含自動播放停留數值 ID');
   assert.ok(code.includes('vnGoodnightCgPref'), '含晚安 CG 偏好選單 ID (D16)');
   assert.ok(code.includes('vnVoiceToggle'), '含語音合成開關 ID (D20)');
   assert.ok(code.includes('claude_novel_goodnight_cg_pref_v1'), '含晚安 CG 存儲 Key');
@@ -38,6 +41,19 @@ test('介面設定整合 (D17): LineRunner 速度讀寫與持久化', () => {
 
   assert.equal(STORAGE_KEY_LINE_MODE, 'claude_novel_line_mode_v1');
   assert.equal(STORAGE_KEY_LINE_SPEED, 'claude_novel_line_speed_v1');
+  assert.equal(STORAGE_KEY_LINE_AUTOPLAY, 'claude_novel_line_autoplay_v1');
+  assert.equal(STORAGE_KEY_LINE_AUTO_DELAY, 'claude_novel_line_autodelay_v1');
+});
+
+test('介面設定整合: 自動播放預設開啟且停留時間可調整', () => {
+  const runner = new LineRunner();
+  assert.equal(runner.autoAdvance, true, '自動播放預設開啟');
+  assert.equal(runner.autoDelay, 1800, '預設每句停留 1800ms');
+
+  runner.saveAutoDelayPreference(3000);
+  assert.equal(runner.autoDelay, 3000);
+  runner.saveAutoAdvancePreference(false);
+  assert.equal(runner.autoAdvance, false);
 });
 
 test('介面設定整合: style.css 包含設定面板視覺美化樣式', () => {

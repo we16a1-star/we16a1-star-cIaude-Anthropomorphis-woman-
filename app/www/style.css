@@ -2906,5 +2906,313 @@ body.is-fullscreen .choices{max-height:30dvh}
   margin-top: 6px;
 }
 
+/* G43.3 開始畫面：移除右上高光與立繪後方光暈，讓書架書脊更清楚；僅影響開始畫面。 */
+#tab-story.story-empty:not(.has-custom-portrait):not(.text-only):not(.has-scene-image) .vn-stage,
+#tab-story.g43-story-opening:not(.has-custom-portrait):not(.text-only):not(.has-scene-image) .vn-stage {
+  background:
+    radial-gradient(ellipse at 78% 80%, rgba(196, 111, 48, .10), transparent 48%),
+    linear-gradient(112deg, #eee2cd 0%, #ddc8aa 52%, #ecd8ba 100%);
+}
+#tab-story.story-empty:not(.has-custom-portrait):not(.text-only):not(.has-scene-image) .vn-stage::after,
+#tab-story.g43-story-opening:not(.has-custom-portrait):not(.text-only):not(.has-scene-image) .vn-stage::after {
+  background: linear-gradient(90deg, rgba(43, 26, 18, .42) 0%, rgba(43, 26, 18, .16) 34%, transparent 68%);
+}
+#tab-story.story-empty:not(.has-custom-portrait):not(.text-only):not(.has-scene-image) .stage-shelves,
+#tab-story.g43-story-opening:not(.has-custom-portrait):not(.text-only):not(.has-scene-image) .stage-shelves {
+  opacity: .50;
+  -webkit-mask-image: linear-gradient(90deg, rgba(0, 0, 0, .30), #000 26%, #000 100%);
+  mask-image: linear-gradient(90deg, rgba(0, 0, 0, .30), #000 26%, #000 100%);
+}
 
 
+
+
+/* G43.3b 開始畫面：g43-story-opening 狀態下隱藏故事立繪 canvas，避免與 start-character-art 重疊。 */
+#tab-story.g43-story-opening:not(.has-custom-portrait):not(.text-only):not(.has-scene-image) canvas.story-portrait:not(.start-portrait){display:none}
+
+/* ── G45｜手動貼上回覆：更大的編輯區、即時格式狀態與兩個明確動作 ───────────── */
+.web-reply-actions{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 2px}
+.web-reply-actions>.choice-btn{flex:1 1 220px;min-height:36px;padding:7px 10px}
+.web-reply-fallback .web-ai-reply{
+  min-height:140px;
+  height:auto;
+  max-height:360px;
+  margin:4px 0 5px;
+  padding:10px;
+  resize:vertical;
+  font-family:ui-monospace,Consolas,"Courier New",monospace;
+  font-size:calc(12px * var(--story-font-scale,1));
+  line-height:1.55;
+  white-space:pre-wrap;
+  overflow:auto;
+}
+.web-ai-reply-status{margin:2px 0 5px!important;font-size:calc(11px * var(--story-font-scale,1));line-height:1.5;color:var(--ink-soft)}
+.web-ai-reply-status[data-kind="ok"]{color:#2f6b45}
+.web-ai-reply-status[data-kind="pending"]{color:#8a5a24}
+#tab-story .web-ai-reply-status[data-kind="ok"]{color:#b9e2bd}
+#tab-story .web-ai-reply-status[data-kind="pending"]{color:#f0c98d}
+.vn-auto-delay-control-box{flex-wrap:wrap;padding-left:24px}
+.vn-auto-delay-control-box .note{flex:1 1 100%;margin:2px 0 0!important}
+
+/* ── G45｜網頁待辦面板：人物完整顯示，不被面板遮住或裁切 ───────────────────── */
+/* 桌面採左右分欄：左側舞台完整顯示人物全身，右側是可捲動的待辦面板與對話框。
+   窄螢幕改成頂部人物橫幅，並用 object-fit:contain 確保人物不會被裁切。 */
+@media(min-width:960px){
+  #tab-story.has-web-pending .game-screen{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(420px,41%);
+    grid-template-rows:minmax(0,1fr) auto auto;
+    padding:176px 0 0;
+    overflow:hidden;
+  }
+  #tab-story.has-web-pending:not(.text-only) .vn-stage{
+    grid-column:2;grid-row:1 / -1;
+    position:relative;inset:auto;
+    width:100%;height:100%;min-height:0;
+    margin:0;overflow:hidden;
+  }
+  #tab-story.has-web-pending:not(.story-empty):not(.g43-story-opening):not(.has-custom-portrait):not(.text-only):not(.has-scene-image):not(.has-bundled-cg) .vn-stage .story-default-art{
+    inset:0;width:100%;height:100%;
+    object-fit:cover;object-position:63% center;
+    transform:none;animation:none;
+  }
+  #tab-story.has-web-pending:not(.text-only) .vn-stage .start-scene-art,
+  #tab-story.has-web-pending:not(.text-only) .vn-stage .start-character-art,
+  #tab-story.has-web-pending:not(.text-only) .vn-stage .scene-generated-image,
+  #tab-story.has-web-pending:not(.text-only) .vn-stage .bundled-story-cg{
+    inset:0;width:100%;height:100%;
+    object-fit:cover;object-position:63% center;
+    transform:none;animation:none;
+  }
+  #tab-story.has-web-pending .choices{
+    grid-column:1;grid-row:1;
+    width:auto;max-width:none;min-width:0;
+    margin:0;padding:0 10px 0 14px;box-sizing:border-box;
+    overflow-y:auto;overflow-x:hidden;
+  }
+  #tab-story.has-web-pending .vn-dialogue-window{
+    grid-column:1;grid-row:2;
+    width:auto;max-width:none;box-sizing:border-box;
+    margin:6px 16px 6px 14px;
+  }
+  #tab-story.has-web-pending .vn-dialogue-text{
+    max-height:clamp(120px,20vh,190px);
+    overflow:auto;
+    font-size:calc(12.5px * var(--story-font-scale,1));
+    line-height:1.65;
+  }
+  #tab-story.has-web-pending .story-tool-status{grid-column:1;grid-row:3;margin:0 16px 0 14px}
+  #tab-story.has-web-pending .pending-turn{
+    display:flex;flex-direction:column;
+  }
+  #tab-story.has-web-pending .pending-turn>.web-paste-step{order:1}
+  #tab-story.has-web-pending .pending-turn>.web-flow-intro{order:2}
+  #tab-story.has-web-pending .pending-turn>.web-quota-switch{order:3}
+  #tab-story.has-web-pending .pending-turn>.web-more-actions{order:4}
+  #tab-story.has-web-pending .pending-turn>.web-steps-details{order:5}
+}
+
+@media(min-width:701px) and (max-width:959px){
+  #tab-story.has-web-pending .game-screen{
+    display:flex;flex-direction:column;overflow:hidden;
+    padding-top:176px;
+  }
+  #tab-story.has-web-pending:not(.text-only) .vn-stage{
+    position:relative;inset:auto;
+    flex:0 0 clamp(230px,34vh,340px);
+    width:100%;height:clamp(230px,34vh,340px);min-height:230px;
+    margin:0;overflow:hidden;
+  }
+  #tab-story.has-web-pending:not(.story-empty):not(.g43-story-opening):not(.has-custom-portrait):not(.text-only):not(.has-scene-image):not(.has-bundled-cg) .vn-stage .story-default-art{
+    inset:0;width:100%;height:100%;
+    object-fit:contain;object-position:center center;
+    transform:none;animation:none;
+  }
+  #tab-story.has-web-pending:not(.text-only) .vn-stage .start-scene-art,
+  #tab-story.has-web-pending:not(.text-only) .vn-stage .start-character-art,
+  #tab-story.has-web-pending:not(.text-only) .vn-stage .scene-generated-image,
+  #tab-story.has-web-pending:not(.text-only) .vn-stage .bundled-story-cg{
+    inset:0;width:100%;height:100%;
+    object-fit:contain;object-position:center center;
+    transform:none;animation:none;
+  }
+  #tab-story.has-web-pending .choices{
+    order:1;flex:1 1 auto;min-height:0;max-height:none;
+    margin:10px auto 0;overflow-y:auto;overflow-x:hidden;
+  }
+  #tab-story.has-web-pending .vn-dialogue-window{order:2;flex:0 0 auto;margin:6px auto}
+  #tab-story.has-web-pending .story-tool-status{order:3;flex:0 0 auto}
+}
+
+@media(max-width:700px){
+  #tab-story.has-web-pending:not(.text-only) .vn-stage{
+    position:relative;inset:auto;
+    height:clamp(150px,26vh,230px);min-height:150px;
+    margin:0;overflow:hidden;
+  }
+  #tab-story.has-web-pending:not(.story-empty):not(.g43-story-opening):not(.has-custom-portrait):not(.text-only):not(.has-scene-image):not(.has-bundled-cg) .vn-stage .story-default-art{
+    inset:0;width:100%;height:100%;
+    object-fit:contain;object-position:center center;
+    transform:none;animation:none;
+  }
+  #tab-story.has-web-pending:not(.text-only) .vn-stage .start-scene-art,
+  #tab-story.has-web-pending:not(.text-only) .vn-stage .start-character-art,
+  #tab-story.has-web-pending:not(.text-only) .vn-stage .scene-generated-image,
+  #tab-story.has-web-pending:not(.text-only) .vn-stage .bundled-story-cg{
+    inset:0;width:100%;height:100%;
+    object-fit:contain;object-position:center center;
+    transform:none;animation:none;
+  }
+  #tab-story.has-web-pending .choices{
+    order:1;flex:1 1 auto;min-height:0;max-height:none;
+    margin:6px auto 0;overflow-y:auto;overflow-x:hidden;
+  }
+  #tab-story.has-web-pending .vn-dialogue-window{order:2;flex:0 0 auto;margin:4px auto}
+  #tab-story.has-web-pending .story-tool-status{order:3;flex:0 0 auto}
+  #tab-story.has-web-pending .web-reply-actions>.choice-btn{width:100%;flex:1 1 100%}
+}
+
+/* G45｜對話框保留已顯示的句子，像打字機一樣往下累積；正常故事模式顯示更多行。 */
+#tab-story:not(.text-only):not(.has-web-pending) .vn-dialogue-text{
+  max-height:clamp(190px,26vh,280px);
+  overflow:auto;
+  scroll-behavior:smooth;
+}
+
+/* G45｜回合／日期／本機使用移到「Claude娘的圖書館」與副標旁邊，同一列顯示。
+   桌面上 HUD 可用寬度會被右側帳號列壓縮；這裡把品牌、場景、回合、日期與本機字樣
+   一起縮成同一條資訊列，並同步收窄帳號列，避免其中一組被擠到第二行。 */
+@media(min-width:1000px){
+  #tab-story .game-hud{gap:10px;padding-left:12px;padding-right:12px}
+  #tab-story .game-hud-main{
+    flex-direction:row;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  #tab-story .game-hud .brand{
+    font-size:calc(14px * var(--story-font-scale,1));
+    letter-spacing:.03em;
+    white-space:nowrap;
+  }
+  #tab-story .game-hud .story-head{
+    flex-direction:row;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    min-width:0;
+  }
+  #tab-story .game-hud .story-head .scene-heading{
+    flex-direction:row;
+    align-items:baseline;
+    gap:7px;
+    flex-wrap:wrap;
+  }
+  #tab-story .game-hud .story-head .scene-heading small{
+    white-space:nowrap;
+    font-size:calc(9.5px * var(--story-font-scale,1));
+    letter-spacing:.08em;
+  }
+  #tab-story .game-hud .story-head .scene-heading b{
+    white-space:nowrap;
+    font-size:calc(12px * var(--story-font-scale,1));
+  }
+  #tab-story .game-hud .story-head .story-clock{
+    margin-top:0;
+    align-self:center;
+    white-space:nowrap;
+    font-size:calc(9.5px * var(--story-font-scale,1));
+    padding:1px 6px;
+  }
+  #tab-story .game-hud .story-local-label{
+    margin-left:0;
+    white-space:nowrap;
+    font-size:calc(10.5px * var(--story-font-scale,1));
+  }
+  #tab-story .game-hud .affection-box{margin-left:0}
+  /* 帳號列同步收窄：保留所有按鈕與可點範圍，只壓縮間距與內距。 */
+  #tab-story .game-hud .account-bar{gap:4px;flex-wrap:nowrap}
+  #tab-story .game-hud .account-bar button{
+    font-size:calc(11px * var(--story-font-scale,1));
+    padding:5px 8px;
+  }
+  #tab-story .game-hud .ai-picker-btn{max-width:150px}
+  #tab-story .game-hud .account-bar .game-menu-btn{
+    font-size:calc(16px * var(--story-font-scale,1));
+    padding:5px 9px;
+  }
+  #tab-story .game-hud .account-bar .hud-story-text-size{gap:2px;padding:1px}
+  #tab-story .game-hud .account-bar .hud-story-text-size b{min-width:32px}
+  #tab-story .game-hud .account-bar .hud-story-text-size button{padding:5px 6px}
+  /* 場景小標原本置中在 HUD 下方；HUD 改成單列後會與回合／日期／本機字樣重疊，
+     桌面上改放到 HUD 左下角，窄視窗（HUD 可能換行）再往下讓開。 */
+  #tab-story .stage-scene-label{
+    top:72px;
+    left:22px;
+    transform:none;
+  }
+}
+@media(min-width:1000px) and (max-width:1149px){
+  #tab-story .stage-scene-label{top:90px}
+}
+
+
+
+
+
+/* ── G43 v2.5：背景滿版、人物靠右、介面在左；人物完整不被遮 ── */
+/* 所有寬度都套用，窄視窗不再退回左右分割的舊版面 */
+/* 舞台恢復滿版，背景不再被切成兩塊 */
+#tab-story .vn-stage{left:0;right:0;box-shadow:none}
+#tab-story .story-default-art{object-position:32% 0%!important}
+/* 特寫型情緒圖各自保留臉部可見的位置，不套用預設全身圖的 32% */
+#tab-story .story-default-art[data-art="soft-morning"]{object-position:0% 0%!important}
+#tab-story .story-default-art[data-art="night"]{object-position:0% 50%!important}
+#tab-story .story-default-art[data-art="evening-reading"]{object-position:62% 44%!important}
+#tab-story .scene-generated-image{object-position:32% 0%}
+/* 自訂立繪靠右，避開左側介面 */
+#tab-story:not(.text-only) .story-portrait{left:auto;right:4%;max-width:52%;height:min(84%,720px)}
+/* 選項集中在左側，與人物完全分離 */
+#tab-story #choices{width:min(37vw,520px);margin:88px auto 46px 2.2%;max-height:min(42dvh,410px)}
+#tab-story #choices>.choice-btn{flex:0 0 auto;min-height:44px;height:auto;overflow:visible;padding-top:10px;padding-bottom:10px}
+/* 故事欄縮小並放在左側 */
+#tab-story:not(.text-only) .vn-dialogue-window{left:2.2%;right:auto;width:min(37vw,520px);margin:0 0 8px;max-height:min(38dvh,360px)}
+#tab-story .vn-dialogue-text{max-height:clamp(160px,24dvh,230px)}
+#tab-story:not(.text-only) .story-tool-status{width:min(37vw,520px);margin:0 0 4px;justify-content:flex-start}
+/* 開始畫面：角色在右、開始面板在左 */
+#tab-story.story-empty:not(.has-custom-portrait):not(.text-only):not(.has-scene-image) .start-character-art,
+#tab-story.g43-story-opening:not(.has-custom-portrait):not(.text-only):not(.has-scene-image) .start-character-art{
+  right:3.5%;left:auto;max-width:54%
+}
+#tab-story.story-empty:not(.has-custom-portrait):not(.text-only):not(.has-scene-image) #choices,
+#tab-story.g43-story-opening:not(.has-custom-portrait):not(.text-only):not(.has-scene-image) #choices{
+  width:min(37vw,520px);margin:88px auto 10px 2.2%;max-height:min(58dvh,560px)
+}
+/* 窄視窗：介面稍微加寬，避免文字擠成過窄；人物仍保留右側空間 */
+@media (max-width:899px){
+  #tab-story #choices{width:min(45vw,430px)}
+  #tab-story.story-empty:not(.has-custom-portrait):not(.text-only):not(.has-scene-image) #choices,
+  #tab-story.g43-story-opening:not(.has-custom-portrait):not(.text-only):not(.has-scene-image) #choices{
+    width:min(40vw,430px)
+  }
+  #tab-story:not(.text-only) .vn-dialogue-window,
+  #tab-story:not(.text-only) .story-tool-status{
+    width:min(45vw,430px)
+  }
+  #tab-story:not(.text-only) .story-portrait{right:2%;max-width:56%}
+  #tab-story.story-empty:not(.has-custom-portrait):not(.text-only):not(.has-scene-image) .start-character-art,
+  #tab-story.g43-story-opening:not(.has-custom-portrait):not(.text-only):not(.has-scene-image) .start-character-art{
+    right:2%;max-width:45%
+  }
+}
+/* 窄視窗：覆寫 G16.11 的全寬置中與 G16.13 的全寬開始面板，維持人物在右、介面在左 */
+@media (max-width:759px){
+  #app #tab-story:not(.text-only):not(.has-web-pending):not(.g16-x) .story-portrait{
+    top:auto;bottom:0;left:auto;right:2%;transform:none;margin:0;
+    width:auto;max-width:44%;height:min(84%,720px);object-position:bottom right;z-index:2
+  }
+  #app #tab-story.story-empty:not(.has-custom-portrait):not(.text-only):not(.has-scene-image) #choices,
+  #app #tab-story.g43-story-opening:not(.has-custom-portrait):not(.text-only):not(.has-scene-image) #choices{
+    width:min(40vw,430px);margin-left:2.2%;margin-right:auto
+  }
+}

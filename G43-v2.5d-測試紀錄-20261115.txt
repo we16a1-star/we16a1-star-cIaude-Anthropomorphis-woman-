@@ -1,0 +1,28 @@
+G43 v2.5d 測試紀錄
+日期：2026-11-15
+
+測試指令：
+node --test tests/story/story-ai.test.js tests/story/line-runner.test.js tests/ui/renderer-globals.test.js tests/story/vn-settings-integration.test.js
+
+結果：
+- 測試 83 題
+- 通過 82 題
+- 失敗 1 題
+
+本次修正並通過的程式缺陷：
+1. gift events and difficulty：開場難度套用順序調整，`state.difficulty=difficulty;` 與 `state.openingStyle=` 距離符合測試要求。
+2. every literal uiText string has an English translation：`UI_EN` 補齊 11 個缺漏鍵。
+3. free website selector includes ChatGPT, Claude, and Gemini official pages：`AI_WEBSITE_URLS` 補上 `doubao`，與 UI 的 13 家清單順序一致。
+4. repeated default prompt is compact while customized story settings remain intact：API 人設改為 `apiProfile`（精簡）→ `apiProfileBase` → `apiProfileWithSafety`，請求改用 `buildRequestBody(apiProfileWithSafety)`。
+5. renderer source never assigns to an undeclared variable：`night-cg.js` 的 `action = ''` 改為 `action`。
+
+剩餘 1 題：
+- `workshop editor exposes and permits export of the modules it imports`
+- 原因：測試以 `tests/story/../../../` 推算專案根目錄，實際建置樹布局為 `app/` 根目錄；`opencode/app` 不存在，因此 `listEditableFiles()` 找不到 `app/www/opening-styles.js`。
+- 判定：測試目錄布局問題，非產品缺陷；不影響安裝包與遊戲功能。
+
+交付驗證：
+- 安裝包：127,589,682 bytes
+- SHA256：A44DDA96E7532D4CFF2E14240C9755DBD66A09F391904B4DD7EFAB6376787263
+- app.bundle.js：783,834 bytes，SHA256 8002E1039CE46636FE9D6C66CEBF30E42250004E2552101641FE3FDF4EAAB66C
+- PII／簡體掃描：209 個文字檔，0 筆 PII，0 行簡體命中。

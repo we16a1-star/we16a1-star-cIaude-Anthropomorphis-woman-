@@ -9,7 +9,7 @@
 //   SECTION 5  場景插圖、立繪、人物圖（IndexedDB；容量規則在 scene-image-store.js）
 //   SECTION 6  存檔槽常數與全域狀態初始化（loadSlots()、state＝load()）
 //   SECTION 7  AI 連線管理（API 模式帳號；API Key 由主程序保管，這裡只看得到有沒有）
-//   SECTION 8  網頁模式：12 家官網清單、提示詞、模型、回覆解析與接回
+//   SECTION 8  網頁模式：13 家官網清單、提示詞、模型、回覆解析與接回
 //   SECTION 9  AI 狀態列與送出設定（後端健康檢查、API base、桌面模式標頭）
 //   SECTION 10 遊戲進度與存檔（fresh／load／save、槽位、自動與快速存檔）
 //   SECTION 11 畫面渲染（render()、對話回顧；innerHTML 一律經 esc()）
@@ -23,7 +23,7 @@
 //
 // 【常見修改點：改什麼去哪裡】
 //   介面文字／翻譯     SECTION 4 的 UI_EN（中英都要加；index.html 靜態文字靠同一份表）
-//   12 家官網清單      SECTION 8 的 WEB_AI_PROVIDERS；主程序 electron-main.cjs 的
+//   13 家官網清單      SECTION 8 的 WEB_AI_PROVIDERS；主程序 electron-main.cjs 的
 //                      AI_WEBSITE_URLS 與 ai-web-flow.cjs 的 SITE_HINTS 要一起看
 //   自動送出／自動接回 流程在 app\ai-web-flow.cjs（各官網選擇器）；SECTION 16 是開關與接回
 //   提示詞長度／規則  token-budget.js（長度預算）＋ prompt-rules.js（寫作規則、規則開關與補充指示）
@@ -69,6 +69,8 @@ import { loadConfigs } from './config-loader.js';
 // P1-06（逐句演出引擎）：借鏡 AnimaVN jev.js / player.ts，將回覆逐句播放並支援插話快進
 import { splitLines } from './line-split.js';
 import { LineRunner } from './line-runner.js';
+// G45（網頁回覆容錯）：彎引號、全形標點、字串內未轉義引號／換行與尾逗號的備援解析。
+import { parseLooseJson } from './json-repair.js';
 // P1-05（玩家安全界線）：危機本機攔截＋低落陪伴提示詞；網頁與 API 兩條生成管線都強制附加安全段。
 import { SafetyModule, withSafetyPromptSupport } from './safety-module.js';
 // P1-02（S2 提示詞組裝與開發者檢視）：工坊「開發者檢視」六區塊面板。
@@ -78,24 +80,67 @@ import { bandKeyForAffection, buildInspectorData, defaultStageForAffection, rend
 // 遊戲以 app.js 內建提示詞照常運作（不白屏、不擋存檔）。
 // P1-06 逐句演出單例
 let storyLineRunner = null;
+// G45：對話框保留已顯示的句子，像打字機一樣往下累積；只自動跟隨最新句子，
+// 玩家往上捲動閱讀時不會被強制拉回底部。
+let storyDialogueTranscript = [];
+let storyDialogueLastIndex = -1;
+let storyDialogueFollow = true;
+let storyDialogueUserScroll = false;
 function getStoryLineRunner() {
   if (!storyLineRunner) {
     storyLineRunner = new LineRunner({
       speed: 35,
       onLineChange: (text, idx, total, isTyping) => {
         const el = document.getElementById('dialogueText');
-        if (el) {
-          el.textContent = text;
-          if (idx >= 0 && total > 1) {
-            el.classList.add('is-line-playing');
-            const ind = document.createElement('span');
-            ind.className = 'dialogue-line-indicator';
-            ind.textContent = ' ▶ (' + (idx + 1) + '/' + total + ')';
-            el.appendChild(ind);
-          } else {
-            el.classList.remove('is-line-playing');
-          }
+        if (!el) return;
+        if (!el.dataset.dialogueScrollBound) {
+          const markUserScroll = () => { storyDialogueUserScroll = true; };
+          el.addEventListener('wheel', markUserScroll, { passive: true });
+          el.addEventListener('touchstart', markUserScroll, { passive: true });
+          el.addEventListener('pointerdown', markUserScroll);
+          el.addEventListener('keydown', markUserScroll);
+          el.addEventListener('scroll', () => {
+            if (!storyDialogueUserScroll) return;
+            storyDialogueFollow = el.scrollTop + el.clientHeight >= el.scrollHeight - 24;
+          });
+          el.dataset.dialogueScrollBound = '1';
         }
+
+        const previousScroll = el.scrollTop;
+        const fullText = typeof text === 'string' && text.includes('\n') && !isTyping;
+
+        if (fullText && (idx < 0 || idx >= total - 1)) {
+          // 關閉逐句或「跳過全部」：一次顯示整篇，仍保留在對話框中可往上捲。
+          storyDialogueTranscript = text.split('\n');
+          storyDialogueLastIndex = storyDialogueTranscript.length - 1;
+          el.textContent = text;
+        } else if (idx >= 0) {
+          if (idx === 0 && storyDialogueLastIndex > 0) {
+            storyDialogueTranscript = [];
+            storyDialogueFollow = true;
+            storyDialogueUserScroll = false;
+          }
+          storyDialogueLastIndex = idx;
+          storyDialogueTranscript[idx] = text;
+          const shown = storyDialogueTranscript
+            .slice(0, idx + 1)
+            .filter((line) => typeof line === 'string');
+          el.textContent = shown.join('\n');
+        } else {
+          el.textContent = text;
+        }
+
+        if (idx >= 0 && total > 1) {
+          el.classList.add('is-line-playing');
+          const ind = document.createElement('span');
+          ind.className = 'dialogue-line-indicator';
+          ind.textContent = ' ▶ (' + (idx + 1) + '/' + total + ')';
+          el.appendChild(ind);
+        } else {
+          el.classList.remove('is-line-playing');
+        }
+
+        el.scrollTop = storyDialogueFollow ? el.scrollHeight : previousScroll;
       },
       onFinish: () => {
         const el = document.getElementById('dialogueText');
@@ -416,6 +461,8 @@ function resetStoryTextSize(){
 applyStoryTextSize();
 let manualClipboardPasteInProgress=false;
 let webAutoReplyRetryTimer=null;
+// 待辦面板上次繪製的回合鍵：只在換回合時重置捲動，避免重繪時把玩家正在看的位置拉走。
+let lastRenderedPendingAction='';
 const isAndroidApp=()=>Capacitor.isNativePlatform()&&Capacitor.getPlatform()==='android';
 async function writeClipboardText(text){if(isAndroidApp())return Clipboard.write({string:String(text)});return navigator.clipboard.writeText(String(text));}
 async function readClipboardText(){if(isAndroidApp()){const result=await Clipboard.read();return result?.value||'';}return navigator.clipboard.readText();}
@@ -839,7 +886,7 @@ let sceneImageObjectUrl = '';
   '對話記錄': 'Conversation log',
   '臨時對話': 'Temporary chat',
   '保存記錄（預設）': 'Save log (default)',
-  '網頁模式可使用清單中的 12 家 AI 官網；臨時對話目前限 Claude、ChatGPT 與 Gemini。故事存檔保存在本機；官網資料處理仍依各供應商規則。': 'Web mode supports all 12 AI websites in the list. Temporary chats are currently available on Claude, ChatGPT and Gemini. Story saves stay on this device; website data is handled under each provider’s rules.',
+  '網頁模式可使用清單中的 13 家 AI 官網；臨時對話目前限 Claude、ChatGPT 與 Gemini。故事存檔保存在本機；官網資料處理仍依各供應商規則。': 'Web mode supports all 13 AI websites in the list. Temporary chats are currently available on Claude, ChatGPT and Gemini. Story saves stay on this device; website data is handled under each provider’s rules.',
   '官網使用臨時對話（本機照常存檔）': 'Use a temporary chat on the website (still saved locally)',
   '臨時對話：本機自動存檔': 'Temporary chat: auto-saved on this device.',
   '臨時': 'Temporary',
@@ -1534,6 +1581,15 @@ let sceneImageObjectUrl = '';
   '貼上／輸入 AI 回覆': 'Paste / type the AI reply',
   '序章 AI 回覆可直接貼在這裡；若格式錯誤，先用 AI 修復提示，再將完整 JSON 貼回。未完成內容會保留。': 'For the prologue, paste the AI reply here; if the format is wrong, use the AI repair prompt first, then paste the complete JSON back. Unfinished input is kept.',
   '將 AI 回覆接回故事': 'Continue the story with this reply',
+  '從剪貼簿貼上並套用': 'Paste from clipboard and apply',
+  '格式完整，按「將 AI 回覆接回故事」或 Ctrl+Enter 套用。': 'Format looks complete. Select Continue the story with this reply, or press Ctrl+Enter.',
+  '已貼上內容，但缺少故事正文 narration。': 'Pasted, but the story text (narration) is missing.',
+  '已貼上內容，但缺少故事記憶 memory。': 'Pasted, but the story memory (memory) is missing.',
+  '已貼上內容，但七個選項尚未完整。': 'Pasted, but the seven choices are not complete yet.',
+  '已貼上內容，但格式尚未完整；可繼續編輯或按「將 AI 回覆接回故事」。': 'Pasted, but the format is not complete yet. Keep editing, or select Continue the story with this reply.',
+  ' 自動播放下一句（預設開啟）': ' Auto-play the next line (on by default)',
+  '自動播放每句停留：': 'Auto-play pause per line:',
+  '自動播放會在每句打完後停留指定時間；最後一句與故事選項不會自動前進。手動點擊或按空白鍵永遠優先。': 'Auto-play waits the chosen time after each line. It stops on the last line and never selects story choices automatically; manual clicks or the space bar always take priority.',
   '無法準備選項修復提示詞：': 'Could not prepare the choice-repair prompt: ',
   '無法開啟網站：': 'Could not open the website: ',
   '無法複製提示詞或開啟 AI 網站：': 'Could not copy the prompt or open the AI website: ',
@@ -1808,7 +1864,18 @@ let sceneImageObjectUrl = '';
   '⏏　離開故事（保留存檔）': '⏏　Leave story (keep save)',
   '⏸︎　暫停故事（保留存檔）': '⏸︎　Pause story (keep save)',
   '目前篩選沒有條目。': 'No entries match the current filter.',
-  '最多 8 個觸發詞。': 'Up to 8 triggers.'
+  '最多 8 個觸發詞。': 'Up to 8 triggers.',
+  '設定檔載入失敗：': 'Failed to load settings: ',
+  '\n遊戲將以內建提示詞照常運作；存檔不受影響。': '\nThe game will continue with built-in prompts; your save is unaffected.',
+  '視覺小說演出與多媒體設定': 'Visual novel presentation and multimedia settings',
+  ' 啟用逐句打字演出（支援點擊快進）': ' Enable line-by-line typing (click to fast-forward)',
+  '逐句打字速度：': 'Typing speed: ',
+  '晚安時刻 CG 偏好：': 'Goodnight CG preference: ',
+  '兩者皆可（隨機輪播：36455 臥室主 CG／36628 夜間蓋被）': 'Either (random rotation: 36455 bedroom main CG / 36628 nighttime reading under blanket)',
+  '36455 臥室主 CG（臥室羽毛筆、微醺）': '36455 bedroom main CG (bedroom quill, slightly tipsy)',
+  '36628 夜間蓋被讀書（溫柔、抱著鯨魚玩偶）': '36628 nighttime reading under blanket (gentle, holding a whale plush)',
+  ' [v2.1 實裝預定] 語音合成（Claude Glassy 英國腔配音）': ' [Planned for v2.1] Voice synthesis (Claude Glassy British accent)',
+  '語音合成功能將於 v2.1 版發布。此處預留開關狀態供用戶偏好存取。': 'Voice synthesis will be released in v2.1. This switch is reserved for storing your preference.'
 };
 const WEB_AI_GUIDE_STEPS = [
   'App 已自動開啟所選官方網站並複製提示詞。首次在官網登入並選擇模型；之後沿用同一個 AI 對話。帳號操作只在官網完成。',
@@ -2289,6 +2356,7 @@ let storyLogOpen = false;
 // 故事中的「離開故事」：只暫停自動化與畫面，不刪除目前存檔；按「繼續故事」可回到同一回合。
 let storyExited = false;
 let webReplySaveTimer = null;
+let webReplyStatusTimer = null;
 // 追加九：設定頁（提示詞管理器補充指示）的存檔計時器；宣告在設定頁函式之前以符合未宣告變數防護。
 let tweakExtraSaveTimer = 0;
 // 追加九：辭典編輯對話框目前編輯的條目索引（-1＝新增）。
@@ -2587,7 +2655,7 @@ async function testAiConnection(id,button){
     if(button){button.disabled=false;button.textContent=uiText('測試連線');}
   }
 }
-// ==== SECTION 8｜網頁模式：12 家官網清單、提示詞、模型、回覆解析與接回 ====
+// ==== SECTION 8｜網頁模式：13 家官網清單、提示詞、模型、回覆解析與接回 ====
 const WEB_AI_PROVIDERS=[
   {id:'openai',name:'ChatGPT',url:'https://chatgpt.com/auth/login'},
   {id:'anthropic',name:'Claude',url:'https://claude.ai/login'},
@@ -3200,7 +3268,7 @@ function parseWebReply(value){
     if(result)break;
   }
   if(!result){
-    try{result=JSON.parse(sanitizeJsonText(extractStoryJson(text)));}
+    try{result=parseLooseJson(text);}
     catch(e){throw new Error('AI 回覆不是有效 JSON，請重新複製完整回覆。');}
   }
   const choices=sanitizeChoices(result.choices);
@@ -3219,6 +3287,27 @@ function parseWebReply(value){
   return result;
 }
 function isCompleteWebReply(value){try{parseWebReply(value);return true;}catch{return false;}}
+function webReplyFormatHint(value){
+  const text=String(value||'').trim();
+  if(!text)return '';
+  try{
+    parseWebReply(text);
+    return uiText('格式完整，按「將 AI 回覆接回故事」或 Ctrl+Enter 套用。');
+  }catch(e){
+    const message=String(e?.message||'');
+    if(message.includes('故事正文'))return uiText('已貼上內容，但缺少故事正文 narration。');
+    if(message.includes('故事記憶'))return uiText('已貼上內容，但缺少故事記憶 memory。');
+    if(message.includes('七選項')||message.includes('7 個選項')||message.includes('選項'))return uiText('已貼上內容，但七個選項尚未完整。');
+    return uiText('已貼上內容，但格式尚未完整；可繼續編輯或按「將 AI 回覆接回故事」。');
+  }
+}
+function setWebReplyStatus(message,kind=''){
+  const el=$('webReplyStatus');
+  if(!el)return;
+  el.textContent=message||'';
+  el.hidden=!message;
+  el.dataset.kind=kind;
+}
 function applyWebReply(replyText=null){
   if(busy||!state.pendingAction) return;
   const playerAction=String(state.pendingAction||'');
@@ -4384,6 +4473,11 @@ function render() {
   if (!getStoryLineRunner().isPlaying) {
     $('dialogueText').textContent=busy?uiText('AI 正在構思故事…'):latest?.text||uiText('先選擇 AI 和序章風格，再按「開始故事」。');
     $('dialogueText').classList.remove('is-line-playing');
+    if (storyDialogueFollow) {
+      const dt = $('dialogueText');
+      dt.scrollTop = dt.scrollHeight;
+      requestAnimationFrame(() => { if (storyDialogueFollow) dt.scrollTop = dt.scrollHeight; });
+    }
   }
   g12UpdatePageHint();
   try{
@@ -4462,7 +4556,7 @@ function render() {
   const fixedChoices = state.ending?[]:(state.choices || []).slice(0,7);
   const giftPanels=(state.giftConversations||[]).map((conversation,index)=>`<section class="gift-conversation" aria-label="禮物對話"><b>🎁 ${uiText('禮物對話')}</b><p>${esc(uiLanguage==="en"?conversation.hintEn:conversation.hint)}</p><small>${uiText('選一份禮物送給她')}</small><div class="gift-options">${conversation.options.map(option=>`<button type="button" class="choice-btn gift-choice" data-gift-event="${esc(conversation.id)}" data-gift-option="${esc(option.id)}" ${state.pendingAction?"disabled":""}>${uiText('送出禮物')}：${esc(uiLanguage==="en"?option.nameEn:option.name)}</button>`).join('')}</div></section>`).join('');
   const webStepsHtml=(isAndroidApp()?WEB_AI_GUIDE_STEPS_ANDROID:WEB_AI_GUIDE_STEPS).map(step=>`<li>${uiText(step)}</li>`).join('');
-  const manualReplyEditor=state.pendingAction&&state.aiMode==='web'?`<div class="web-reply-fallback"><label for="webAiReplyInput">${uiText(state.pendingAction==='__OPENING__'?'貼上 AI 序章回覆':'貼上／輸入 AI 回覆')}</label><textarea class="web-ai-reply" id="webAiReplyInput" rows="3" maxlength="120000" spellcheck="false" autocomplete="off" placeholder="貼上或輸入完整 AI JSON">${esc(state.webReply||'')}</textarea><p class="note web-ai-reply-hint">${uiText(state.pendingAction==='__OPENING__'?'序章 AI 回覆可直接貼在這裡；若格式錯誤，先用 AI 修復提示，再將完整 JSON 貼回。未完成內容會保留。':'可貼上或輸入完整 AI JSON；未完成可繼續編輯；有效回覆會自動接續。按 Ctrl+Enter 可手動套用。')}</p><button class="choice-btn ai-btn" id="applyWebReplyBtn" type="button">將 AI 回覆接回故事</button></div>`:'';
+  const manualReplyEditor=state.pendingAction&&state.aiMode==='web'?`<div class="web-reply-fallback"><label for="webAiReplyInput">${uiText(state.pendingAction==='__OPENING__'?'貼上 AI 序章回覆':'貼上／輸入 AI 回覆')}</label><textarea class="web-ai-reply" id="webAiReplyInput" rows="3" maxlength="120000" spellcheck="false" autocomplete="off" placeholder="貼上或輸入完整 AI JSON">${esc(state.webReply||'')}</textarea><p class="note web-ai-reply-hint">${uiText(state.pendingAction==='__OPENING__'?'序章 AI 回覆可直接貼在這裡；若格式錯誤，先用 AI 修復提示，再將完整 JSON 貼回。未完成內容會保留。':'可貼上或輸入完整 AI JSON；未完成可繼續編輯；有效回覆會自動接續。按 Ctrl+Enter 可手動套用。')}</p><p class="note web-ai-reply-status" id="webReplyStatus" aria-live="polite" hidden></p><div class="web-reply-actions"><button class="choice-btn ai-btn" id="applyWebReplyBtn" type="button">將 AI 回覆接回故事</button><button class="choice-btn" id="pasteWebReplyBtn" type="button">從剪貼簿貼上並套用</button></div></div>`:'';
   const quickWebProviders=WEB_AI_PROVIDERS.filter(item=>['openai','anthropic','gemini'].includes(item.id));
   const pendingBrowserMode=normalizeWebBrowserMode(webBrowserMode,state.webProvider);
   const pendingModelKey=webModelCacheKey(state.webProvider,pendingBrowserMode);
@@ -4489,6 +4583,17 @@ function render() {
        <div class="free-row"><textarea id="freeInput" rows=3 maxlength=2000 ${state.pendingAction||state.ending?'disabled':''} placeholder="選「做／說／想」快速帶入，或直接寫下你這回合的行動、台詞或念頭。"></textarea><button class="choice-btn ai-btn free-send-wide" id="freeSend" ${state.pendingAction||state.ending?'disabled':''}>${uiText('送出我的行動')}</button></div>
      </div>` + `<p class="keyboard-hint">${uiText(keyboardHint)}</p>`;
   c.scrollTop = 0;
+  // 待辦面板第一次出現（含重新載入後）時，避免瀏覽器還原舊捲動位置而把標題與
+  // 回覆輸入區藏在上面。只在待辦行動改變時重置一次，之後尊重玩家自己的捲動。
+  const pendingKey = state.pendingAction || '';
+  if (pendingKey && pendingKey !== lastRenderedPendingAction) {
+    lastRenderedPendingAction = pendingKey;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (state.pendingAction && c.isConnected) c.scrollTop = 0;
+    }));
+  } else if (!pendingKey) {
+    lastRenderedPendingAction = '';
+  }
   if(state.pendingAction&&state.aiMode==='web'&&state.webReply){
     const pending=c.querySelector('.pending-turn');
     if(pending){
@@ -4525,18 +4630,36 @@ function render() {
   const retryPendingApi=$('retryPendingApiTurn'); if(retryPendingApi) retryPendingApi.onclick=()=>retryPendingWithMode('api');
   const backupPendingSave=$('backupPendingSaveBtn'); if(backupPendingSave) backupPendingSave.onclick=exportData;
   const webReplyInput=$('webAiReplyInput'); if(webReplyInput){
+    const resizeWebReplyInput=()=>{
+      webReplyInput.style.height='auto';
+      webReplyInput.style.height=Math.min(360,Math.max(120,webReplyInput.scrollHeight))+'px';
+    };
+    const refreshWebReplyHint=()=>{
+      const text=webReplyInput.value;
+      if(!text.trim()){setWebReplyStatus('');return;}
+      setWebReplyStatus(webReplyFormatHint(text),isCompleteWebReply(text)?'ok':'pending');
+    };
     webReplyInput.oninput=()=>{
       state.webReply=webReplyInput.value;
       clearTimeout(webReplySaveTimer);
       webReplySaveTimer=setTimeout(()=>save(),500);
+      clearTimeout(webReplyStatusTimer);
+      webReplyStatusTimer=setTimeout(()=>{resizeWebReplyInput();refreshWebReplyHint();},220);
+      resizeWebReplyInput();
     };
+    resizeWebReplyInput();
+    if(state.webReply)setTimeout(refreshWebReplyHint,0);
     webReplyInput.addEventListener('paste',()=>setTimeout(()=>{
       if(!state.pendingAction||busy||$('webAiReplyInput')!==webReplyInput)return;
       const pastedReply=webReplyInput.value;
+      resizeWebReplyInput();
+      setWebReplyStatus(webReplyFormatHint(pastedReply),isCompleteWebReply(pastedReply)?'ok':'pending');
       if(!isCompleteWebReply(pastedReply))return;
       applyWebReply(pastedReply);
     },0));
   }
+  const pasteWebReplyBtn=$('pasteWebReplyBtn');
+  if(pasteWebReplyBtn)pasteWebReplyBtn.onclick=()=>void readClipboardReply();
   const pendingWebProvider=$('pendingWebProvider'); if(pendingWebProvider){fillWebAIProviderSelect(pendingWebProvider,state.webProvider);pendingWebProvider.onchange=()=>void switchPendingWebProvider(pendingWebProvider.value);}
   const pendingWebBrowserMode=$('pendingWebBrowserMode');if(pendingWebBrowserMode)pendingWebBrowserMode.onchange=()=>void switchPendingWebProvider(state.webProvider,pendingWebBrowserMode.value);
   // 網頁操作自動化：提示詞可在這裡直接切「標準／節省」，並顯示這一回合兩種模式的字元數。
@@ -4726,7 +4849,7 @@ function renderOpeningSetup(container){
   const recordRow=incognitoInput.closest('.opening-clock-row');
   const recordHint=document.createElement('p');
   recordHint.className='opening-style-help';
-  recordHint.textContent=uiText('網頁模式可使用清單中的 12 家 AI 官網；臨時對話目前限 Claude、ChatGPT 與 Gemini。故事存檔保存在本機；官網資料處理仍依各供應商規則。')+(incognitoRestriction?` ${uiText(incognitoRestriction)}`:'');
+  recordHint.textContent=uiText('網頁模式可使用清單中的 13 家 AI 官網；臨時對話目前限 Claude、ChatGPT 與 Gemini。故事存檔保存在本機；官網資料處理仍依各供應商規則。')+(incognitoRestriction?` ${uiText(incognitoRestriction)}`:'');
   recordRow.append(recordHint);
   const tempChatLabel=document.createElement('label');
   tempChatLabel.className='opening-style-help';
@@ -4755,7 +4878,7 @@ function renderOpeningSetup(container){
       render();
       return;
     }
-    recordHint.textContent=uiText('網頁模式可使用清單中的 12 家 AI 官網；臨時對話目前限 Claude、ChatGPT 與 Gemini。故事存檔保存在本機；官網資料處理仍依各供應商規則。')+(input.value==='incognito'&&incognitoTemporaryChatRestriction()?` ${uiText(incognitoTemporaryChatRestriction())}`:'');
+    recordHint.textContent=uiText('網頁模式可使用清單中的 13 家 AI 官網；臨時對話目前限 Claude、ChatGPT 與 Gemini。故事存檔保存在本機；官網資料處理仍依各供應商規則。')+(input.value==='incognito'&&incognitoTemporaryChatRestriction()?` ${uiText(incognitoTemporaryChatRestriction())}`:'');
     refreshTempChatControl();
   }));
   const difficultySelect=$('openingDifficultySelect');difficultySelect.value=openingDifficultyDraft;difficultySelect.onchange=()=>{openingDifficultyDraft=normalizeDifficulty(difficultySelect.value);};
@@ -4816,11 +4939,11 @@ function renderOpeningSetup(container){
       }
     }
     resetRareGoodnightWarmup();
-    state.difficulty=difficulty;
     const playerName=normalizePlayerName($('openingPlayerName')?.value);
     state.playerName=playerName;
     savePlayerNamePreference(playerName);
     state.letterEventEnabled=letterEventEnabled;
+    state.difficulty=difficulty;
     state.openingStyle=select.value===CUSTOM_OPENING_STYLE?CUSTOM_OPENING_STYLE:resolveOpeningStyle(select.value);
     state.openingCustomPrompt=custom.value.slice(0,600);
     const openingClockMode=[...document.querySelectorAll('input[name="openingClockMode"]')].find(input=>input.checked)?.value||'story';
@@ -5222,7 +5345,7 @@ function settings() {
     themeSelect.onchange=()=>{applyThemePreference(themeSelect.value);};
     refreshQuickThemeBtn();
   }
-  // 追加九：故事功能開關＋提示詞管理器（GALGAME 設定画面風；每項預設不影響既有存檔）。
+  // 追加九：故事功能開關＋提示詞管理器（GALGAME 設定畫面風；每項預設不影響既有存檔）。
   const featureWorldBookToggle=$('featureWorldBookToggle');
   const affectionDisplayToggle=$('affectionDisplayToggle');
   if(affectionDisplayToggle){
@@ -5378,6 +5501,15 @@ function ensureVnPerformanceControls() {
     lineModeLabel.append(lineModeCheckbox, document.createTextNode(uiText(' 啟用逐句打字演出（支援點擊快進）')));
     group.append(lineModeLabel);
 
+    // 1b. 自動播放（預設開啟）與每句停留時間
+    const autoPlayLabel = document.createElement('label');
+    autoPlayLabel.className = 'vn-line-mode-label vn-autoplay-label';
+    const autoPlayCheckbox = document.createElement('input');
+    autoPlayCheckbox.type = 'checkbox';
+    autoPlayCheckbox.id = 'vnAutoPlayToggle';
+    autoPlayLabel.append(autoPlayCheckbox, document.createTextNode(uiText(' 自動播放下一句（預設開啟）')));
+    group.append(autoPlayLabel);
+
     const speedBox = document.createElement('div');
     speedBox.className = 'vn-speed-control-box';
     const speedLabel = document.createElement('label');
@@ -5393,6 +5525,26 @@ function ensureVnPerformanceControls() {
     speedVal.id = 'vnLineSpeedValue';
     speedBox.append(speedLabel, speedSlider, speedVal);
     group.append(speedBox);
+
+    const autoDelayBox = document.createElement('div');
+    autoDelayBox.className = 'vn-speed-control-box vn-auto-delay-control-box';
+    const autoDelayLabel = document.createElement('label');
+    autoDelayLabel.htmlFor = 'vnAutoDelaySlider';
+    autoDelayLabel.textContent = uiText('自動播放每句停留：');
+    const autoDelaySlider = document.createElement('input');
+    autoDelaySlider.type = 'range';
+    autoDelaySlider.id = 'vnAutoDelaySlider';
+    autoDelaySlider.min = '500';
+    autoDelaySlider.max = '6000';
+    autoDelaySlider.step = '100';
+    const autoDelayVal = document.createElement('span');
+    autoDelayVal.id = 'vnAutoDelayValue';
+    autoDelayBox.append(autoDelayLabel, autoDelaySlider, autoDelayVal);
+    const autoDelayNote = document.createElement('p');
+    autoDelayNote.className = 'note';
+    autoDelayNote.textContent = uiText('自動播放會在每句打完後停留指定時間；最後一句與故事選項不會自動前進。手動點擊或按空白鍵永遠優先。');
+    autoDelayBox.append(autoDelayNote);
+    group.append(autoDelayBox);
 
     // 2. 晚安 CG 偏好 (D16)
     const gnBox = document.createElement('label');
@@ -5432,6 +5584,9 @@ function ensureVnPerformanceControls() {
   const lineToggle = $('vnLineModeToggle');
   const speedSlider = $('vnLineSpeedSlider');
   const speedVal = $('vnLineSpeedValue');
+  const autoPlayToggle = $('vnAutoPlayToggle');
+  const autoDelaySlider = $('vnAutoDelaySlider');
+  const autoDelayVal = $('vnAutoDelayValue');
   const gnSelect = $('vnGoodnightCgPref');
   const voiceToggle = $('vnVoiceToggle');
 
@@ -5448,6 +5603,22 @@ function ensureVnPerformanceControls() {
     speedSlider.oninput = () => {
       if (speedVal) speedVal.textContent = ` ${speedSlider.value} ms/字`;
       runner.saveSpeedPreference(speedSlider.value);
+    };
+  }
+
+  if (autoPlayToggle && runner) {
+    autoPlayToggle.checked = runner.autoAdvance;
+    autoPlayToggle.onchange = () => {
+      runner.saveAutoAdvancePreference(autoPlayToggle.checked);
+    };
+  }
+
+  if (autoDelaySlider && runner) {
+    autoDelaySlider.value = runner.autoDelay;
+    if (autoDelayVal) autoDelayVal.textContent = ` ${(runner.autoDelay / 1000).toFixed(1)} 秒`;
+    autoDelaySlider.oninput = () => {
+      if (autoDelayVal) autoDelayVal.textContent = ` ${(Number(autoDelaySlider.value) / 1000).toFixed(1)} 秒`;
+      runner.saveAutoDelayPreference(autoDelaySlider.value);
     };
   }
 
@@ -5734,13 +5905,15 @@ async function callAI(action=null) {
   if(action===null) action=`__OPENING_STYLE__:${state.openingStyle}`;
   const historyWindow=state.responseMode==='quality'?4:2;
   const isOpening=!state.history.length&&String(action).startsWith('__OPENING_STYLE__:');
-  const apiProfileBase=state.characterProfile===DEFAULT_CHARACTER_PROFILE
+  const apiProfile=state.characterProfile===DEFAULT_CHARACTER_PROFILE
     ?(state.claudePersonaMode==='tsundere'?COMPACT_HIGH_TSUNDERE_CHARACTER_PROFILE:COMPACT_DEFAULT_CHARACTER_PROMPT)
     :String(state.characterProfile||'')+(state.claudePersonaMode==='tsundere'?'\n一般互動使用傲嬌濃度調高：嘴上挑剔、實際仔細做好；被看出用心時否認。重要問題維持準確與尊重，不可羞辱或操控。':'');
+  const apiProfileBase=apiProfile;
   // P1-05：API 也走同一條安全提示詞管線；危機由呼叫端本機攔截，這裡補低落陪伴與常駐安全段。
   const apiLowMood=!isOpening&&safetyModule.detectLowMood(action);
-  const apiProfile=withSafetyPromptSupport(withCharacterBoundary(apiProfileBase),{lowMood:apiLowMood,language:uiLanguage});
-  const requestBody={provider:state.provider,accountProfile:connection?.profileId||'',model:state.model,history:state.history.slice(-historyWindow),action,...(isOpening?{openingCustomPrompt:state.openingStyle===CUSTOM_OPENING_STYLE?String(state.openingCustomPrompt||'').slice(0,600):''}:{}),affection:state.affection,characterName:state.characterName||DEFAULT_CHARACTER_NAME,characterProfile:apiProfile+characterCardsUseText(),worldSetting:state.worldSetting===DEFAULT_WORLD_SETTING?'':state.worldSetting,storyTemplate:state.storyTemplate===DEFAULT_STORY_TEMPLATE?'':state.storyTemplate,storyMemory:String(state.storyMemory||'').slice(-1000),storyClock:realStoryClock(state.storyClock),pendingMilestone:state.pendingMilestone||'',pendingSpecialEvent:isOpening?'':normalizeSpecialEventKey(state.pendingSpecialEvent),storyEventSeen:normalizeSeenStoryEventFlags(state.storyEventSeen),specialEvent:isOpening?'':normalizeSpecialEventKey(state.pendingSpecialEvent),worldBook:normalizeWorldBook(state.worldBook),authorNote:normalizeAuthorNote(state.authorNote),promptTweaks:normalizePromptTweaks(state.promptTweaks),temperature:Number(state.temperature),topP:Number(state.topP),maxTokens:Number(state.maxTokens),responseMode:state.responseMode||'fast',language:uiLanguage,sceneMode:sceneMode};
+  const apiProfileWithSafety=withSafetyPromptSupport(withCharacterBoundary(apiProfileBase),{lowMood:apiLowMood,language:uiLanguage});
+  const buildRequestBody=apiProfile=>({provider:state.provider,accountProfile:connection?.profileId||'',model:state.model,history:state.history.slice(-historyWindow),action,...(isOpening?{openingCustomPrompt:state.openingStyle===CUSTOM_OPENING_STYLE?String(state.openingCustomPrompt||'').slice(0,600):''}:{}),affection:state.affection,characterName:state.characterName||DEFAULT_CHARACTER_NAME,characterProfile:apiProfile+characterCardsUseText(),worldSetting:state.worldSetting===DEFAULT_WORLD_SETTING?'':state.worldSetting,storyTemplate:state.storyTemplate===DEFAULT_STORY_TEMPLATE?'':state.storyTemplate,storyMemory:String(state.storyMemory||'').slice(-1000),storyClock:realStoryClock(state.storyClock),pendingMilestone:state.pendingMilestone||'',pendingSpecialEvent:isOpening?'':normalizeSpecialEventKey(state.pendingSpecialEvent),storyEventSeen:normalizeSeenStoryEventFlags(state.storyEventSeen),specialEvent:isOpening?'':normalizeSpecialEventKey(state.pendingSpecialEvent),worldBook:normalizeWorldBook(state.worldBook),authorNote:normalizeAuthorNote(state.authorNote),promptTweaks:normalizePromptTweaks(state.promptTweaks),temperature:Number(state.temperature),topP:Number(state.topP),maxTokens:Number(state.maxTokens),responseMode:state.responseMode||'fast',language:uiLanguage,sceneMode:sceneMode});
+  const requestBody=buildRequestBody(apiProfileWithSafety);
   archivePrompt(JSON.stringify(requestBody,null,2),{mode:'api',provider:state.provider,model:state.model,title:'API 回合資料'});
   const r=await fetch(base+'/api/story',{method:'POST',headers:{'Content-Type':'application/json',...desktopApiHeaders(base)},body:JSON.stringify(requestBody)});
   if(!r.ok){let message='';try{const data=await r.json();message=data.error||data.message||JSON.stringify(data)}catch{message=await r.text()}const error=new Error(message||(uiLanguage==='en'?`AI connection failed (${r.status})`:`AI 連線失敗 (${r.status})`));error.status=r.status;throw error;}
@@ -5900,6 +6073,9 @@ function applyTurn(r, role='ai') {
   if (role === 'ai' && r.narration) {
     try {
       const lines = splitLines(r.narration);
+      storyDialogueTranscript = [];
+      storyDialogueLastIndex = -1;
+      storyDialogueFollow = true;
       getStoryLineRunner().start(lines);
     } catch (_) {}
   }
@@ -7681,6 +7857,8 @@ window.addEventListener('beforeunload',event=>{
 function queueWebAutoReply(value){
   const reply=String(value||'');
   if(!reply.trim()||!state.pendingAction||state.aiMode!=='web')return;
+  // 穩定度：只接受完整 JSON 回覆，避免把半成品套用到故事。
+  if(typeof isCompleteWebReply==='function' && !isCompleteWebReply(reply)) return;
   if(storyExited){webAutoQueuedReply=reply;return;}
   if(webAutoReplyRetryTimer){clearTimeout(webAutoReplyRetryTimer);webAutoReplyRetryTimer=null;}
   const expectedAction=state.pendingAction,expectedSlot=activeSlotId,startedAt=Date.now();
@@ -7690,7 +7868,7 @@ function queueWebAutoReply(value){
     // Renderer can briefly be busy while a delayed UI update or save finishes. Keep the
     // harvested reply queued instead of losing the only main-process delivery event.
     if(busy){
-      if(Date.now()-startedAt>=30000){
+      if(Date.now()-startedAt>=60000){
         // G44：畫面忙碌中收到的回覆，寫入狀態但不重建 #choices（避免了兩段式動畫與輸入框閃失）。
         state.webReply=reply;
         state.lastAiError=uiText('回覆已收到，畫面忙碌中；已先保留在回覆欄，稍後可按「將 AI 回覆接回故事」。');
@@ -7743,6 +7921,8 @@ window.claudeDesktop?.onWebAutoStatus?.(payload=>{
 });
 bootstrapGameConfigs();
 applyTheme(storedThemeChoice()); startThemeTimeWatch(); settings(); render(); refreshAiStatus();
+// 穩定度：載入時若已有完整 webReply，自動套用一次（避免遺失主程序已採收的回覆）。
+if(state.pendingAction && state.aiMode==='web' && state.webReply && isCompleteWebReply(state.webReply)) setTimeout(()=>{if(!busy && state.pendingAction && state.aiMode==='web') applyWebReply(state.webReply);},0);
 // G16.11｜故事畫面自適應：量出「資訊列之下、選項區之上」的剩餘空間，交給立繪使用（只寫 CSS 變數，不動版面邏輯）。
 // 窄視窗或矮視窗時，人物會自動縮放到剩餘空間內，不會被選項／對話框蓋住，也不會把選項擠出畫面。
 function setupStageFit(){

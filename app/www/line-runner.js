@@ -10,13 +10,22 @@
 
 const STORAGE_KEY_LINE_MODE = 'claude_novel_line_mode_v1';
 const STORAGE_KEY_LINE_SPEED = 'claude_novel_line_speed_v1';
+const STORAGE_KEY_LINE_AUTOPLAY = 'claude_novel_line_autoplay_v1';
+const STORAGE_KEY_LINE_AUTO_DELAY = 'claude_novel_line_autodelay_v1';
 
-export { STORAGE_KEY_LINE_MODE, STORAGE_KEY_LINE_SPEED };
+export { STORAGE_KEY_LINE_MODE, STORAGE_KEY_LINE_SPEED, STORAGE_KEY_LINE_AUTOPLAY, STORAGE_KEY_LINE_AUTO_DELAY };
 
 export class LineRunner {
   constructor(options = {}) {
     this.speed = options.speed || this.loadSpeedPreference(); // 每字毫秒數（D17：預設 35ms）
     this.enabled = this.loadPreference();
+    // 自動播放：預設開啟；每句打字完成後停留 autoDelay 毫秒再自動接下一句。
+    this.autoAdvance = options.autoAdvance !== undefined
+      ? !!options.autoAdvance
+      : this.loadAutoAdvancePreference();
+    this.autoDelay = Number.isFinite(Number(options.autoDelay))
+      ? Math.max(0, Math.round(Number(options.autoDelay)))
+      : this.loadAutoDelayPreference();
     this.lines = [];
     this.currentIndex = -1;
     this.currentText = '';
@@ -24,6 +33,7 @@ export class LineRunner {
     this.isPlaying = false;
     this.isCharTyping = false;
     this.timer = null;
+    this.autoTimer = null;
     this.onLineChange = options.onLineChange || null;
     this.onFinish = options.onFinish || null;
   }
@@ -67,6 +77,71 @@ export class LineRunner {
     } catch (_) {}
   }
 
+  loadAutoAdvancePreference() {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const val = localStorage.getItem(STORAGE_KEY_LINE_AUTOPLAY);
+        if (val !== null) return val === 'true';
+      }
+    } catch (_) {}
+    return true; // 預設開啟自動播放
+  }
+
+  saveAutoAdvancePreference(enabled) {
+    this.autoAdvance = !!enabled;
+    if (!this.autoAdvance) this.clearAutoTimer();
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY_LINE_AUTOPLAY, String(this.autoAdvance));
+      }
+    } catch (_) {}
+  }
+
+  loadAutoDelayPreference() {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const val = parseInt(localStorage.getItem(STORAGE_KEY_LINE_AUTO_DELAY), 10);
+        if (Number.isFinite(val) && val >= 500 && val <= 6000) return val;
+      }
+    } catch (_) {}
+    return 1800; // 預設每句停留 1.8 秒
+  }
+
+  saveAutoDelayPreference(delay) {
+    const val = Math.max(500, Math.min(6000, Math.round(Number(delay) || 1800)));
+    this.autoDelay = val;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY_LINE_AUTO_DELAY, String(val));
+      }
+    } catch (_) {}
+  }
+
+  clearAutoTimer() {
+    if (this.autoTimer) {
+      clearTimeout(this.autoTimer);
+      this.autoTimer = null;
+    }
+  }
+
+  /**
+   * 目前句子播完後，若自動播放開啟且還有下一句，排定自動前進。
+   * 手動點擊／跳過會先清除這個計時器，確保使用者操作永遠優先。
+   */
+  scheduleAutoAdvance() {
+    this.clearAutoTimer();
+    if (!this.autoAdvance || !this.enabled || !this.isPlaying) return;
+    if (this.currentIndex >= this.lines.length - 1) return;
+
+    this.autoTimer = setTimeout(() => {
+      this.autoTimer = null;
+      if (!this.autoAdvance || !this.isPlaying || this.isCharTyping) return;
+      if (this.currentIndex >= this.lines.length - 1) return;
+      this.currentIndex++;
+      this.playCurrentLine();
+    }, this.autoDelay);
+  }
+
   /**
    * 開始播放一組句子
    * @param {string[]} lines 
@@ -108,6 +183,7 @@ export class LineRunner {
    * 播放當前句子（打字機效果）
    */
   playCurrentLine() {
+    this.clearAutoTimer();
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
@@ -155,6 +231,8 @@ export class LineRunner {
     if (isLastLine) {
       this.isPlaying = false;
       if (this.onFinish) this.onFinish();
+    } else {
+      this.scheduleAutoAdvance();
     }
   }
 
@@ -163,6 +241,7 @@ export class LineRunner {
    * @returns {boolean} 是否仍有下一句
    */
   nextOrSkip() {
+    this.clearAutoTimer();
     if (!this.isPlaying && this.currentIndex >= this.lines.length - 1) {
       return false;
     }
@@ -190,6 +269,7 @@ export class LineRunner {
    * 跳過全部，直接展示整篇
    */
   skipAll() {
+    this.clearAutoTimer();
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
@@ -208,6 +288,7 @@ export class LineRunner {
    * 停止當前演出
    */
   stop() {
+    this.clearAutoTimer();
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;

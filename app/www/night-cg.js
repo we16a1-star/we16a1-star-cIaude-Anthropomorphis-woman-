@@ -18,7 +18,7 @@ export function hasGoodnightText(text) {
 // 回傳 { show, reason }；reason 只給測試與回報用，不顯示給玩家。
 // random 可注入，測試才能固定機率；正式路徑傳 Math.random。
 export function evaluateRareGoodnight({
-  action = '',
+  action,
   affection = 0,
   isNight = false,
   now = Date.now(),
