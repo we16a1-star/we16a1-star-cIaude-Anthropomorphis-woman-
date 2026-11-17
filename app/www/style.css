@@ -3293,6 +3293,12 @@ body.is-fullscreen .choices{max-height:30dvh}
   #tab-story.has-scene-image.keep-portrait.story-empty:not(.has-custom-portrait):not(.text-only) .start-character-art,
   #tab-story.has-scene-image.keep-portrait.g43-story-opening:not(.has-custom-portrait):not(.text-only) .start-character-art{right:9%}
 }
+/* v2.5g 修復開場雙人物：開場人物已是當前人物時，不再同時顯示故事立繪。
+   同一缺口會在 has-web-pending、非 pending 的 g43-story-opening，以及 portrait-anim 退回 <img> 時出現。 */
+#tab-story.g43-story-opening:not(.story-empty):not(.has-custom-portrait):not(.text-only):not(.has-scene-image) .story-portrait,
+#tab-story.g43-story-opening.has-scene-image.keep-portrait:not(.story-empty):not(.has-custom-portrait):not(.text-only) .story-portrait{
+  display:none!important
+}
 /* v2.5e the scene label sits at top:72px on wide windows; push the start panel below it. */
 @media(min-width:1150px){
   #app #tab-story #choices:has(> .start-panel){margin-top:112px}

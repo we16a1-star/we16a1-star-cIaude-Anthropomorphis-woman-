@@ -785,3 +785,32 @@ PII 掃描 0 處。
 - 標籤／Release：`v4.6.41-g43-v2.5f`。
 - 資產：`ClaudeNiang-Windows11-Setup-4.6.41-G43-v2.5f-x64.exe`（127,776,546 bytes；GitHub digest `sha256:eb49bc1c318f8e5270a566679c4fadfdd2a42caecef216438780a5f24e83ac36`）。
 - 下載：`https://github.com/we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-/releases/tag/v4.6.41-g43-v2.5f`。
+
+---
+
+## 2026-11-17（G43 v2.5g：開場雙人物修復）
+
+依使用者回饋「雙人物」與選擇「保留開場人物、一次修掉所有 `g43-story-opening` 缺口」，本次只改 CSS，不動 JS／`app.bundle.js`。
+
+### 調整
+- `app/www/style.css`（v2.5g）：在 v2.5f 區塊後新增兩條 `display:none!important` 規則，當開場人物已是當前人物時隱藏 `.story-portrait`：
+  - `#tab-story.g43-story-opening:not(.story-empty):not(.has-custom-portrait):not(.text-only):not(.has-scene-image) .story-portrait`
+  - `#tab-story.g43-story-opening.has-scene-image.keep-portrait:not(.story-empty):not(.has-custom-portrait):not(.text-only) .story-portrait`
+- 根因：原本隱藏故事立繪的規則被 `has-scene-image` 排除；`has-web-pending` 與非 pending 的 `g43-story-opening + has-scene-image.keep-portrait` 都會同時顯示 `.start-character-art` 與故事立繪 canvas。
+- 保留 `.start-character-art`（開場人物），符合 v2.5e `keep-portrait` 原意；開始畫面、故事進行中、自訂立繪、文字模式、CG 不受影響。
+
+### 測試
+- 建置版 CDP：1264×781、1024×768、800×600、1440×900、1150×800，pending／非 pending／完整開場／自訂立繪／文字模式／無場景圖，皆只有 1 個可見人物；無 console error。
+- 正式安裝版 4.6.42（全新 user-data）：開始畫面面板 600×430、人物 [732,39,419,750]；真實插圖匯入後 pending 1264×781 人物 [922,152,295,604]、故事立繪 `display:none`；非 pending 人物 [732,39,419,750]、故事立繪 `display:none`；800×600 人物 [698,112,86,155]、1024×768 [755,128,239,614]、1440×900 [1039,176,333,695]、1150×800 [848,144,269,630]，皆只有 1 個人物；無 console error。
+- 完整開場（2 個 AI 回合）故事立繪 canvas [842,115,371,656] 正常顯示、開場人物隱藏；只有 1 個人物。
+- 278／278 自動化測試 PASS（wait-interlude 26、album 39、bedroom-scene 37、bedroom-wp7 54、expression-affinity 22、rare-goodnight 100）；`scripts/audit-buttons.cjs` PASS。
+- 交付雜湊：`style.css` 255,298 bytes／`9ACBAAFEFE8444FBEBA0AF22C80458F0113D809464CFF2562DA9EB205F9D437A`；`app.js` 602,818 bytes／`185FE2C4F33BADAB2EFB140CCD48D739620B4CEF418D11FAB92FF87E5BDDBDD4`（未變）；`app.bundle.js` 784,146 bytes／`5A8A342233E2D02BAF9EE12BE597D7D8DABE74B897AD1C97968A355AA4A3E278`（未變）；`app.asar` 23,724,097 bytes／`736970FF8F04315BE878E1C9CCBF52CD9542559E8697429E65766C6789CE56F7`；Setup 127,776,762 bytes／`C25FD25651ED08590B77C08533CA5DC665D17513C2A22F4D66C727FA9E1EB798`。
+- 備註：安裝包 `/S` 靜默安裝在此機器會卡住；本次以 `dist-out\win-unpacked` 覆蓋正式安裝目錄完成更新，安裝包檔案本身仍可用於交付。
+- PII／簡體掃描（本次修改與新增文字檔）：0 PII、0 簡體。
+
+### 推送
+- GitHub：`we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-`（`main`）。
+- 提交：`<待補>`（G43 v2.5g：開場雙人物修復）。
+- 標籤／Release：`v4.6.42-g43-v2.5g`。
+- 資產：`ClaudeNiang-Windows11-Setup-4.6.42-G43-v2.5g-x64.exe`（127,776,762 bytes）。
+- 下載：`https://github.com/we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-/releases/tag/v4.6.42-g43-v2.5g`。
