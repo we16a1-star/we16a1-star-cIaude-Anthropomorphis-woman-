@@ -1,21 +1,21 @@
-G43 v2.5f 交付雜湊
-日期：2026-11-17（開始畫面按鈕遮擋、插圖保留、場景標籤與中間空白）
+G43 v2.5g 交付雜湊
+日期：2026-11-17（開場雙人物修復）
 
-安裝包：Claude娘 - Windows 11 電腦版-Setup-4.6.41-x64.exe
-大小：127,776,546 bytes
-SHA256：EB49BC1C318F8E5270A566679C4FADFDD2A42CAECEF216438780A5F24E83AC36
+安裝包：Claude娘 - Windows 11 電腦版-Setup-4.6.42-x64.exe
+大小：127,776,762 bytes
+SHA256：C25FD25651ED08590B77C08533CA5DC665D17513C2A22F4D66C727FA9E1EB798
 
 app.asar
-大小：23,723,577 bytes
-SHA256：2B1BF1075DBAE01C4E15A49655C8F8BB04C4FC83C00C40626421480089ABB65E
+大小：23,724,097 bytes
+SHA256：736970FF8F04315BE878E1C9CCBF52CD9542559E8697429E65766C6789CE56F7
 
 www/app.js
 大小：602,818 bytes
 SHA256：185FE2C4F33BADAB2EFB140CCD48D739620B4CEF418D11FAB92FF87E5BDDBDD4
 
 www/style.css
-大小：254,778 bytes
-SHA256：7ECFA8BA45A32F668CE756D0E7B9BDB9EAE7FA7F6BCFD95F4CAA7BE7056E94E8
+大小：255,298 bytes
+SHA256：9ACBAAFEFE8444FBEBA0AF22C80458F0113D809464CFF2562DA9EB205F9D437A
 
 www/app.bundle.js
 大小：784,146 bytes
@@ -51,7 +51,7 @@ SHA256：7CF00A255A7AC61DAF17FF3EF5F9FEF65FA500359FC489F019108555DC29FBE5
 
 備註
 GitHub：we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-（main）
-狀態：4.6.41 已建置並覆蓋正式安裝目錄；GitHub main 功能提交為 9d0475d（G43 v2.5f）
-Release：v4.6.41-g43-v2.5f（資產 ClaudeNiang-Windows11-Setup-4.6.41-G43-v2.5f-x64.exe）
-備註：Release 資產已上傳，GitHub digest sha256:eb49bc1c318f8e5270a566679c4fadfdd2a42caecef216438780a5f24e83ac36（與本地 SHA256 一致）。
-URL：https://github.com/we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-/releases/tag/v4.6.41-g43-v2.5f
+狀態：4.6.42 已建置並覆蓋正式安裝目錄；GitHub main 功能提交為 2f9a6b2（G43 v2.5g）
+Release：v4.6.42-g43-v2.5g（資產 ClaudeNiang-Windows11-Setup-4.6.42-G43-v2.5g-x64.exe）
+備註：Release 資產已上傳，GitHub digest sha256:c25fd25651ed08590b77c08533ca5dc665d17513c2a22f4d66c727fa9e1eb798（與本地 SHA256 一致）。
+URL：https://github.com/we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-/releases/tag/v4.6.42-g43-v2.5g

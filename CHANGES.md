@@ -810,7 +810,7 @@ PII 掃描 0 處。
 
 ### 推送
 - GitHub：`we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-`（`main`）。
-- 提交：`<待補>`（G43 v2.5g：開場雙人物修復）。
+- 提交：`2f9a6b2`（G43 v2.5g：開場雙人物修復）。
 - 標籤／Release：`v4.6.42-g43-v2.5g`。
-- 資產：`ClaudeNiang-Windows11-Setup-4.6.42-G43-v2.5g-x64.exe`（127,776,762 bytes）。
+- 資產：`ClaudeNiang-Windows11-Setup-4.6.42-G43-v2.5g-x64.exe`（127,776,762 bytes；GitHub digest `sha256:c25fd25651ed08590b77c08533ca5dc665d17513c2a22f4d66c727fa9e1eb798`）。
 - 下載：`https://github.com/we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-/releases/tag/v4.6.42-g43-v2.5g`。
