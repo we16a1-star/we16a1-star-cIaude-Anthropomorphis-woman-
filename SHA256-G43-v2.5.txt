@@ -51,7 +51,7 @@ SHA256：7CF00A255A7AC61DAF17FF3EF5F9FEF65FA500359FC489F019108555DC29FBE5
 
 備註
 GitHub：we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-（main）
-狀態：4.6.41 已建置並覆蓋正式安裝目錄；GitHub main 仍為 5a2d16b76074b893de0729518b933363e9871b3d
-Release：v4.6.38-g43-v2.5d（資產仍為 2026-11-15 舊安裝包，尚未更新）
-備註：尚未推送 GitHub／更新 Release 資產。
-URL：https://github.com/we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-/releases/tag/v4.6.38-g43-v2.5d
+狀態：4.6.41 已建置並覆蓋正式安裝目錄；GitHub main 功能提交為 9d0475d（G43 v2.5f）
+Release：v4.6.41-g43-v2.5f（資產 ClaudeNiang-Windows11-Setup-4.6.41-G43-v2.5f-x64.exe）
+備註：Release 資產已上傳，GitHub digest sha256:eb49bc1c318f8e5270a566679c4fadfdd2a42caecef216438780a5f24e83ac36（與本地 SHA256 一致）。
+URL：https://github.com/we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-/releases/tag/v4.6.41-g43-v2.5f

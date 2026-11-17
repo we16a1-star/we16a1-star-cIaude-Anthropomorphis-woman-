@@ -778,3 +778,10 @@ PII 掃描 0 處。
 - 正式安裝版 4.6.41 以全新 user-data 複驗：面板 600×430、標籤無遮擋、人物 [732,39,419,750]、插圖 800×600、無 console 錯誤。
 - 交付雜湊：`app.js` 602,818 bytes／`185FE2C4F33BADAB2EFB140CCD48D739620B4CEF418D11FAB92FF87E5BDDBDD4`；`style.css` 254,778 bytes／`7ECFA8BA45A32F668CE756D0E7B9BDB9EAE7FA7F6BCFD95F4CAA7BE7056E94E8`；`app.bundle.js` 784,146 bytes／`5A8A342233E2D02BAF9EE12BE597D7D8DABE74B897AD1C97968A355AA4A3E278`；`app.asar` 23,723,577 bytes／`2B1BF1075DBAE01C4E15A49655C8F8BB04C4FC83C00C40626421480089ABB65E`；Setup 127,776,546 bytes／`EB49BC1C318F8E5270A566679C4FADFDD2A42CAECEF216438780A5F24E83AC36`。
 - PII／簡體掃描（本次修改與新增文字檔）：0 PII、0 簡體。
+
+### 推送
+- GitHub：`we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-`（`main`）。
+- 提交：`9d0475d`（G43 v2.5f：開始畫面按鈕遮擋、插圖保留、場景標籤與中間空白修復）。
+- 標籤／Release：`v4.6.41-g43-v2.5f`。
+- 資產：`ClaudeNiang-Windows11-Setup-4.6.41-G43-v2.5f-x64.exe`（127,776,546 bytes；GitHub digest `sha256:eb49bc1c318f8e5270a566679c4fadfdd2a42caecef216438780a5f24e83ac36`）。
+- 下載：`https://github.com/we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-/releases/tag/v4.6.41-g43-v2.5f`。
