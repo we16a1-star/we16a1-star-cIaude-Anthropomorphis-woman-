@@ -1,5 +1,5 @@
-// G43 等待中介畫面：AI 回覆生成期間，舞台改顯示第一章的插畫（書庫寫字）。
-// 2026-11-09：日夜一律使用同一張 g43-wait-writing.jpg；舊夜間等待圖 36455_1（g43-wait-night.jpg）不再使用。
+// G43 等待中介畫面：AI 回覆生成期間，舞台改顯示第一章的插畫（日：書庫寫字，夜：床邊羽毛筆）。
+// 2026-11-17：恢復夜間等待圖 g43-wait-night.jpg（36455_1）；夜間以 landscape 版式顯示。
 // 注意：36455 本體是 P2-11 的夜間事件 CG，與等待圖無關，保留不動。
 // 不修改 app.js：render() 在 busy 時會在 #choices 放入 .loading-dot，這裡只監看這個既有標記。
 // 若要換圖或調整時間，只改下面的 ART 與 tuning。
@@ -16,7 +16,7 @@ if (tab && stage && choices) {
     hintAfter: 25000,   // 等太久時顯示提示
   }, window.__WAIT_INTERLUDE_TUNING__ || {});
 
-  // night 設為 null 就會在夜間也使用 day 的圖。
+  // night 設為 null 就會在夜間也使用 day 的圖；目前恢復夜間圖，夜間使用 landscape 版式。
   const ART = {
     day: {
       file: 'g43-wait-writing.jpg', ratio: 'portrait',
@@ -26,8 +26,14 @@ if (tab && stage && choices) {
         en: ['(She writes a line in her notebook with the quill.)', '(She turns a page, fingertip resting on a paragraph.)', '(She tucks a loose strand of hair behind her ear.)', '(She blows gently on her tea.)'],
       },
     },
-    // 夜間等待圖 36455_1 不再使用：night 設為 null，夜間也使用 day 的同一張圖與同一組動作描寫。
-    night: null,
+    night: {
+      file: 'g43-wait-night.jpg', ratio: 'landscape',
+      alt: '夜裡的克勞德趴在床上，羽毛筆指向畫面',
+      lines: {
+        zh: ['（把羽毛筆轉了一圈，想著該怎麼回你）', '（掩著嘴打了個哈欠，又笑了笑）', '（用羽毛筆輕輕點著枕邊）'],
+        en: ['(She spins the quill, thinking how to answer.)', '(She yawns behind her hand, then smiles.)', '(She taps the quill lightly on the pillow.)'],
+      },
+    },
   };
   const HINT = {
     zh: '回覆比平常久，請再等一下。網路或模型忙碌時會比較慢。',

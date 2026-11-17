@@ -52,14 +52,18 @@ const ov = w => w.document.getElementById('waitInterlude');
   clearDots(w); await sleep(5); addDot(w); await sleep(100);
   ok(!ov(w).hidden && ov(w).classList.contains('is-visible'), 'quick re-render does not close overlay');
 
-  // 4 night theme: same single image as day
+  // 4 night theme: uses the night image and landscape layout
   w = make(); w.document.getElementById('tab-story').dataset.artTone = 'night'; addDot(w); await sleep(100);
-  ok(/g43-wait-writing\.jpg$/.test(ov(w).querySelector('.wait-art').getAttribute('src')), 'night also uses the single wait image');
-  ok(ov(w).dataset.ratio === 'portrait' && ov(w).dataset.theme === 'day', 'night uses portrait day layout');
-  ok(!code.includes("file: 'g43-wait-night.jpg'"), 'code no longer uses the night wait variant');
+  ok(/g43-wait-night\.jpg$/.test(ov(w).querySelector('.wait-art').getAttribute('src')), 'night uses g43-wait-night.jpg');
+  ok(ov(w).dataset.ratio === 'landscape' && ov(w).dataset.theme === 'night', 'night uses landscape night layout');
+  ok(code.includes("file: 'g43-wait-night.jpg'"), 'code keeps the night wait variant');
 
   const assets = path.join(__dirname, '..', 'app', 'www', 'assets');
-  ok(!fs.existsSync(path.join(assets, 'g43-wait-night.jpg')), 'night wait variant g43-wait-night.jpg is removed from assets');
+  ok(fs.existsSync(path.join(assets, 'g43-wait-night.jpg')), 'night wait variant g43-wait-night.jpg is present');
+  const nightApproved = crypto.createHash('sha256')
+    .update(fs.readFileSync(path.join(assets, 'g43-wait-night.jpg')))
+    .digest('hex').toUpperCase();
+  ok(nightApproved === 'F7C4B8534E3F19369B80C4325A8B3B308554B80949693A9F321E90BBB79D5806', 'night wait image matches the approved attachment');
   const approved = crypto.createHash('sha256')
     .update(fs.readFileSync(path.join(assets, 'g43-wait-writing.jpg')))
     .digest('hex').toUpperCase();

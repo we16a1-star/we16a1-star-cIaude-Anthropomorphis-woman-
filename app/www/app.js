@@ -602,10 +602,11 @@ function applyAffectionDisplayPreference(){document.querySelector('.affection-bo
 const SCENE_MODE_KEY = 'claude_novel_scene_mode_v2';
 let sceneMode = localStorage.getItem(SCENE_MODE_KEY) === 'text' ? 'text' : 'offer';
 const PORTRAIT_OVER_SCENE_KEY = 'claude_novel_portrait_over_scene_v1';
-let keepPortraitOverScene = localStorage.getItem(PORTRAIT_OVER_SCENE_KEY) === '1';
+let keepPortraitOverScene = localStorage.getItem(PORTRAIT_OVER_SCENE_KEY) !== '0';
 let sceneImageBusy = false;
 let loadedSceneImageKey = '';
 let sceneImageObjectUrl = '';
+let openingSceneImageKey = '';
 // ==== SECTION 4｜介面文字 UI_EN 與語言套用（uiText／applyUiLanguage；新增文字中英都要加）====
   const UI_EN = {
   '提示詞記錄': 'Prompt history',
@@ -2110,6 +2111,7 @@ async function importSceneIllustration(file,source='') {
       sceneImageObjectUrl=URL.createObjectURL(imageBlob);
       g12SceneSwap($('sceneGeneratedImage'),()=>{$('sceneGeneratedImage').src=sceneImageObjectUrl;$('sceneGeneratedImage').hidden=false;});
       loadedSceneImageKey=key;
+      if(!state.history.length&&!state.pendingAction) openingSceneImageKey=key;
       setSceneImageVisible(true);
       if(sceneMode==='text'){
         sceneMode='offer';
@@ -2220,7 +2222,9 @@ async function deleteSceneImage(key) {
 async function removeSceneIllustration() {
   if(!confirm(uiText('要移除目前顯示的場景插圖嗎？'))) return;
   try{
-    await deleteSceneImage(currentSceneImageKey());
+    const removingKey=currentSceneImageKey();
+    await deleteSceneImage(removingKey);
+    if(removingKey===openingSceneImageKey) openingSceneImageKey='';
     loadedSceneImageKey='';
     await loadSceneImage();
     $('sceneImageStatus').textContent=uiText('已移除這張插圖。');
@@ -4842,7 +4846,7 @@ function renderOpeningSetup(container){
   const continueSlots=slots.filter(slot=>slot.id!==activeSlotId&&(((slot.state?.history)||[]).length>0||String(slot.state?.pendingAction||'')));
   const continueOptions=continueSlots.map(slot=>{const turns=(slot.state?.history||[]).filter(entry=>entry?.role==='user').length;return `<option value="${esc(slot.id)}">${esc(slot.name)}（${turns} ${uiText('回合')}）</option>`;}).join('');
   const playerNamePref=loadPlayerNamePreference();
-  container.innerHTML=`<section class="start-panel" aria-labelledby="openingSetupTitle"><h2 id="openingSetupTitle">${uiText('開始新故事')}</h2><p>${uiText('先選 AI，再挑一種序章；不同序章會從不同事件、地點與故事氣氛展開。按下開始後才會送出請求。')}</p><p class="note free-ai-note">${uiText('新存檔預設使用 AI 官方網站免費版，免 API Key；遊戲內 API 模式為選用，需自行設定 API Key。網站與 API 額度分開，依供應商規則。')}</p><div class="opening-clock-row opening-letter-row"><label class="feature-toggle" for="openingAnthropicLetterToggle"><input type="checkbox" id="openingAnthropicLetterToggle"> <span>${uiText('遊玩中有機會觸發神秘的一封信')}</span></label></div><label class="opening-style-label" for="openingPlayerName">${uiText('你的名字')}</label><input id="openingPlayerName" class="opening-name-input" type="text" maxlength="16" value="${esc(playerNamePref)}"><p class="opening-style-help">${uiText('會隨這個存檔記錄；留空則使用 User。')}</p><div class="start-ai-row"><span>${uiText('目前 AI')}</span><b>${esc(aiLabel)}</b><button id="openingAiPicker" type="button">${uiText('選擇 AI')}</button></div><label class="opening-style-label" for="openingDifficultySelect">${uiText('遊戲難度')}</label><select id="openingDifficultySelect"><option value="veryEasy">${uiText('非常簡單（不扣好感，1小時保底滿好感）')}</option><option value="easy">${uiText('簡單（扣分減半）')}</option><option value="normal">${uiText('中等（標準增減）')}</option><option value="hard">${uiText('困難（加分打折、扣分加重）')}</option><option value="veryHard">${uiText('非常困難（加分減半、扣分加重）')}</option></select><p class="opening-style-help">${uiText('難度會在開始時套用並隨此故事存檔；既有故事保留自己的難度。')}</p><label class="opening-style-label" for="openingStyleSelect">${uiText('序章風格')}</label><select id="openingStyleSelect"><option value="${RANDOM_OPENING_STYLE}">${uiText('隨機驚喜')}</option>${options}<option value="${CUSTOM_OPENING_STYLE}">${uiText('自由自訂')}</option></select><p class="opening-style-help">${uiText('隨機驚喜會從預設風格與 AI 完全自由創作中抽選；「完全隨機」則讓 AI 自行決定整個開場。若生成失敗，重試會保留同一選擇。')}</p><div id="openingCustomWrap" class="opening-custom-wrap" ${selected===CUSTOM_OPENING_STYLE?'':'hidden'}><label class="opening-style-label" for="openingCustomPrompt">${uiText('自訂序章方向')}</label><textarea id="openingCustomPrompt" rows="3" maxlength="600"></textarea><div class="opening-custom-meta"><span>${uiText('可補充人物初遇、事件、氣氛或你想看到的開場；只用於序章，最多600字。')}</span><span id="openingCustomCount">0/600</span></div></div><div id="openingWorldWrap" class="opening-custom-wrap"><label class="opening-style-label" for="openingWorldSetting">${uiText('自訂世界觀（選填）')}</label><textarea id="openingWorldSetting" rows="3" maxlength="10000"></textarea><p class="opening-style-help">${uiText('在這裡描述故事發生的世界；留白則沿用目前設定。')}</p></div><div class="opening-clock-row"><span class="opening-style-label">${uiText('故事時間')}</span><div class="opening-clock-choices" role="radiogroup" aria-label="故事時間"><label><input type="radio" name="openingClockMode" id="openingClockOff" value="off"> ${uiText('不啟用')}</label><label><input type="radio" name="openingClockMode" id="openingClockStory" value="story" checked> ${uiText('隨劇情推進')}</label><label><input type="radio" name="openingClockMode" id="openingClockReal" value="real"> ${uiText('綁定現實時間')}</label></div><p class="opening-style-help">${uiText('「隨劇情推進」＝顯示目前天數與時段（例如「第 3 天・晚上」），AI 會依劇情推進時間；「綁定現實時間」＝天數與時段直接跟隨現實時刻（早上 05:00–11:59／中午 12:00–17:59／晚上 18:00–04:59），跨現實日界線 +1，AI 不需回報時間推進。「不啟用」＝與原本完全相同。開始後不提供中途切換；既有存檔不受影響。')}</p><p class="note" id="openingClockPreview"></p></div><div class="opening-clock-row"><span class="opening-style-label">${uiText('對話記錄')}</span><div class="opening-clock-choices" role="radiogroup" aria-label="對話記錄"><label><input type="radio" name="openingRecordMode" id="openingRecordIncognito" value="incognito" ${openingRecordModeDraft==='incognito'?'checked':''}> ${uiText('臨時對話')}</label><label><input type="radio" name="openingRecordMode" id="openingRecordSave" value="save" ${openingRecordModeDraft==='save'?'checked':''}> ${uiText('保存記錄（預設）')}</label></div></div><button id="startStoryBtn" class="choice-btn ai-btn" type="button">${uiText('開始故事')}</button>${continueOptions?`<div class="opening-clock-row"><span class="opening-style-label">${uiText('繼續既有存檔')}</span><div class="opening-clock-choices"><select id="openingContinueSlot" aria-label="繼續既有存檔">${continueOptions}</select><button id="openingContinueBtn" type="button">${uiText('繼續這個存檔')}</button></div><p class="opening-style-help">${uiText('選一個舊存檔直接回到該故事；目前未開始的進度不受影響。')}</p></div>`:''}<p class="opening-help">${uiText('新手流程：確認 AI → 選序章 → 開始。使用網頁版時，遊戲會準備提示詞，並在下方逐步提醒按鍵。')}</p></section>`;
+  container.innerHTML=`<section class="start-panel" aria-labelledby="openingSetupTitle"><div class="start-panel-scroll"><h2 id="openingSetupTitle">${uiText('開始新故事')}</h2><p>${uiText('先選 AI，再挑一種序章；不同序章會從不同事件、地點與故事氣氛展開。按下開始後才會送出請求。')}</p><p class="note free-ai-note">${uiText('新存檔預設使用 AI 官方網站免費版，免 API Key；遊戲內 API 模式為選用，需自行設定 API Key。網站與 API 額度分開，依供應商規則。')}</p><div class="opening-clock-row opening-letter-row"><label class="feature-toggle" for="openingAnthropicLetterToggle"><input type="checkbox" id="openingAnthropicLetterToggle"> <span>${uiText('遊玩中有機會觸發神秘的一封信')}</span></label></div><label class="opening-style-label" for="openingPlayerName">${uiText('你的名字')}</label><input id="openingPlayerName" class="opening-name-input" type="text" maxlength="16" value="${esc(playerNamePref)}"><p class="opening-style-help">${uiText('會隨這個存檔記錄；留空則使用 User。')}</p><div class="start-ai-row"><span>${uiText('目前 AI')}</span><b>${esc(aiLabel)}</b><button id="openingAiPicker" type="button">${uiText('選擇 AI')}</button></div><label class="opening-style-label" for="openingDifficultySelect">${uiText('遊戲難度')}</label><select id="openingDifficultySelect"><option value="veryEasy">${uiText('非常簡單（不扣好感，1小時保底滿好感）')}</option><option value="easy">${uiText('簡單（扣分減半）')}</option><option value="normal">${uiText('中等（標準增減）')}</option><option value="hard">${uiText('困難（加分打折、扣分加重）')}</option><option value="veryHard">${uiText('非常困難（加分減半、扣分加重）')}</option></select><p class="opening-style-help">${uiText('難度會在開始時套用並隨此故事存檔；既有故事保留自己的難度。')}</p><label class="opening-style-label" for="openingStyleSelect">${uiText('序章風格')}</label><select id="openingStyleSelect"><option value="${RANDOM_OPENING_STYLE}">${uiText('隨機驚喜')}</option>${options}<option value="${CUSTOM_OPENING_STYLE}">${uiText('自由自訂')}</option></select><p class="opening-style-help">${uiText('隨機驚喜會從預設風格與 AI 完全自由創作中抽選；「完全隨機」則讓 AI 自行決定整個開場。若生成失敗，重試會保留同一選擇。')}</p><div id="openingCustomWrap" class="opening-custom-wrap" ${selected===CUSTOM_OPENING_STYLE?'':'hidden'}><label class="opening-style-label" for="openingCustomPrompt">${uiText('自訂序章方向')}</label><textarea id="openingCustomPrompt" rows="3" maxlength="600"></textarea><div class="opening-custom-meta"><span>${uiText('可補充人物初遇、事件、氣氛或你想看到的開場；只用於序章，最多600字。')}</span><span id="openingCustomCount">0/600</span></div></div><div id="openingWorldWrap" class="opening-custom-wrap"><label class="opening-style-label" for="openingWorldSetting">${uiText('自訂世界觀（選填）')}</label><textarea id="openingWorldSetting" rows="3" maxlength="10000"></textarea><p class="opening-style-help">${uiText('在這裡描述故事發生的世界；留白則沿用目前設定。')}</p></div><div class="opening-clock-row"><span class="opening-style-label">${uiText('故事時間')}</span><div class="opening-clock-choices" role="radiogroup" aria-label="故事時間"><label><input type="radio" name="openingClockMode" id="openingClockOff" value="off"> ${uiText('不啟用')}</label><label><input type="radio" name="openingClockMode" id="openingClockStory" value="story" checked> ${uiText('隨劇情推進')}</label><label><input type="radio" name="openingClockMode" id="openingClockReal" value="real"> ${uiText('綁定現實時間')}</label></div><p class="opening-style-help">${uiText('「隨劇情推進」＝顯示目前天數與時段（例如「第 3 天・晚上」），AI 會依劇情推進時間；「綁定現實時間」＝天數與時段直接跟隨現實時刻（早上 05:00–11:59／中午 12:00–17:59／晚上 18:00–04:59），跨現實日界線 +1，AI 不需回報時間推進。「不啟用」＝與原本完全相同。開始後不提供中途切換；既有存檔不受影響。')}</p><p class="note" id="openingClockPreview"></p></div><div class="opening-clock-row"><span class="opening-style-label">${uiText('對話記錄')}</span><div class="opening-clock-choices" role="radiogroup" aria-label="對話記錄"><label><input type="radio" name="openingRecordMode" id="openingRecordIncognito" value="incognito" ${openingRecordModeDraft==='incognito'?'checked':''}> ${uiText('臨時對話')}</label><label><input type="radio" name="openingRecordMode" id="openingRecordSave" value="save" ${openingRecordModeDraft==='save'?'checked':''}> ${uiText('保存記錄（預設）')}</label></div></div>${continueOptions?`<div class="opening-clock-row"><span class="opening-style-label">${uiText('繼續既有存檔')}</span><div class="opening-clock-choices"><select id="openingContinueSlot" aria-label="繼續既有存檔">${continueOptions}</select><button id="openingContinueBtn" type="button">${uiText('繼續這個存檔')}</button></div><p class="opening-style-help">${uiText('選一個舊存檔直接回到該故事；目前未開始的進度不受影響。')}</p></div>`:''}<p class="opening-help">${uiText('新手流程：確認 AI → 選序章 → 開始。使用網頁版時，遊戲會準備提示詞，並在下方逐步提醒按鍵。')}</p></div><div class="start-panel-footer"><button id="startStoryBtn" class="choice-btn ai-btn" type="button">${uiText('開始故事')}</button></div></section>`;
   const incognitoRestriction=incognitoTemporaryChatRestriction();
   const incognitoInput=$('openingRecordIncognito');
   incognitoInput.disabled=state.aiMode==='web'&&!TEMPORARY_CHAT_WEB_PROVIDERS.has(normalizeWebAIProvider(state.webProvider));
@@ -4907,6 +4911,8 @@ function renderOpeningSetup(container){
   const openingContinueBtn=$('openingContinueBtn');
   if(openingContinueBtn)openingContinueBtn.onclick=()=>{const id=$('openingContinueSlot')?.value;if(id)void switchSlot(id);};
   $('startStoryBtn').onclick=()=>{
+    const carryOpeningSceneKey=openingSceneImageKey&&openingSceneImageKey===currentSceneImageKey()?openingSceneImageKey:'';
+    openingSceneImageKey='';
     const letterEventEnabled=$('openingAnthropicLetterToggle')?.checked===true;
     const recordMode=[...document.querySelectorAll('input[name="openingRecordMode"]')].find(input=>input.checked)?.value||openingRecordModeDraft||'save';
     openingRecordModeDraft=recordMode;
@@ -4953,6 +4959,21 @@ function renderOpeningSetup(container){
     storyNoticeText='';
     const wv=String(worldDraft.value||'').trim();
     if(wv)state.worldSetting=wv.slice(0,10000);
+    if(carryOpeningSceneKey){
+      const targetKey=currentSceneImageKey();
+      if(targetKey!==carryOpeningSceneKey){
+        void (async()=>{
+          try{
+            const blob=await readSceneImageBlob(carryOpeningSceneKey);
+            if(!blob)return;
+            await saveSceneImageBlob(targetKey,blob);
+            if(targetKey!==currentSceneImageKey())return;
+            loadedSceneImageKey='';
+            await loadSceneImage();
+          }catch{}
+        })();
+      }
+    }
     if(!save())return;
     opening();
     refreshTimeTheme();

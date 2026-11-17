@@ -727,3 +727,54 @@ PII 掃描 0 處。
 - 提交：`dc59c25`（G43 v2.5d：窄視窗滿版背景、工作列圖示修復、Doubao 接入與測試修正）。
 - Release：`v4.6.38-g43-v2.5d`，資產 `ClaudeNiang-Windows11-Setup-4.6.38-G43-v2.5d-x64.exe`（127,589,682 bytes；GitHub digest `sha256:a44dda96e7532d4cff2e14240c9755dbd66a09f391904b4dd7efab6376787263`）。
 - 下載：`https://github.com/we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-/releases/tag/v4.6.38-g43-v2.5d`。
+
+---
+
+## 2026-11-17（G43 v2.5d 熱修：等待畫面恢復夜間圖）
+
+依使用者「1 2」選擇：重新安裝 v2.5d 至正式位置，並恢復夜間等待圖。此變更取代 2026-11-09 的 D6「夜間沿用日間圖」決定。
+
+### 調整
+- `app/www/wait-interlude.js`：`ART.night` 恢復為 `g43-wait-night.jpg`、`ratio: 'landscape'`，夜間動作描寫恢復三句；檔案開頭註解更新。
+- `app/www/wait-interlude.css`：補回 landscape 版式（圖片置中、底部漸層、caption 置底）與窄視窗 caption 規則。
+- `app/www/assets/g43-wait-night.jpg`：恢復夜間等待圖（189,076 bytes，SHA256 `F7C4B8534E3F19369B80C4325A8B3B308554B80949693A9F321E90BBB79D5806`）。
+- `tests/wait-interlude.test.cjs`：夜間測試改回期待 `g43-wait-night.jpg` 與 landscape，並檢查素材存在與核准雜湊（26 項）。
+- `完整原始碼-G43-v2.1` 鏡像同步上列檔案。
+
+### 驗證
+- `tests/wait-interlude.test.cjs`：26 項全數通過。
+- esbuild bundle 未變更（本次未改 `app.js`）：783,834 bytes，SHA256 `8002E1039CE46636FE9D6C66CEBF30E42250004E2552101641FE3FDF4EAAB66C`。
+- 安裝包重建：127,778,464 bytes，SHA256 `9E1BFA23A1ABF4D0E6985191A866CA8FE34D935F141B986244722EBA8B44AD94`。
+- asar 驗證：`www/wait-interlude.js` `99839F2EE2DE904820A59974C9A95CC5BBF0F7A191FA6789482E06FE9BEE1DD1`、`www/wait-interlude.css` `4FBD3AEBE9CBBD800D78069F248B1D5BD353BC82512C0BF750A057B55C7983AE`、`www/assets/g43-wait-night.jpg` `F7C4B8534E3F19369B80C4325A8B3B308554B80949693A9F321E90BBB79D5806`、`www/assets/g43-wait-writing.jpg` `C787A498B189922B3D41B4DB577BEC7615A481B6BEEE5B4AAC22E9AE9E90357D`。
+- 正式安裝目錄更新為 4.6.38：`app.asar` 23,747,294 bytes，SHA256 `7F6F2C3A535B3F88B73103C45724D87BCB68891C483D8D2C07F5A6536136A55A`；舊版保留於 `Claude娘 - Windows 11 電腦版.bak-4.6.36`。
+- 桌面與開始功能表捷徑改指向正式安裝 exe 與 `resources\icon.ico`。
+- CDP 實測（正式安裝版）：日間 `portrait`／`g43-wait-writing.jpg`（1024×1536，人物在右）；夜間 `landscape`／`g43-wait-night.jpg`（1672×941）；兩張皆自然載入，等待結束後 overlay 關閉。
+- PII／簡體掃描（本次新增與修改的文字檔）：0 PII、0 簡體。
+- 備註：全樹掃描仍有既有、未變更檔案中的功能性簡體字（官網按鈕比對字串與舊註解），非本次新增。
+
+---
+
+## 2026-11-17（G43 v2.5e／v2.5f：開始畫面按鈕遮擋、插圖保留、場景標籤與中間空白）
+
+依使用者回饋「1 2 3」與「介面中間太空」，連續修正開始畫面：
+
+### 4.6.39：開始面板捲動與插圖保留
+- `app/www/style.css`：`#app #tab-story #choices:has(> .start-panel)` 改為固定高度、`display:flex;flex-direction:column;overflow:hidden`；`.start-panel` 內容區 `.start-panel-scroll` 獨立捲動、`.start-panel-footer` 固定在底部；`#startStoryBtn` 改 `position:static`，不再 sticky 覆蓋名字欄；開始畫面隱藏浮動 `.vn-speaker`。
+- `app/www/app.js`：`keepPortraitOverScene` 預設改為 `true`，只有 localStorage 明確為 `'0'` 時才隱藏；按鈕仍可切換。開始畫面匯入的插圖在按下「開始故事」時複製到新 `storyRunId` 的 IndexedDB key（`openingSceneImageKey`），避免換 run 後圖片消失。
+
+### 4.6.40：場景標籤間距
+- `app/www/style.css`：場景標籤維持左側；`@media(min-width:1150px)` 開始面板下移 112px，`1000–1149px` 下移 132px，避免「古籍閱覽室 · 雨夜」被面板遮住。
+
+### 4.6.41：中間空白
+- `app/www/style.css`（v2.5f）：開始面板加寬為 `min(50vw,640px)`（≥1200px）、`min(46vw,520px)`（1000–1199px）、`min(44vw,460px)`（900–999px）；高度 `min(58dvh,560px)`。
+- 開始提示框與面板同寬、`min-height:0`、`padding:12px 16px`，只在 `story-empty:not(.text-only):not(.has-web-pending):has(.start-panel)` 生效。
+- 開場人物內移：`right:9%`（≥1200px）、`7%`（1000–1199px）、`6%`（900–999px）；仍保持右側且不遮擋。
+- 底部狀態列與面板同寬並 `margin-left:2.2%` 對齊；移除 `#choices:has(> .start-panel)` 與 `.start-panel-scroll` 的 `scrollbar-gutter:stable`，讓面板與提示框同為 600px。
+
+### 測試
+- 278／278 自動化測試 PASS（wait-interlude 26、album 39、bedroom-scene 37、bedroom-wp7 54、expression-affinity 22、rare-goodnight 100）；`scripts/audit-buttons.cjs` PASS。
+- 版面量測：1264×781、1024×768、1280×800、1920×1080、1000×700、1150×800、1200×800、1440×900 皆無重疊；1264×781 面板 600×430、提示框 600×52、狀態列 600×16、人物 [732,39,419,750]、面板與人物間距 103px、標籤間距 7px。
+- 插圖匯入：800×600 檔案輸入成功、人物保留；真實剪貼簿 Ctrl+V 512×384 成功；開始畫面 640×480 → 臨時對話 → 開始故事，IndexedDB 新 key `incognito-save:run_1794874377352_2acbtg:0`（2,944 bytes image/webp），圖片仍顯示、人物保留、無錯誤。
+- 正式安裝版 4.6.41 以全新 user-data 複驗：面板 600×430、標籤無遮擋、人物 [732,39,419,750]、插圖 800×600、無 console 錯誤。
+- 交付雜湊：`app.js` 602,818 bytes／`185FE2C4F33BADAB2EFB140CCD48D739620B4CEF418D11FAB92FF87E5BDDBDD4`；`style.css` 254,778 bytes／`7ECFA8BA45A32F668CE756D0E7B9BDB9EAE7FA7F6BCFD95F4CAA7BE7056E94E8`；`app.bundle.js` 784,146 bytes／`5A8A342233E2D02BAF9EE12BE597D7D8DABE74B897AD1C97968A355AA4A3E278`；`app.asar` 23,723,577 bytes／`2B1BF1075DBAE01C4E15A49655C8F8BB04C4FC83C00C40626421480089ABB65E`；Setup 127,776,546 bytes／`EB49BC1C318F8E5270A566679C4FADFDD2A42CAECEF216438780A5F24E83AC36`。
+- PII／簡體掃描（本次修改與新增文字檔）：0 PII、0 簡體。

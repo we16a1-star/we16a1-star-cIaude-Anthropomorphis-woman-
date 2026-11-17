@@ -1,0 +1,51 @@
+G43 v2.5e／v2.5f 開始畫面驗收紀錄
+日期：2026-11-17
+版本：4.6.39（開始面板捲動＋插圖保留）→ 4.6.40（場景標籤間距）→ 4.6.41（中間空白）
+環境：Windows 11；正式安裝版 4.6.41；win-unpacked 建置版；layout-probe 多尺寸
+
+一、版面幾何（無插圖；body zoom 依視窗自動縮放）
+尺寸 | 面板 | 提示框 | 狀態列 | 人物 | 標籤間距 | 面板與人物間距 | 重疊
+1264×781 | 600×430 | 600×52 | 600×16 | [732,39,419,750] | 7 | 103 | 無
+1024×768 | 377×356 | 377×44 | 377×14 | [541,38,412,738] | 6 | 141 | 無
+1280×800 | 640×464 | 640×55 | 640×17 | [736,39,429,769] | 7 | 68 | 無
+1920×1080 | 832×728 | 832×71 | 832×22 | [1154,53,580,1038] | 10 | 280 | 無
+1000×700 | 368×325 | 368×44 | 368×14 | [555,34,376,673] | 6 | 165 | 無
+1150×800 | 468×418 | 468×50 | 468×16 | [640,39,429,769] | 5 | 147 | 無
+1200×800 | 570×441 | 570×52 | 570×16 | [663,39,429,769] | 7 | 67 | 無
+1440×900 | 704×574 | 704×60 | 704×19 | [814,44,483,865] | 8 | 79 | 無
+
+註：面板、提示框、狀態列同寬；標籤中心 elementFromPoint 皆為 .stage-scene-label；panelDialogueOverlap、dialogueStatusOverlap 皆 false。
+
+二、開始面板按鈕與名字欄
+- 1264×781：panel [28,106,600,430]、scroll [29,107,598,364]、footer [29,471,598,64]、#startStoryBtn [44,482,568,42]、名字欄 [44,359,399,36]。
+- #startStoryBtn position: static；按鈕在 footer 內，不覆蓋名字欄。
+- 開始畫面 .vn-speaker display: none。
+
+三、插圖匯入與人物保留
+- 800×600 PNG 以檔案輸入匯入：tab class 變 has-scene-image keep-portrait；圖片 natural 800×600；狀態「圖片已加入目前場景。」；人物仍在 [732,39,419,750]；無 console 錯誤。
+- 真實剪貼簿 Ctrl+V（Windows 剪貼簿 512×384 PNG）：paste 事件收到 Files/image/png；圖片 natural 變 512×384；狀態更新；人物保留；無錯誤。
+- 開始畫面匯入 640×480 → 選「臨時對話」→ 按「開始故事」：IndexedDB 新 key incognito-save:run_1794874377352_2acbtg:0（2,944 bytes image/webp）；圖片仍顯示；人物保留；無錯誤。
+
+四、自動化測試
+- wait-interlude 26、album 39、bedroom-scene 37、bedroom-wp7 54、expression-affinity 22、rare-goodnight 100，合計 278／278 PASS。
+- scripts/audit-buttons.cjs PASS。
+- 建置樹已移除測試檔 json-repair-debug.mjs、layout-probe.html、meta.json、test-entry.js、test-out.js；asar 清單確認不含上述檔案。
+
+五、交付雜湊
+- Setup 4.6.41：127,776,546 bytes；SHA256 EB49BC1C318F8E5270A566679C4FADFDD2A42CAECEF216438780A5F24E83AC36。
+- app.asar：23,723,577 bytes；SHA256 2B1BF1075DBAE01C4E15A49655C8F8BB04C4FC83C00C40626421480089ABB65E。
+- www/app.js：602,818 bytes；SHA256 185FE2C4F33BADAB2EFB140CCD48D739620B4CEF418D11FAB92FF87E5BDDBDD4。
+- www/style.css：254,778 bytes；SHA256 7ECFA8BA45A32F668CE756D0E7B9BDB9EAE7FA7F6BCFD95F4CAA7BE7056E94E8。
+- www/app.bundle.js：784,146 bytes；SHA256 5A8A342233E2D02BAF9EE12BE597D7D8DABE74B897AD1C97968A355AA4A3E278。
+- exe FileVersion 4.6.41、ProductVersion 4.6.41.0。
+- 正式安裝目錄 app.asar 大小與 SHA256 與建置一致；robocopy exit 3。
+
+六、PII／簡體掃描
+- 本次修改與新增文字檔：PII 0、簡體 0。
+- 掃描範圍：app.js 本次區段、style.css v2.5e／v2.5f 區段、CHANGES.md、SHA256-G43-v2.5.txt、本紀錄。
+- 註：全樹既有未變更檔案仍有功能性簡體字（官網按鈕比對字串與舊註解），非本次新增。
+
+七、備註
+- has-web-pending 狀態仍會同時顯示 start-character-art（滿版背景）與 .story-portrait，形成兩個人物重疊；此為既有行為，未在本次變更。
+- 開始面板內容高度約 1,210px，可視約 383px；AI／序章選項需向下捲動。
+- registry 版本可能仍顯示 4.6.36，實際 exe／asar 已是 4.6.41。
