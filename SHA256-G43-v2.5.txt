@@ -71,6 +71,7 @@ SHA256：2382C8540310496A51DF0998E7A59881C5FCCB4A8E97B2D9E543F7C89143F465
 
 備註
 GitHub：we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-（main）
+補記：796d685（Release 驗證）
 狀態：4.6.43 已建置並以安裝包完成正式安裝（`/S /currentuser`，exit 0）；安裝後 exe 4.6.43.0、app.asar 與交付一致、icon.ico 七尺寸齊全；開始畫面只有 1 個人物、無 console error
 安裝目錄：`%LOCALAPPDATA%\Programs\claude-novel-windows11`；桌面與開始功能表捷徑皆指向此版本
 圖標：G30 徽章外框＋4.6.42 立繪＋金星（A2）；ICO 尺寸 16/24/32/48/64/128/256，小尺寸（≤48）加 sharpen sigma 0.5

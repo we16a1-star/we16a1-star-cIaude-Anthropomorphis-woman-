@@ -846,6 +846,7 @@ PII 掃描 0 處。
 ### 推送
 - GitHub：`we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-`（`main`）。
 - 提交：153ddbc（G43 v2.5h：G30 徽章圖標）。
+- 補記：796d685（補記 153ddbc 提交）。
 - 標籤／Release：`v4.6.43-g43-v2.5h`。
 - 資產：`ClaudeNiang-Windows11-Setup-4.6.43-G43-v2.5h-x64.exe`（127,631,642 bytes；GitHub digest `sha256:ff5880b7827b9bb6ca6be2fb8f9d97d821af402b1dd3a46372ccc694cec857ed`）。
 - 下載：`https://github.com/we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-/releases/tag/v4.6.43-g43-v2.5h`。
