@@ -805,7 +805,9 @@ PII 掃描 0 處。
 - 完整開場（2 個 AI 回合）故事立繪 canvas [842,115,371,656] 正常顯示、開場人物隱藏；只有 1 個人物。
 - 278／278 自動化測試 PASS（wait-interlude 26、album 39、bedroom-scene 37、bedroom-wp7 54、expression-affinity 22、rare-goodnight 100）；`scripts/audit-buttons.cjs` PASS。
 - 交付雜湊：`style.css` 255,298 bytes／`9ACBAAFEFE8444FBEBA0AF22C80458F0113D809464CFF2562DA9EB205F9D437A`；`app.js` 602,818 bytes／`185FE2C4F33BADAB2EFB140CCD48D739620B4CEF418D11FAB92FF87E5BDDBDD4`（未變）；`app.bundle.js` 784,146 bytes／`5A8A342233E2D02BAF9EE12BE597D7D8DABE74B897AD1C97968A355AA4A3E278`（未變）；`app.asar` 23,724,097 bytes／`736970FF8F04315BE878E1C9CCBF52CD9542559E8697429E65766C6789CE56F7`；Setup 127,776,762 bytes／`C25FD25651ED08590B77C08533CA5DC665D17513C2A22F4D66C727FA9E1EB798`。
-- 備註：安裝包 `/S` 靜默安裝在此機器會卡住；本次以 `dist-out\win-unpacked` 覆蓋正式安裝目錄完成更新，安裝包檔案本身仍可用於交付。
+- 安裝包實測：`/S /currentuser` 靜默安裝 exit 0，安裝 22 個檔案；安裝後 `app.asar` 23,724,097 bytes／`736970FF8F04315BE878E1C9CCBF52CD9542559E8697429E65766C6789CE56F7`，與交付一致。以桌面捷徑啟動後，開始畫面只有 1 個人物、面板 600×430、v2.5g CSS 規則存在。
+- `/S` 單獨使用仍會卡住（assisted installer 在靜默模式等待安裝模式選擇）；請使用 `/S /currentuser`，需要指定目錄時再加 `/D=<路徑>`。
+- 系統清理：已以 UAC 移除 4.6.36 全機殘留（HKLM 卸載鍵、`C:\Program Files\claude-novel-windows11` 空目錄、ProgramData 失效捷徑）與舊 HKCU 4.6.36 卸載鍵；HKCU 4.6.42 卸載鍵已指向正式安裝目錄與新 `Uninstall Claude娘 - Windows 11 電腦版.exe`。桌面與開始功能表捷徑已全部指向正式安裝版。
 - PII／簡體掃描（本次修改與新增文字檔）：0 PII、0 簡體。
 
 ### 推送
