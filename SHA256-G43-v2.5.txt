@@ -51,7 +51,7 @@ SHA256：7CF00A255A7AC61DAF17FF3EF5F9FEF65FA500359FC489F019108555DC29FBE5
 
 備註
 GitHub：we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-（main）
-狀態：4.6.42 已建置並以安裝包完成正式安裝；GitHub main 功能提交為 2f9a6b2（G43 v2.5g）
+狀態：4.6.42 已建置並以安裝包完成正式安裝；GitHub main 功能提交為 2f9a6b2（G43 v2.5g），補記提交為 8c17ba5
 安裝：`/S /currentuser` 靜默安裝 exit 0；`/S` 單獨使用會卡住（assisted installer 在靜默模式等待安裝模式選擇）
 安裝驗證：22 個檔案；`app.asar` 23,724,097 bytes／`736970FF8F04315BE878E1C9CCBF52CD9542559E8697429E65766C6789CE56F7`，與交付一致；開始畫面只有 1 個人物
 系統清理：已以 UAC 移除 4.6.36 全機殘留（HKLM 卸載鍵、空目錄、ProgramData 失效捷徑）與舊 HKCU 4.6.36 卸載鍵；桌面／開始功能表捷徑與 HKCU 4.6.42 卸載鍵已指向正式安裝版
