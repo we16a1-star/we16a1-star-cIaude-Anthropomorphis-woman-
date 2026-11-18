@@ -817,3 +817,35 @@ PII 掃描 0 處。
 - 標籤／Release：`v4.6.42-g43-v2.5g`（Release 說明已補安裝指令與驗證）。
 - 資產：`ClaudeNiang-Windows11-Setup-4.6.42-G43-v2.5g-x64.exe`（127,776,762 bytes；GitHub digest `sha256:c25fd25651ed08590b77c08533ca5dc665d17513c2a22f4d66c727fa9e1eb798`）。
 - 下載：`https://github.com/we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-/releases/tag/v4.6.42-g43-v2.5g`。
+
+---
+
+## 2026-11-18（G43 v2.5h：G30 徽章圖標）
+
+依使用者選擇 A2「保留目前 4.6.42 立繪、套 G30 徽章外框、保留金星」，本次只改圖標資產與版號；前端 JS 未改，`www/app.bundle.js` 以 esbuild 重建後雜湊不變。
+
+### 調整
+- `app/assets/icon-g30-badge.png`（新增）：G30 source `app/assets/icon.png` 完整徽章（1024×1024、808,777 bytes），作為合成來源；角落 alpha 為 0。
+- `app/scripts/build-g30-badge-icon.cjs`（新增）：sharp 合成腳本。G30 徽章圓心 (512,483)、內圓半徑 325；G43 立繪內圓半徑 448、角色底部 y=940；立繪縮放 0.759346、貼上原點 (172,143)，底部切齊圓環內緣。
+- `app/assets/icon.png`、`app/assets/icon-only.png`（更新）：748,724 bytes，兩檔相同；A2 預覽 pixel-identical。
+- `app/assets/desktop-avatar.png`（更新）：239,278 bytes。
+- `app/assets/icon.ico`（更新）：110,301 bytes；七尺寸 16／24／32／48／64／128／256；48 以下加 sharpen sigma 0.5。
+- `package.json`、`package-lock.json`：版本 4.6.42 → 4.6.43。
+- `tests/story/story-ai.test.js`：版本斷言改為 4.6.43。
+- `www/app.bundle.js`：以 esbuild 重建，784,146 bytes／`5A8A342233E2D02BAF9EE12BE597D7D8DABE74B897AD1C97968A355AA4A3E278`，與 4.6.42 相同。
+
+### 測試
+- 自動化測試 278／278 PASS（等待畫面 26、相簿 39、臥室場景 37、臥室 WP7 54、表情四階 22、稀有晚安 100）；`scripts/audit-buttons.cjs` PASS。
+- 圖標目視比對 256／32／16px 與 G30 小尺寸：外框、圓環、金星皆可辨識；角落透明。
+- 安裝包：127,631,642 bytes／`FF5880B7827B9BB6CA6BE2FB8F9D97D821AF402B1DD3A46372CCC694CEC857ED`；exe 版本 4.6.43.0。
+- 安裝包與 App exe 圖標抽取皆為七尺寸；`resources/icon.ico` 與 `assets/icon.ico` 同為 110,301 bytes／`C707579356431ACDD7A1C84F9A80AB4C984B56A5FF4DB7901EB104AF35F14792`；64／128／256 與 ICO 逐像素相同，16／24／32／48 為 electron-builder 重新取樣（可辨識）。
+- `/S /currentuser` 靜默安裝 exit 0；安裝 22 個檔案；`app.asar` 23,694,950 bytes／`22568ECE50A22B0F68C7F6B8782755AFF72BA81234280CF31BEE4BD05280F421`，與建置輸出一致。
+- 安裝版啟動煙測（全新 user-data）：開始畫面 1264×781 面板 600×430、人物 [732,39,419,750]；1024×768、800×600 皆只有 1 個人物；無 console error。
+- PII／簡體掃描：0 PII、0 簡體。
+
+### 推送
+- GitHub：`we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-`（`main`）。
+- 提交：待補。
+- 標籤／Release：`v4.6.43-g43-v2.5h`。
+- 資產：`ClaudeNiang-Windows11-Setup-4.6.43-G43-v2.5h-x64.exe`（127,631,642 bytes；GitHub digest `sha256:ff5880b7827b9bb6ca6be2fb8f9d97d821af402b1dd3a46372ccc694cec857ed`）。
+- 下載：`https://github.com/we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-/releases/tag/v4.6.43-g43-v2.5h`。

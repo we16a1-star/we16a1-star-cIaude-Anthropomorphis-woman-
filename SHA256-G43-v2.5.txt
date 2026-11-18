@@ -1,13 +1,13 @@
-G43 v2.5g 交付雜湊
-日期：2026-11-17（開場雙人物修復）
+G43 v2.5h 交付雜湊
+日期：2026-11-18（G30 徽章圖標）
 
-安裝包：Claude娘 - Windows 11 電腦版-Setup-4.6.42-x64.exe
-大小：127,776,762 bytes
-SHA256：C25FD25651ED08590B77C08533CA5DC665D17513C2A22F4D66C727FA9E1EB798
+安裝包：Claude娘 - Windows 11 電腦版-Setup-4.6.43-x64.exe
+大小：127,631,642 bytes
+SHA256：FF5880B7827B9BB6CA6BE2FB8F9D97D821AF402B1DD3A46372CCC694CEC857ED
 
 app.asar
-大小：23,724,097 bytes
-SHA256：736970FF8F04315BE878E1C9CCBF52CD9542559E8697429E65766C6789CE56F7
+大小：23,694,950 bytes
+SHA256：22568ECE50A22B0F68C7F6B8782755AFF72BA81234280CF31BEE4BD05280F421
 
 www/app.js
 大小：602,818 bytes
@@ -49,12 +49,31 @@ ai-web-flow.cjs
 大小：55,941 bytes
 SHA256：7CF00A255A7AC61DAF17FF3EF5F9FEF65FA500359FC489F019108555DC29FBE5
 
+assets/icon.ico
+大小：110,301 bytes
+SHA256：C707579356431ACDD7A1C84F9A80AB4C984B56A5FF4DB7901EB104AF35F14792
+
+assets/icon.png
+大小：748,724 bytes
+SHA256：F73FD95C428F16185F9FC454FD0761DA31F17A98B4DFEF7BBEBD4403C5AD635A
+
+assets/icon-only.png
+大小：748,724 bytes
+SHA256：F73FD95C428F16185F9FC454FD0761DA31F17A98B4DFEF7BBEBD4403C5AD635A
+
+assets/desktop-avatar.png
+大小：239,278 bytes
+SHA256：387628E237923C0D1DBA933F8B1701E5B05EBEE93FF0B14FE065B4F3DF4427C8
+
+assets/icon-g30-badge.png
+大小：808,777 bytes
+SHA256：2382C8540310496A51DF0998E7A59881C5FCCB4A8E97B2D9E543F7C89143F465
+
 備註
 GitHub：we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-（main）
-狀態：4.6.42 已建置並以安裝包完成正式安裝；GitHub main 功能提交為 2f9a6b2（G43 v2.5g），補記提交為 8c17ba5
-安裝：`/S /currentuser` 靜默安裝 exit 0；`/S` 單獨使用會卡住（assisted installer 在靜默模式等待安裝模式選擇）
-安裝驗證：22 個檔案；`app.asar` 23,724,097 bytes／`736970FF8F04315BE878E1C9CCBF52CD9542559E8697429E65766C6789CE56F7`，與交付一致；開始畫面只有 1 個人物
-系統清理：已以 UAC 移除 4.6.36 全機殘留（HKLM 卸載鍵、空目錄、ProgramData 失效捷徑）與舊 HKCU 4.6.36 卸載鍵；桌面／開始功能表捷徑與 HKCU 4.6.42 卸載鍵已指向正式安裝版
-Release：v4.6.42-g43-v2.5g（資產 ClaudeNiang-Windows11-Setup-4.6.42-G43-v2.5g-x64.exe）
-備註：Release 資產已上傳，GitHub digest sha256:c25fd25651ed08590b77c08533ca5dc665d17513c2a22f4d66c727fa9e1eb798（與本地 SHA256 一致）。
-URL：https://github.com/we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-/releases/tag/v4.6.42-g43-v2.5g
+狀態：4.6.43 已建置並以安裝包完成正式安裝（`/S /currentuser`，exit 0）；安裝後 exe 4.6.43.0、app.asar 與交付一致、icon.ico 七尺寸齊全；開始畫面只有 1 個人物、無 console error
+安裝目錄：`%LOCALAPPDATA%\Programs\claude-novel-windows11`；桌面與開始功能表捷徑皆指向此版本
+圖標：G30 徽章外框＋4.6.42 立繪＋金星（A2）；ICO 尺寸 16/24/32/48/64/128/256，小尺寸（≤48）加 sharpen sigma 0.5
+Release：v4.6.43-g43-v2.5h（資產 ClaudeNiang-Windows11-Setup-4.6.43-G43-v2.5h-x64.exe）
+GitHub digest：sha256:ff5880b7827b9bb6ca6be2fb8f9d97d821af402b1dd3a46372ccc694cec857ed（與本地 SHA256 一致）
+URL：https://github.com/we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-/releases/tag/v4.6.43-g43-v2.5h
