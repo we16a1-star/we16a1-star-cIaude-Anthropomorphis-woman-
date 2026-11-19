@@ -820,7 +820,6 @@ class PortraitAnimator {
 
   swapOut() {
     if (!this.swapped) return;
-    this.removeHairRibbon();
     this.canvas.replaceWith(this.img);
     this.swapped = false;
   }
@@ -842,7 +841,7 @@ class PortraitAnimator {
   }
 }
 
-const state = { animators: [], look: [0, 0], raf: 0, running: false, observer: null, handlers: [], hoverAt: 0, heartAt: 0, touchableStage: null, faceOk: null, affLoaded: new Set(), faceTimer: 0, storyEmotionTimer: 0, emotionGeneration: 0, emotionUntil: 0, lastEmotionAt: 0, lastEmotion: 'neutral', storyEmotion: 'neutral', storyEmotionIntensity: 1, storyEmotionToken: null, pendingEmotion: null, displayedEmotion: null };
+const state = { animators: [], look: [0, 0], raf: 0, running: false, observer: null, handlers: [], hoverAt: 0, heartAt: 0, touchableStage: null, faceOk: null, affLoaded: new Set(), faceTimer: 0, storyEmotionTimer: 0, emotionGeneration: 0, emotionUntil: 0, lastEmotionAt: 0, lastEmotion: 'neutral', storyEmotion: 'neutral', storyEmotionIntensity: 1, storyEmotionToken: null, pendingEmotion: null, displayedEmotion: null, taps: [] };
 
 function frame(now) {
   if (!state.running) return;

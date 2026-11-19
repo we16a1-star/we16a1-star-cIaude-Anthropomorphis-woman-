@@ -8,6 +8,12 @@ const transition = document.getElementById('storySceneTransition');
 const dialogue = document.getElementById('dialogueText');
 if (tab && stage && defaultArt && cgArt && grade && transition && dialogue) {
   const image = name => `assets/${name}`;
+  // v2.5j：這兩個預設圖的人物在左半，需水平鏡射到右側以避開左側選項與對話框。
+  // 換成人物已在右側的新圖時，從清單移除該檔名（或改成新檔名）即可同步取消鏡射。
+  const mirroredDefaultFiles = new Set([
+    'g43-cg-magic-light.jpg',
+    'g43-story-soft-morning.jpg',
+  ]);
   // v5 Step 2：ratio＝16:9 或 portrait；portrait 由 CSS 以前景完整＋背景模糊呈現。
   const cgEvents = [
     { flag: 'moon_bird', id: 'moon-bird', artId: '36372', file: 'g43-cg-moon-bird.jpg', alt: '月夜中發光信鳥送來書信的劇情 CG', once: true, tone: 'night', ratio: '16:9', blurBg: false },
@@ -80,6 +86,8 @@ if (tab && stage && defaultArt && cgArt && grade && transition && dialogue) {
 
   function setStoryArt(file, alt, scene = '', tone = 'none') {
     if (hasUserOverride() || tab.classList.contains('has-bundled-cg')) return;
+    if (mirroredDefaultFiles.has(file)) defaultArt.style.scale = '-1 1';
+    else defaultArt.style.removeProperty('scale');
     const src = image(file);
     currentScene = scene;
     if (defaultArt.getAttribute('src') === src) {

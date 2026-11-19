@@ -3308,3 +3308,5 @@ body.is-fullscreen .choices{max-height:30dvh}
 }
 /* v2.5e the start screen already says 故事尚未開始 inside the hint box; hide the floating speaker so it cannot cover the panel. */
 #tab-story.story-empty .vn-speaker{display:none}
+/* v2.5j：夜間與晨光預設圖的鏡射改由 story-art.js 的 mirroredDefaultFiles 清單控制，
+   換圖時只需調整該清單，不再於 CSS 以 data-art 綁定。 */

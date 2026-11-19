@@ -850,3 +850,61 @@ PII 掃描 0 處。
 - 標籤／Release：`v4.6.43-g43-v2.5h`。
 - 資產：`ClaudeNiang-Windows11-Setup-4.6.43-G43-v2.5h-x64.exe`（127,631,642 bytes；GitHub digest `sha256:ff5880b7827b9bb6ca6be2fb8f9d97d821af402b1dd3a46372ccc694cec857ed`）。
 - 下載：`https://github.com/we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-/releases/tag/v4.6.43-g43-v2.5h`。
+
+---
+
+## 2026-11-19（G43 v2.5i：表情點擊修復＋夜間／晨光立繪鏡射）
+
+依使用者回報「人物還是被選項擋住」與同意套用最小修補，本次修復 `portrait-anim.js` 兩個回歸錯誤，並以 CSS 讓夜間／晨光預設圖的人物落到右側，避開左側選項與對話框。前端 JS 僅改 `portrait-anim.js`；`app.bundle.js` 以 esbuild 重建後雜湊不變。
+
+### 調整
+- `app/www/portrait-anim.js`：
+  - `state` 初始化加入 `taps: []`。根因：`onDown()` 執行 `state.taps.filter(...)` 時 `state.taps` 為 `undefined`，每次點擊立繪都拋 `TypeError: Cannot read properties of undefined (reading 'filter')`，導致表情四階、摸頭與連點效果全部失效。
+  - 移除 `swapOut()` 內不存在的 `this.removeHairRibbon()`。根因：還原自訂立繪或 WebGL 降級時會拋 `TypeError`，可能讓立繪留在隱藏容器。
+- `app/www/style.css`：檔尾追加 v2.5j 規則，對 `[data-art="night"]` 與 `[data-art="soft-morning"]` 套用 `scale:-1 1`。夜間 `g43-cg-magic-light.jpg` 與晨光 `g43-story-soft-morning.jpg` 的人物原本在畫面左半，會被 `#choices` 與對話框遮住；因圖片幾乎填滿寬度，`object-position` 無法水平移動人物，故改用獨立 `scale` 屬性水平鏡射。`scale` 與 `transform` 分開，`g43-scene-breathe` 呼吸動畫仍正常。
+- `package.json`、`package-lock.json`：版本 4.6.43 → 4.6.44。
+- `tests/story/story-ai.test.js`：版本斷言改為 4.6.44。
+- `www/app.bundle.js`：以 esbuild 重建，784,146 bytes／`5A8A342233E2D02BAF9EE12BE597D7D8DABE74B897AD1C97968A355AA4A3E278`，與 4.6.43 相同（`portrait-anim.js` 不在 bundle 內）。
+
+### 測試
+- `tests/expression-affinity.test.cjs`：22／22 PASS。
+- 建置版 CDP 表情四階：`affProgress` 注入 50／10／30／95，依序顯示 `g43-face-aff-3`／`aff-1`／`aff-2`／`aff-4`；還原自訂立繪後 canvas 隱藏；console error 0。
+- 正式安裝版 4.6.44：`/S /currentuser` 靜默安裝 exit 0；`app.asar` 23,694,746 bytes／`370B5283816AF3E24D33A8002FCB73D3B6868DCB5A9F939951FEF3AF4D005F80`，與建置輸出一致。
+- 安裝版啟動：只有 1 個 page／視窗；夜間預設圖 `scale:-1 1` 生效，人物在右側、選項在左側不重疊；表情四階 10／30／50／95 全數正確；還原自訂立繪 PASS；console error 0。
+- 開始畫面 1264×781／1024×768／800×600／1440×900：`.start-panel` 與 `.start-character-art` 均無重疊；面板可捲動，開始按鈕可見。
+- 白天等待畫面：移除自訂立繪後觸發第 8 回合，`#waitInterlude` 為 `theme=day`、`ratio=portrait`、`art=assets/g43-wait-writing.jpg`。
+- 故事回顧：`#storyLogBtn` 可開啟 `#gmBacklog`（display:grid、transcript 1,822 字），關閉後回到故事；無錯誤。
+- 結局：mock 第 9 次回應觸發 `role:"ending"`，對話名稱顯示「結局」、選項清空、提示「本章已結束，可以重新開始。」。
+- 提示詞界線：CDP 擷取 `POST /api/story` 請求 body（1,507 字），含「【界線｜優先於人設】」與「傲嬌是可愛的嘴硬，不能變成貶低、羞辱、冷暴力、情感操控或強迫」；D13 強制附加生效。
+- 交付雜湊：`portrait-anim.js` 65,241 bytes／`7E15164C135A639563932AA1489D3A7045A9CF6D390E3C6821E7068D9E46A78E`；`style.css` 255,637 bytes／`87DE764798EB4C80344231027D7CACD478436F2EF607A587D131EDAEA767CED1`；Setup 127,631,790 bytes／`8ADDDF008D3E05163791B5B858CF1A9A16137140C1EA9C0B7DE6B8E07CBDD17E`；exe 版本 4.6.44.0。
+- 桌面兩個安裝包（空格版與連字號版）同為 127,631,790 bytes／`8ADDDF008D3E05163791B5B858CF1A9A16137140C1EA9C0B7DE6B8E07CBDD17E`。
+- PII／簡體掃描（本次修改與新增文字檔）：0 PII、0 簡體。
+
+### 推送
+- GitHub：`we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-`（`main`）。
+- 提交／標籤／Release：待推送。
+
+---
+
+## 2026-11-19（G43 v2.5j：鏡射規則改由素材清單控制）
+
+依指示「同步移除或調整」，把夜間／晨光預設圖的鏡射從 CSS 的 `data-art` 選擇器移到 `story-art.js` 的 `mirroredDefaultFiles` 清單。日後換成人物已在右側的新圖時，只要從清單移除該檔名即可同步取消鏡射；若新圖人物仍在左側，則把新檔名加入清單。
+
+### 調整
+- `app/www/story-art.js`：新增 `mirroredDefaultFiles`（`g43-cg-magic-light.jpg`、`g43-story-soft-morning.jpg`）；`setStoryArt()` 依清單設定或移除 `defaultArt.style.scale`。`scale` 與 `transform` 分開，`g43-scene-breathe` 呼吸動畫不受影響。
+- `app/www/style.css`：移除 v2.5i 的 `[data-art="night"]`／`[data-art="soft-morning"]` 鏡射規則，只留註解指向 `mirroredDefaultFiles`。
+- `package.json`、`package-lock.json`：4.6.44 → 4.6.45。
+- `tests/story/story-ai.test.js`：版本斷言改 4.6.45。
+- `www/app.bundle.js`：未改動（`story-art.js` 不在 bundle 內），784,146 bytes／`5A8A342233E2D02BAF9EE12BE597D7D8DABE74B897AD1C97968A355AA4A3E278`。
+
+### 測試
+- `tests/expression-affinity.test.cjs`：22／22 PASS。
+- `story-ai.test.js` 版本測試：1／1 PASS。
+- 安裝版 CDP（1264×781）：夜間 `scale=-1 1`、晨光 `scale=-1 1`、日間預設 `scale=none`；切換三次皆正確，人物在右側、選項在左側，console error 0。
+- 安裝包：`/S /currentuser` exit 0；`app.asar` 23,695,056 bytes／`F3B5687FDCA1FF4B843FBCB91CFF33A5E0F1C7C76931A47F6F4C8D68FA3880B1`，與建置輸出一致；exe 4.6.45.0。
+- 交付雜湊：`style.css` 255,479 bytes／`B0D07745BB16816CC08F0FD5C73CD4626F6E2CEB5124F39A02C3B664FD89F5A2`；`story-art.js` 16,468 bytes／`1BA830F8B645040D6D68127B77CAE8710E0DC5F5A6C3725E6F456D8FD23A7498`；Setup 127,632,039 bytes／`BCCAB4857241487C1AB913419ED7B245178FB6591B95DA554F3F96B7382FEC9A`。
+- PII／簡體掃描（本次修改與交付文字檔）：0 PII、0 簡體。
+
+### 推送
+- GitHub：`we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-`（`main`）。
+- 提交／標籤／Release：待推送（v4.6.45-g43-v2.5j）。

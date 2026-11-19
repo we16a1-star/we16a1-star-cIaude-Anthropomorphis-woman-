@@ -1,21 +1,29 @@
-G43 v2.5h 交付雜湊
-日期：2026-11-18（G30 徽章圖標）
+G43 v2.5j 交付雜湊
+日期：2026-11-19（鏡射規則改由素材清單控制）
 
-安裝包：Claude娘 - Windows 11 電腦版-Setup-4.6.43-x64.exe
-大小：127,631,642 bytes
-SHA256：FF5880B7827B9BB6CA6BE2FB8F9D97D821AF402B1DD3A46372CCC694CEC857ED
+安裝包：Claude娘 - Windows 11 電腦版-Setup-4.6.45-x64.exe
+大小：127,632,039 bytes
+SHA256：BCCAB4857241487C1AB913419ED7B245178FB6591B95DA554F3F96B7382FEC9A
 
 app.asar
-大小：23,694,950 bytes
-SHA256：22568ECE50A22B0F68C7F6B8782755AFF72BA81234280CF31BEE4BD05280F421
+大小：23,695,056 bytes
+SHA256：F3B5687FDCA1FF4B843FBCB91CFF33A5E0F1C7C76931A47F6F4C8D68FA3880B1
 
 www/app.js
 大小：602,818 bytes
 SHA256：185FE2C4F33BADAB2EFB140CCD48D739620B4CEF418D11FAB92FF87E5BDDBDD4
 
 www/style.css
-大小：255,298 bytes
-SHA256：9ACBAAFEFE8444FBEBA0AF22C80458F0113D809464CFF2562DA9EB205F9D437A
+大小：255,479 bytes
+SHA256：B0D07745BB16816CC08F0FD5C73CD4626F6E2CEB5124F39A02C3B664FD89F5A2
+
+www/story-art.js
+大小：16,468 bytes
+SHA256：1BA830F8B645040D6D68127B77CAE8710E0DC5F5A6C3725E6F456D8FD23A7498
+
+www/portrait-anim.js
+大小：65,241 bytes
+SHA256：7E15164C135A639563932AA1489D3A7045A9CF6D390E3C6821E7068D9E46A78E
 
 www/app.bundle.js
 大小：784,146 bytes
@@ -71,10 +79,10 @@ SHA256：2382C8540310496A51DF0998E7A59881C5FCCB4A8E97B2D9E543F7C89143F465
 
 備註
 GitHub：we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-（main）
-補記：796d685（Release 驗證）
-狀態：4.6.43 已建置並以安裝包完成正式安裝（`/S /currentuser`，exit 0）；安裝後 exe 4.6.43.0、app.asar 與交付一致、icon.ico 七尺寸齊全；開始畫面只有 1 個人物、無 console error
+狀態：4.6.45 已建置並以安裝包完成正式安裝（`/S /currentuser`，exit 0）；安裝後 exe 4.6.45.0、app.asar 與交付一致、icon.ico 七尺寸齊全；只有 1 個視窗、無 console error
 安裝目錄：`%LOCALAPPDATA%\Programs\claude-novel-windows11`；桌面與開始功能表捷徑皆指向此版本
 圖標：G30 徽章外框＋4.6.42 立繪＋金星（A2）；ICO 尺寸 16/24/32/48/64/128/256，小尺寸（≤48）加 sharpen sigma 0.5
-Release：v4.6.43-g43-v2.5h（資產 ClaudeNiang-Windows11-Setup-4.6.43-G43-v2.5h-x64.exe）
-GitHub digest：sha256:ff5880b7827b9bb6ca6be2fb8f9d97d821af402b1dd3a46372ccc694cec857ed（與本地 SHA256 一致）
-URL：https://github.com/we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-/releases/tag/v4.6.43-g43-v2.5h
+表情：`portrait-anim.js` 修復 `state.taps` 初始化與 `removeHairRibbon` 呼叫；四階 10/30/50/95 → aff-1/2/3/4
+立繪：夜間 `g43-cg-magic-light.jpg` 與晨光 `g43-story-soft-morning.jpg` 由 `story-art.js` 的 `mirroredDefaultFiles` 清單控制 `scale:-1 1`，人物在右側；換圖時調整清單
+Release：待推送（v4.6.45-g43-v2.5j）
+URL：待推送
