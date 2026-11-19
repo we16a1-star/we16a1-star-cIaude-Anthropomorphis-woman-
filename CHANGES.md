@@ -861,7 +861,7 @@ PII 掃描 0 處。
 - `app/www/portrait-anim.js`：
   - `state` 初始化加入 `taps: []`。根因：`onDown()` 執行 `state.taps.filter(...)` 時 `state.taps` 為 `undefined`，每次點擊立繪都拋 `TypeError: Cannot read properties of undefined (reading 'filter')`，導致表情四階、摸頭與連點效果全部失效。
   - 移除 `swapOut()` 內不存在的 `this.removeHairRibbon()`。根因：還原自訂立繪或 WebGL 降級時會拋 `TypeError`，可能讓立繪留在隱藏容器。
-- `app/www/style.css`：檔尾追加 v2.5j 規則，對 `[data-art="night"]` 與 `[data-art="soft-morning"]` 套用 `scale:-1 1`。夜間 `g43-cg-magic-light.jpg` 與晨光 `g43-story-soft-morning.jpg` 的人物原本在畫面左半，會被 `#choices` 與對話框遮住；因圖片幾乎填滿寬度，`object-position` 無法水平移動人物，故改用獨立 `scale` 屬性水平鏡射。`scale` 與 `transform` 分開，`g43-scene-breathe` 呼吸動畫仍正常。
+- `app/www/style.css`：檔尾追加 v2.5i 規則，對 `[data-art="night"]` 與 `[data-art="soft-morning"]` 套用 `scale:-1 1`。夜間 `g43-cg-magic-light.jpg` 與晨光 `g43-story-soft-morning.jpg` 的人物原本在畫面左半，會被 `#choices` 與對話框遮住；因圖片幾乎填滿寬度，`object-position` 無法水平移動人物，故改用獨立 `scale` 屬性水平鏡射。`scale` 與 `transform` 分開，`g43-scene-breathe` 呼吸動畫仍正常。
 - `package.json`、`package-lock.json`：版本 4.6.43 → 4.6.44。
 - `tests/story/story-ai.test.js`：版本斷言改為 4.6.44。
 - `www/app.bundle.js`：以 esbuild 重建，784,146 bytes／`5A8A342233E2D02BAF9EE12BE597D7D8DABE74B897AD1C97968A355AA4A3E278`，與 4.6.43 相同（`portrait-anim.js` 不在 bundle 內）。
@@ -882,7 +882,7 @@ PII 掃描 0 處。
 
 ### 推送
 - GitHub：`we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-`（`main`）。
-- 提交／標籤／Release：待推送。
+- 提交／標籤／Release：已隨 v2.5j 一併推送（提交 `9c5c7b9`、標籤 `v4.6.45-g43-v2.5j`）。
 
 ---
 
@@ -907,4 +907,7 @@ PII 掃描 0 處。
 
 ### 推送
 - GitHub：`we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-`（`main`）。
-- 提交／標籤／Release：待推送（v4.6.45-g43-v2.5j）。
+- 提交：`9c5c7b9`（G43 v2.5j：鏡射規則改由素材清單控制）。
+- 標籤／Release：`v4.6.45-g43-v2.5j`。
+- 資產：`ClaudeNiang-Windows11-Setup-4.6.45-G43-v2.5j-x64.exe`（127,632,039 bytes；GitHub digest `sha256:bccab4857241487c1ab913419ed7b245178fb6591b95da554f3f96b7382fec9a`）。
+- 下載：`https://github.com/we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-/releases/tag/v4.6.45-g43-v2.5j`。
