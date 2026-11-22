@@ -18,7 +18,7 @@ export { STORAGE_KEY_LINE_MODE, STORAGE_KEY_LINE_SPEED, STORAGE_KEY_LINE_AUTOPLA
 
 function normalizeEntry(entry) {
   if (typeof entry === 'string') {
-    return { text: entry, speaker: null, kind: 'narration', emotion: null, scene: null, player: false, endOffset: null };
+    return { text: entry, speaker: null, kind: 'narration', emotion: null, scene: null, player: false, spokenText: null, endOffset: null };
   }
   if (entry && typeof entry === 'object') {
     return {
@@ -29,10 +29,11 @@ function normalizeEntry(entry) {
       emotionSource: entry.emotionSource || null,
       scene: entry.scene || null,
       player: Boolean(entry.player),
+      spokenText: typeof entry.spokenText === 'string' && entry.spokenText.trim() ? entry.spokenText.trim() : null,
       endOffset: Number.isFinite(Number(entry.endOffset)) ? Number(entry.endOffset) : null
     };
   }
-  return { text: '', speaker: null, kind: 'narration', emotion: null, scene: null, player: false, endOffset: null };
+  return { text: '', speaker: null, kind: 'narration', emotion: null, scene: null, player: false, spokenText: null, endOffset: null };
 }
 
 export class LineRunner {
@@ -58,6 +59,10 @@ export class LineRunner {
     this.onLineChange = options.onLineChange || null;
     this.onLineMeta = options.onLineMeta || null;
     this.onFinish = options.onFinish || null;
+    this.isVoiceBusy = typeof options.isVoiceBusy === 'function' ? options.isVoiceBusy : null;
+    this.maxVoiceWaitMs = Number.isFinite(Number(options.maxVoiceWaitMs))
+      ? Math.max(0, Math.round(Number(options.maxVoiceWaitMs)))
+      : 15000;
   }
 
   loadPreference() {
@@ -180,6 +185,7 @@ export class LineRunner {
 
   /**
    * 目前句子播完後，若自動播放開啟且還有下一句，排定自動前進。
+   * 若語音仍在朗讀，自動播放會禮貌等待配音結束（最長 maxVoiceWaitMs）；
    * 手動點擊／跳過會先清除這個計時器，確保使用者操作永遠優先。
    */
   scheduleAutoAdvance() {
@@ -187,13 +193,20 @@ export class LineRunner {
     if (!this.autoAdvance || !this.enabled || !this.isPlaying) return;
     if (this.currentIndex >= this.lines.length - 1) return;
 
-    this.autoTimer = setTimeout(() => {
+    const waitedStart = Date.now();
+    const tick = () => {
       this.autoTimer = null;
       if (!this.autoAdvance || !this.isPlaying || this.isCharTyping) return;
       if (this.currentIndex >= this.lines.length - 1) return;
+      if (this.isVoiceBusy && this.isVoiceBusy() && (Date.now() - waitedStart) < this.maxVoiceWaitMs) {
+        this.autoTimer = setTimeout(tick, 250);
+        return;
+      }
       this.currentIndex++;
       this.playCurrentLine();
-    }, this.autoDelay);
+    };
+
+    this.autoTimer = setTimeout(tick, this.autoDelay);
   }
 
   /**

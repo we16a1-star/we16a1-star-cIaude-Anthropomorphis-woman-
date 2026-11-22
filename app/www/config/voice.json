@@ -1,0 +1,59 @@
+{
+  "version": "v2.1-voice",
+  "profile": {
+    "name": "Claude Glassy (English UK)",
+    "language": "en-GB",
+    "languageLabel": "英文（英國）",
+    "style": "glassy",
+    "styleLabel": "Glassy",
+    "speed": "normal",
+    "speedLabel": "正常",
+    "rate": 1.0
+  },
+  "playback": {
+    "bilingualEnglishSpeech": true,
+    "dialogueOnly": true,
+    "skipNarration": true,
+    "skipPlayer": true,
+    "interruptOnAdvance": true,
+    "waitVoiceOnAutoAdvance": true,
+    "volume": 0.9
+  },
+  "stylePresets": {
+    "glassy": {
+      "label": "Glassy（清亮知性）",
+      "pitch": 1.06,
+      "rateMultiplier": 1.0,
+      "preferredWebVoices": [
+        "Google UK English Female",
+        "Microsoft Libby Online (Natural) - English (United Kingdom)",
+        "Microsoft Sonia Online (Natural) - English (United Kingdom)",
+        "Microsoft Maisie Online (Natural) - English (United Kingdom)",
+        "Microsoft AdaMultilingual Online (Natural) - English (United Kingdom)",
+        "Microsoft Hazel Desktop - English (Great Britain)",
+        "Microsoft Hazel - English (United Kingdom)",
+        "Serena",
+        "Martha",
+        "Kate"
+      ],
+      "elevenLabs": {
+        "modelId": "eleven_multilingual_v2",
+        "stability": 0.58,
+        "similarityBoost": 0.8,
+        "style": 0.25,
+        "useSpeakerBoost": true
+      },
+      "openai": {
+        "model": "gpt-4o-mini-tts",
+        "voice": "shimmer",
+        "instructions": "Speak in crisp, bright, clear British English (en-GB), glassy and articulate with warm scholarly poise at a normal pace."
+      }
+    }
+  },
+  "speedPresets": {
+    "slow": { "label": "較慢", "rate": 0.85 },
+    "normal": { "label": "正常", "rate": 1.0 },
+    "fast": { "label": "較快", "rate": 1.15 }
+  },
+  "previewSampleEn": "Good evening. I have checked every footnote twice—do let me know if you would like to read the next page together."
+}

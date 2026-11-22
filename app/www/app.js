@@ -78,6 +78,20 @@ import { audioBus } from './audio-bus.js';
 import { TYPE_SOUNDS, loadTypeSoundPreference, saveTypeSoundPreference, playTypeSound } from './type-sound.js';
 import { evaluateMacros, createMacroEnv } from './macro-engine.js';
 import { computeVnControlState } from './vn-controls.js';
+// D20（雙軌語音合成引擎）：Claude 英文（英國 en-GB · Glassy · 正常速度）中文字幕＋英式英文配音
+import {
+  VOICE_PROVIDERS,
+  VOICE_LANGUAGES,
+  VOICE_STYLES,
+  VOICE_SPEEDS,
+  voicePlayer,
+  attachSpokenEnToLines,
+  normalizeSpokenEnList,
+  voicePromptRule,
+  getWebSpeechDiagnostics,
+  loadVoiceApiKey,
+  saveVoiceApiKey
+} from './voice-tts.js';
 // P1-05（玩家安全界線）：危機本機攔截＋低落陪伴提示詞；網頁與 API 兩條生成管線都強制附加安全段。
 import { SafetyModule, withSafetyPromptSupport } from './safety-module.js';
 // P1-02（S2 提示詞組裝與開發者檢視）：工坊「開發者檢視」六區塊面板。
@@ -100,6 +114,10 @@ if (typeof window !== 'undefined') {
   window.__audioBus = audioBus;
   window.__typeSound = { TYPE_SOUNDS, load: loadTypeSoundPreference, save: saveTypeSoundPreference, play: playTypeSound };
   window.__macroEngine = { evaluateMacros, createMacroEnv };
+  window.__voiceTts = voicePlayer;
+  voicePlayer.subscribe(() => {
+    syncVnQuickBar();
+  });
   if (typeof document !== 'undefined') {
     const unlockOnce = () => {
       try { audioBus.unlock(); audioBus.setActive(true); } catch (_) {}
@@ -138,14 +156,17 @@ function ensureVnQuickBar() {
   bar.innerHTML =
     '<button type="button" class="vn-quick-btn is-skip" id="vnQuickSkip" hidden>跳過本段</button>' +
     '<button type="button" class="vn-quick-btn" id="vnQuickAuto" aria-pressed="true">自動開</button>' +
+    '<button type="button" class="vn-quick-btn" id="vnQuickVoice" aria-pressed="false" title="切換 Claude 英文（英國 en-GB · Glassy）配音">配音</button>' +
     '<button type="button" class="vn-quick-btn" id="vnQuickSfx" aria-pressed="false">靜音</button>';
   win.appendChild(bar);
   const skipBtn = bar.querySelector('#vnQuickSkip');
   const autoBtn = bar.querySelector('#vnQuickAuto');
+  const voiceBtn = bar.querySelector('#vnQuickVoice');
   const sfxBtn = bar.querySelector('#vnQuickSfx');
   if (skipBtn) {
     skipBtn.onclick = (e) => {
       e.stopPropagation();
+      voicePlayer.stop();
       getStoryLineRunner().skipAll();
       syncVnQuickBar();
     };
@@ -157,6 +178,18 @@ function ensureVnQuickBar() {
       runner.saveAutoAdvancePreference(!runner.autoAdvance);
       const settingsAuto = document.getElementById('vnAutoPlayToggle');
       if (settingsAuto) settingsAuto.checked = runner.autoAdvance;
+      syncVnQuickBar();
+    };
+  }
+  if (voiceBtn) {
+    voiceBtn.onclick = (e) => {
+      e.stopPropagation();
+      try { audioBus.unlock(); audioBus.setActive(true); } catch (_) {}
+      const nextEnabled = !voicePlayer.isEnabled();
+      voicePlayer.updateConfig({ enabled: nextEnabled });
+      try { localStorage.setItem('claude_novel_voice_tts_v21', String(nextEnabled)); } catch (_) {}
+      const settingsVoice = document.getElementById('vnVoiceToggle');
+      if (settingsVoice) settingsVoice.checked = nextEnabled;
       syncVnQuickBar();
     };
   }
@@ -191,10 +224,13 @@ function syncVnQuickBar() {
     isPlaying: runner.isPlaying,
     autoAdvance: runner.autoAdvance,
     typeSoundId: pref.id,
+    voiceEnabled: voicePlayer.isEnabled(),
+    voiceSpeaking: voicePlayer.isSpeaking(),
     lang: typeof uiLanguage === 'string' ? uiLanguage : 'zh'
   });
   const skipBtn = bar.querySelector('#vnQuickSkip');
   const autoBtn = bar.querySelector('#vnQuickAuto');
+  const voiceBtn = bar.querySelector('#vnQuickVoice');
   const sfxBtn = bar.querySelector('#vnQuickSfx');
   if (skipBtn) {
     skipBtn.hidden = !st.showSkip;
@@ -204,6 +240,12 @@ function syncVnQuickBar() {
     autoBtn.classList.toggle('is-active', st.autoActive);
     autoBtn.setAttribute('aria-pressed', String(st.autoActive));
     autoBtn.textContent = st.autoLabel;
+  }
+  if (voiceBtn) {
+    voiceBtn.classList.toggle('is-active', st.voiceActive);
+    voiceBtn.classList.toggle('is-speaking', st.voiceSpeaking);
+    voiceBtn.setAttribute('aria-pressed', String(st.voiceActive));
+    voiceBtn.textContent = st.voiceLabel;
   }
   if (sfxBtn) {
     sfxBtn.classList.toggle('is-active', st.soundActive);
@@ -215,6 +257,7 @@ function getStoryLineRunner() {
   if (!storyLineRunner) {
     storyLineRunner = new LineRunner({
       speed: 35,
+      isVoiceBusy: () => voicePlayer.isSpeaking(),
       onLineChange: (text, idx, total, isTyping) => {
         const el = document.getElementById('dialogueText');
         if (!el) return;
@@ -293,6 +336,10 @@ function getStoryLineRunner() {
         }
         if (meta.scene) {
           window.__storyArt?.applyScenePack?.(meta.scene);
+        }
+        // D20：中文字幕＋英式英文配音（僅於逐句模式下念角色英文台詞，不念旁白與玩家）
+        if (voicePlayer.isEnabled() && meta.spokenText && storyLineRunner?.enabled) {
+          void voicePlayer.speakLine(meta);
         }
       },
       onFinish: () => {
@@ -2049,7 +2096,36 @@ let openingSceneImageKey = '';
   '36455 臥室主 CG（臥室羽毛筆、微醺）': '36455 bedroom main CG (bedroom quill, slightly tipsy)',
   '36628 夜間蓋被讀書（溫柔、抱著鯨魚玩偶）': '36628 nighttime reading under blanket (gentle, holding a whale plush)',
   ' [v2.1 實裝預定] 語音合成（Claude Glassy 英國腔配音）': ' [Planned for v2.1] Voice synthesis (Claude Glassy British accent)',
-  '語音合成功能將於 v2.1 版發布。此處預留開關狀態供用戶偏好存取。': 'Voice synthesis will be released in v2.1. This switch is reserved for storing your preference.'
+  '語音合成功能將於 v2.1 版發布。此處預留開關狀態供用戶偏好存取。': 'Voice synthesis will be released in v2.1. This switch is reserved for storing your preference.',
+  ' 啟用語音配音（Claude 英文 · en-GB · Glassy · 正常）': ' Enable voice synthesis (Claude English · en-GB · Glassy · Normal)',
+  '口說語言：英文（英國）en-GB ｜ 風格：Glassy ｜ 速度：正常': 'Spoken language: English (UK) en-GB | Style: Glassy | Speed: Normal',
+  '配音引擎：': 'Voice engine: ',
+  '口說語言：': 'Spoken language: ',
+  '語音風格：': 'Voice style: ',
+  '語音速度：': 'Voice speed: ',
+  '語音音量：': 'Voice volume: ',
+  '試聽 Glassy': 'Preview Glassy',
+  '停止播放': 'Stop',
+  ' 中文字幕＋英式英文配音（僅念角色英文台詞，不念旁白與玩家）': ' Chinese subtitles + British English voice (character lines only, skips narration)',
+  '系統聲線：': 'System voice: ',
+  '自動配對最佳 en-GB Glassy 女聲': 'Auto-match best en-GB Glassy female voice',
+  '外接語音後端設定（本機聲紋克隆 / ElevenLabs / OpenAI 相容）': 'External TTS backend settings (Local voice clone / ElevenLabs / OpenAI-compatible)',
+  '服務網址（Endpoint）：': 'Endpoint URL: ',
+  '聲線 ID / 名稱：': 'Voice ID / Name: ',
+  '模型 ID：': 'Model ID: ',
+  '參考音檔路徑（GPT-SoVITS / IndexTTS）：': 'Reference audio path (GPT-SoVITS / IndexTTS): ',
+  '參考音檔原文（英文）：': 'Reference transcript (English): ',
+  'TTS API Key（僅存本機，絕不隨存檔匯出）：': 'TTS API Key (stored locally only, never exported with saves): ',
+  '瀏覽器／系統內建（Web Speech · 免金鑰）': 'Built-in Web Speech (No API key required)',
+  '本機聲紋克隆（GPT-SoVITS / IndexTTS）': 'Local voice clone (GPT-SoVITS / IndexTTS)',
+  'ElevenLabs API（高擬真英式語音）': 'ElevenLabs API (Neural British voice)',
+  'OpenAI 相容 TTS API（OpenAI / Kokoro）': 'OpenAI-compatible TTS API (OpenAI / Kokoro)',
+  '英文（英國） en-GB': 'English (UK) en-GB',
+  '英文（美國） en-US': 'English (US) en-US',
+  'Glassy（清亮知性 · glassy）': 'Glassy (crisp & clear · glassy)',
+  '較慢（0.85x）': 'Slow (0.85x)',
+  '正常（1.0x）': 'Normal (1.0x)',
+  '較快（1.15x）': 'Fast (1.15x)'
 };
 const WEB_AI_GUIDE_STEPS = [
   'App 已自動開啟所選官方網站並複製提示詞。首次在官網登入並選擇模型；之後沿用同一個 AI 對話。帳號操作只在官網完成。',
@@ -3000,7 +3076,9 @@ function buildWebPrompt(action,saving=false){
     ...authorNoteLines(state.authorNote,uiLanguage),
     size+' 先寫場景反應再推進。'+endingRule,...craftLines,...promptTweaksExtraLines(state.promptTweaks,uiLanguage),
     affectionRule,
-    outputRule+' 不輸出Markdown或圖片。',craft.json,
+    outputRule+' 不輸出Markdown或圖片。',
+    voicePromptRule(uiLanguage, voicePlayer.getConfig()),
+    craft.json,
     identityRule
   ].filter(Boolean).join('\n');
   const finalPrompt=uiLanguage==='en'?'Write all new narration, dialogue, choices, ending text, and memory in natural English.\n\n'+prompt:prompt;
@@ -3468,6 +3546,8 @@ function parseWebReply(value){
   result.affectionDelta=Number.isFinite(delta)?Math.max(-5,Math.min(5,Math.round(delta*100)/100)):0;
   const advance=Number(result.timeAdvance);
   if(Number.isFinite(advance)) result.timeAdvance=Math.max(0,Math.min(6,Math.round(advance))); else delete result.timeAdvance;
+  const spokenEn=normalizeSpokenEnList(result.spokenEn);
+  if(spokenEn.length) result.spokenEn=spokenEn; else delete result.spokenEn;
   return result;
 }
 function isCompleteWebReply(value){try{parseWebReply(value);return true;}catch{return false;}}
@@ -5857,17 +5937,128 @@ function ensureVnPerformanceControls() {
     typeSoundBox.append(tsLabel, tsSelect, tsVol, tsVolVal, tsPreview);
     group.append(typeSoundBox);
 
-    // 3. 語音合成預留 (D20)
+    // 3. D20 雙軌語音合成（Claude 英文 · 英國腔 en-GB · Glassy · 正常速度）
+    const voicePanel = document.createElement('div');
+    voicePanel.className = 'vn-voice-panel';
+    voicePanel.id = 'vnVoicePanel';
+
     const voiceBox = document.createElement('label');
     voiceBox.className = 'vn-voice-label';
     const voiceCheckbox = document.createElement('input');
     voiceCheckbox.type = 'checkbox';
     voiceCheckbox.id = 'vnVoiceToggle';
-    voiceBox.append(voiceCheckbox, document.createTextNode(uiText(' [v2.1 實裝預定] 語音合成（Claude Glassy 英國腔配音）')));
+    voiceBox.append(voiceCheckbox, document.createTextNode(uiText(' 啟用語音配音（Claude 英文 · en-GB · Glassy · 正常）')));
+
+    const voiceBadge = document.createElement('div');
+    voiceBadge.className = 'vn-voice-badge';
+    voiceBadge.id = 'vnVoiceBadge';
+    voiceBadge.textContent = uiText('口說語言：英文（英國）en-GB ｜ 風格：Glassy ｜ 速度：正常');
+
+    const voiceGrid = document.createElement('div');
+    voiceGrid.className = 'vn-voice-grid';
+
+    const makeSelectField = (id, labelText, items) => {
+      const wrap = document.createElement('label');
+      wrap.className = 'vn-voice-field';
+      const cap = document.createElement('span');
+      cap.textContent = uiText(labelText);
+      const sel = document.createElement('select');
+      sel.id = id;
+      for (const item of items) {
+        const opt = document.createElement('option');
+        opt.value = item.id;
+        opt.textContent = uiText(item.label);
+        sel.append(opt);
+      }
+      wrap.append(cap, sel);
+      return wrap;
+    };
+
+    voiceGrid.append(
+      makeSelectField('vnVoiceProvider', '配音引擎：', VOICE_PROVIDERS),
+      makeSelectField('vnVoiceLang', '口說語言：', VOICE_LANGUAGES),
+      makeSelectField('vnVoiceStyle', '語音風格：', Object.values(VOICE_STYLES)),
+      makeSelectField('vnVoiceSpeed', '語音速度：', Object.values(VOICE_SPEEDS))
+    );
+
+    const voiceActions = document.createElement('div');
+    voiceActions.className = 'vn-voice-actions';
+    const vVolLabel = document.createElement('label');
+    vVolLabel.htmlFor = 'vnVoiceVolume';
+    vVolLabel.textContent = uiText('語音音量：');
+    const vVol = document.createElement('input');
+    vVol.type = 'range';
+    vVol.id = 'vnVoiceVolume';
+    vVol.min = '10';
+    vVol.max = '100';
+    vVol.step = '5';
+    const vVolVal = document.createElement('span');
+    vVolVal.id = 'vnVoiceVolumeVal';
+    const vPreview = document.createElement('button');
+    vPreview.type = 'button';
+    vPreview.id = 'vnVoicePreview';
+    vPreview.className = 'vn-typesound-preview';
+    vPreview.textContent = uiText('試聽 Glassy');
+    const vStop = document.createElement('button');
+    vStop.type = 'button';
+    vStop.id = 'vnVoiceStop';
+    vStop.className = 'vn-typesound-preview';
+    vStop.textContent = uiText('停止播放');
+    voiceActions.append(vVolLabel, vVol, vVolVal, vPreview, vStop);
+
+    const bilingualBox = document.createElement('label');
+    bilingualBox.className = 'vn-voice-subcheck';
+    const bilingualCb = document.createElement('input');
+    bilingualCb.type = 'checkbox';
+    bilingualCb.id = 'vnVoiceBilingual';
+    bilingualBox.append(bilingualCb, document.createTextNode(uiText(' 中文字幕＋英式英文配音（僅念角色英文台詞，不念旁白與玩家）')));
+
+    // Web Speech 本機聲線選擇區
+    const webVoiceBox = document.createElement('div');
+    webVoiceBox.className = 'vn-voice-web-box';
+    webVoiceBox.id = 'vnVoiceWebBox';
+    const webVoiceLabel = document.createElement('label');
+    webVoiceLabel.className = 'vn-voice-field';
+    const webVoiceCap = document.createElement('span');
+    webVoiceCap.textContent = uiText('系統聲線：');
+    const webVoiceSel = document.createElement('select');
+    webVoiceSel.id = 'vnVoiceWebSelect';
+    webVoiceLabel.append(webVoiceCap, webVoiceSel);
+    webVoiceBox.append(webVoiceLabel);
+
+    // 外接引擎設定區（本機 GPT-SoVITS / IndexTTS、ElevenLabs、OpenAI 相容）
+    const backendBox = document.createElement('div');
+    backendBox.className = 'vn-voice-backend';
+    backendBox.id = 'vnVoiceBackendBox';
+    const makeInputField = (id, labelText, placeholder, type = 'text') => {
+      const wrap = document.createElement('label');
+      wrap.className = 'vn-voice-field';
+      wrap.dataset.fieldFor = id;
+      const cap = document.createElement('span');
+      cap.textContent = uiText(labelText);
+      const inp = document.createElement('input');
+      inp.type = type;
+      inp.id = id;
+      inp.placeholder = placeholder;
+      inp.autocomplete = 'off';
+      wrap.append(cap, inp);
+      return wrap;
+    };
+    backendBox.append(
+      makeInputField('vnVoiceEndpoint', '服務網址（Endpoint）：', 'http://127.0.0.1:9880/tts'),
+      makeInputField('vnVoiceId', '聲線 ID / 名稱：', 'shimmer / ElevenLabs Voice ID'),
+      makeInputField('vnVoiceModel', '模型 ID：', 'gpt-4o-mini-tts / eleven_multilingual_v2'),
+      makeInputField('vnVoiceRefPath', '參考音檔路徑（GPT-SoVITS / IndexTTS）：', 'D:/AnimaVoice/claude/glassy_en_gb.wav'),
+      makeInputField('vnVoiceRefText', '參考音檔原文（英文）：', 'Good evening. I have checked every footnote twice.'),
+      makeInputField('vnVoiceApiKey', 'TTS API Key（僅存本機，絕不隨存檔匯出）：', '選填（本機服務可留空）', 'password')
+    );
+
     const voiceNote = document.createElement('p');
-    voiceNote.className = 'note';
-    voiceNote.textContent = uiText('語音合成功能將於 v2.1 版發布。此處預留開關狀態供用戶偏好存取。');
-    group.append(voiceBox, voiceNote);
+    voiceNote.className = 'note vn-voice-status';
+    voiceNote.id = 'vnVoiceStatusNote';
+
+    voicePanel.append(voiceBox, voiceBadge, voiceGrid, voiceActions, bilingualBox, webVoiceBox, backendBox, voiceNote);
+    group.append(voicePanel);
 
     settingsRoot.append(group);
   }
@@ -5953,12 +6144,191 @@ function ensureVnPerformanceControls() {
   }
 
   if (voiceToggle) {
-    let savedVoice = false;
-    try { savedVoice = localStorage.getItem('claude_novel_voice_tts_v21') === 'true'; } catch(_) {}
-    voiceToggle.checked = savedVoice;
-    voiceToggle.onchange = () => {
-      try { localStorage.setItem('claude_novel_voice_tts_v21', String(voiceToggle.checked)); } catch(_) {}
+    const vProvider = $('vnVoiceProvider');
+    const vLang = $('vnVoiceLang');
+    const vStyle = $('vnVoiceStyle');
+    const vSpeed = $('vnVoiceSpeed');
+    const vVol = $('vnVoiceVolume');
+    const vVolVal = $('vnVoiceVolumeVal');
+    const vPreview = $('vnVoicePreview');
+    const vStop = $('vnVoiceStop');
+    const vBilingual = $('vnVoiceBilingual');
+    const vWebBox = $('vnVoiceWebBox');
+    const vWebSelect = $('vnVoiceWebSelect');
+    const vBackendBox = $('vnVoiceBackendBox');
+    const vEndpoint = $('vnVoiceEndpoint');
+    const vVoiceId = $('vnVoiceId');
+    const vModel = $('vnVoiceModel');
+    const vRefPath = $('vnVoiceRefPath');
+    const vRefText = $('vnVoiceRefText');
+    const vApiKey = $('vnVoiceApiKey');
+    const vStatus = $('vnVoiceStatusNote');
+    const vBadge = $('vnVoiceBadge');
+
+    const populateWebVoices = (cfg) => {
+      if (!vWebSelect) return;
+      const diag = getWebSpeechDiagnostics(cfg);
+      vWebSelect.innerHTML = '';
+      const autoOpt = document.createElement('option');
+      autoOpt.value = '';
+      autoOpt.textContent = uiText('自動配對最佳 en-GB Glassy 女聲');
+      vWebSelect.append(autoOpt);
+      for (const v of diag.englishVoices) {
+        const opt = document.createElement('option');
+        opt.value = v.name;
+        opt.textContent = `${v.name} (${v.lang})`;
+        vWebSelect.append(opt);
+      }
+      vWebSelect.value = cfg.webVoiceName || '';
     };
+
+    const syncVoiceStatusUi = (cfg) => {
+      if (vBadge) {
+        const langObj = VOICE_LANGUAGES.find((l) => l.id === cfg.language) || VOICE_LANGUAGES[0];
+        const speedObj = VOICE_SPEEDS[cfg.speed] || VOICE_SPEEDS.normal;
+        vBadge.textContent = uiLanguage === 'en'
+          ? `Spoken: ${cfg.language} | Style: Glassy (${cfg.style}) | Speed: ${speedObj.id} (${speedObj.rate}x)`
+          : `口說語言：${langObj.label} ｜ 風格：Glassy（${cfg.style}） ｜ 速度：${speedObj.label}`;
+      }
+      const isWeb = cfg.provider === 'webspeech';
+      const isSovits = cfg.provider === 'local-sovits';
+      if (vWebBox) vWebBox.hidden = !isWeb;
+      if (vBackendBox) {
+        vBackendBox.hidden = isWeb;
+        vBackendBox.querySelectorAll('[data-field-for]').forEach((row) => {
+          const id = row.dataset.fieldFor;
+          if (id === 'vnVoiceRefPath' || id === 'vnVoiceRefText') row.hidden = !isSovits;
+          else if (id === 'vnVoiceId' || id === 'vnVoiceModel' || id === 'vnVoiceApiKey') row.hidden = isSovits;
+        });
+      }
+      if (!vStatus) return;
+      const snap = voicePlayer.getSnapshot();
+      if (snap.lastError) {
+        vStatus.textContent = `⚠ ${snap.lastError}`;
+        return;
+      }
+      if (isWeb) {
+        const diag = getWebSpeechDiagnostics(cfg);
+        if (!diag.supported) {
+          vStatus.textContent = uiLanguage === 'en'
+            ? 'Web Speech API is unavailable in this environment; switch to an external TTS backend.'
+            : '目前環境不支援 Web Speech API，可改切換至本機 GPT-SoVITS 或外部 TTS API。';
+        } else if (diag.isTrueEnGb && diag.picked) {
+          vStatus.textContent = uiLanguage === 'en'
+            ? `Matched en-GB voice: ${diag.picked.name} (Glassy pitch/rate calibrated).`
+            : `已配對英國腔聲線：${diag.picked.name}（已套用 Glassy 清亮音調與正常語速）。`;
+        } else if (diag.picked) {
+          vStatus.textContent = uiLanguage === 'en'
+            ? `No local en-GB voice detected yet (temporarily using ${diag.picked.name}). Install Windows "English (United Kingdom)" speech pack or connect GPT-SoVITS / ElevenLabs for native UK accent.`
+            : `尚未偵測到系統 en-GB 英國語音（暫以 ${diag.picked.name} 降級）；建議至 Windows 設定 → 時間與語言 → 語音 新增免費「英文（英國）」語音包，或改接本機 GPT-SoVITS／ElevenLabs 還原真 Claude Glassy 音色。`;
+        } else {
+          vStatus.textContent = uiLanguage === 'en'
+            ? 'Loading system speech voices… click Preview Glassy to test.'
+            : '正在讀取系統可用聲線；點「試聽 Glassy」即可測試發聲。';
+        }
+      } else if (isSovits) {
+        vStatus.textContent = uiLanguage === 'en'
+          ? 'Local GPT-SoVITS / IndexTTS mode (AnimaVN compatible): provide your 5–10s Claude Glassy (en-GB) reference audio path for 1:1 voice cloning.'
+          : '本機聲紋克隆模式（相容 AnimaVN GPT-SoVITS api_v2）：填入 5–10 秒 Claude Glassy（en-GB）參考音檔與原文，即可高度還原原聲；連線失敗時自動降級免斷線。';
+      } else {
+        vStatus.textContent = uiLanguage === 'en'
+          ? 'External neural TTS ready (en-GB Glassy profile). API key is kept locally and never exported in game saves.'
+          : '外接神經語音已套用 en-GB Glassy 參數；API Key 僅保存在本機，匯出存檔時絕不外洩。';
+      }
+    };
+
+    let cfg = voicePlayer.getConfig();
+    try {
+      const legacy = localStorage.getItem('claude_novel_voice_tts_v21');
+      if (legacy !== null && (legacy === 'true') !== cfg.enabled) {
+        cfg = voicePlayer.updateConfig({ enabled: legacy === 'true' });
+      }
+    } catch (_) {}
+
+    voiceToggle.checked = cfg.enabled;
+    if (vProvider) vProvider.value = cfg.provider;
+    if (vLang) vLang.value = cfg.language;
+    if (vStyle) vStyle.value = cfg.style;
+    if (vSpeed) vSpeed.value = cfg.speed;
+    if (vVol) vVol.value = String(Math.round(cfg.volume * 100));
+    if (vVolVal) vVolVal.textContent = ` ${Math.round(cfg.volume * 100)}%`;
+    if (vBilingual) vBilingual.checked = cfg.bilingualEnglish;
+    if (vEndpoint) vEndpoint.value = cfg.endpointUrl;
+    if (vVoiceId) vVoiceId.value = cfg.voiceId;
+    if (vModel) vModel.value = cfg.modelId;
+    if (vRefPath) vRefPath.value = cfg.refAudioPath;
+    if (vRefText) vRefText.value = cfg.refPromptText;
+    if (vApiKey) vApiKey.value = loadVoiceApiKey();
+
+    populateWebVoices(cfg);
+    syncVoiceStatusUi(cfg);
+
+    const applyPatch = (patch) => {
+      const next = voicePlayer.updateConfig(patch);
+      try { localStorage.setItem('claude_novel_voice_tts_v21', String(next.enabled)); } catch (_) {}
+      if (vVolVal) vVolVal.textContent = ` ${Math.round(next.volume * 100)}%`;
+      syncVoiceStatusUi(next);
+      syncVnQuickBar();
+      return next;
+    };
+
+    voiceToggle.onchange = () => applyPatch({ enabled: voiceToggle.checked });
+    if (vProvider) {
+      vProvider.onchange = () => {
+        const p = vProvider.value;
+        const patch = { provider: p };
+        if (p === 'local-sovits') {
+          patch.endpointUrl = 'http://127.0.0.1:9880/tts';
+        } else if (p === 'elevenlabs') {
+          patch.endpointUrl = 'https://api.elevenlabs.io/v1';
+          patch.modelId = 'eleven_multilingual_v2';
+        } else if (p === 'openai-compat') {
+          patch.endpointUrl = 'https://api.openai.com/v1/audio/speech';
+          patch.modelId = 'gpt-4o-mini-tts';
+          if (!vVoiceId?.value) patch.voiceId = 'shimmer';
+        }
+        const next = applyPatch(patch);
+        if (vEndpoint) vEndpoint.value = next.endpointUrl;
+        if (vModel) vModel.value = next.modelId;
+        if (vVoiceId) vVoiceId.value = next.voiceId;
+        if (p === 'webspeech') populateWebVoices(next);
+      };
+    }
+    if (vLang) vLang.onchange = () => applyPatch({ language: vLang.value });
+    if (vStyle) vStyle.onchange = () => applyPatch({ style: vStyle.value });
+    if (vSpeed) vSpeed.onchange = () => applyPatch({ speed: vSpeed.value });
+    if (vVol) vVol.oninput = () => applyPatch({ volume: Number(vVol.value) / 100 });
+    if (vBilingual) vBilingual.onchange = () => applyPatch({ bilingualEnglish: vBilingual.checked });
+    if (vWebSelect) vWebSelect.onchange = () => applyPatch({ webVoiceName: vWebSelect.value });
+    if (vEndpoint) vEndpoint.onchange = () => applyPatch({ endpointUrl: vEndpoint.value });
+    if (vVoiceId) vVoiceId.onchange = () => applyPatch({ voiceId: vVoiceId.value });
+    if (vModel) vModel.onchange = () => applyPatch({ modelId: vModel.value });
+    if (vRefPath) vRefPath.onchange = () => applyPatch({ refAudioPath: vRefPath.value });
+    if (vRefText) vRefText.onchange = () => applyPatch({ refPromptText: vRefText.value });
+    if (vApiKey) vApiKey.onchange = () => { saveVoiceApiKey(vApiKey.value); syncVoiceStatusUi(voicePlayer.getConfig()); };
+
+    if (vPreview) {
+      vPreview.onclick = async () => {
+        try { audioBus.unlock(); audioBus.setActive(true); } catch (_) {}
+        await voicePlayer.preview();
+        syncVoiceStatusUi(voicePlayer.getConfig());
+      };
+    }
+    if (vStop) {
+      vStop.onclick = () => {
+        voicePlayer.stop();
+        syncVoiceStatusUi(voicePlayer.getConfig());
+      };
+    }
+
+    if (typeof window !== 'undefined' && window.speechSynthesis && !window.__vnVoiceChangedBound) {
+      window.__vnVoiceChangedBound = true;
+      window.speechSynthesis.addEventListener?.('voiceschanged', () => {
+        const latest = voicePlayer.getConfig();
+        populateWebVoices(latest);
+        syncVoiceStatusUi(latest);
+      });
+    }
   }
 }
 
@@ -6235,7 +6605,8 @@ async function callAI(action=null) {
   const apiProfileBase=apiProfile;
   // P1-05：API 也走同一條安全提示詞管線；危機由呼叫端本機攔截，這裡補低落陪伴與常駐安全段。
   const apiLowMood=!isOpening&&safetyModule.detectLowMood(action);
-  const apiProfileWithSafety=withSafetyPromptSupport(withCharacterBoundary(apiProfileBase),{lowMood:apiLowMood,language:uiLanguage});
+  const apiVoiceRule=voicePromptRule(uiLanguage, voicePlayer.getConfig());
+  const apiProfileWithSafety=withSafetyPromptSupport(withCharacterBoundary(apiProfileBase)+(apiVoiceRule?'\n'+apiVoiceRule:''),{lowMood:apiLowMood,language:uiLanguage});
   const buildRequestBody=apiProfile=>({provider:state.provider,accountProfile:connection?.profileId||'',model:state.model,history:state.history.slice(-historyWindow),action,...(isOpening?{openingCustomPrompt:state.openingStyle===CUSTOM_OPENING_STYLE?String(state.openingCustomPrompt||'').slice(0,600):''}:{}),affection:state.affection,characterName:state.characterName||DEFAULT_CHARACTER_NAME,characterProfile:apiProfile+characterCardsUseText(),worldSetting:state.worldSetting===DEFAULT_WORLD_SETTING?'':state.worldSetting,storyTemplate:state.storyTemplate===DEFAULT_STORY_TEMPLATE?'':state.storyTemplate,storyMemory:String(state.storyMemory||'').slice(-1000),storyClock:realStoryClock(state.storyClock),pendingMilestone:state.pendingMilestone||'',pendingSpecialEvent:isOpening?'':normalizeSpecialEventKey(state.pendingSpecialEvent),storyEventSeen:normalizeSeenStoryEventFlags(state.storyEventSeen),specialEvent:isOpening?'':normalizeSpecialEventKey(state.pendingSpecialEvent),worldBook:normalizeWorldBook(state.worldBook),authorNote:normalizeAuthorNote(state.authorNote),promptTweaks:normalizePromptTweaks(state.promptTweaks),temperature:Number(state.temperature),topP:Number(state.topP),maxTokens:Number(state.maxTokens),responseMode:state.responseMode||'fast',language:uiLanguage,sceneMode:sceneMode});
   const requestBody=buildRequestBody(apiProfileWithSafety);
   archivePrompt(JSON.stringify(requestBody,null,2),{mode:'api',provider:state.provider,model:state.model,title:'API 回合資料'});
@@ -6396,15 +6767,28 @@ function applyTurn(r, role='ai') {
   temporaryChatFallbackKey='';
   if (role === 'ai' && r.narration) {
     try {
+      voicePlayer.stop();
       const scriptLines = splitScriptLines(r.narration, {
         charName: state.characterName || DEFAULT_CHARACTER_NAME,
         userName: state.playerName || 'User'
       });
-      const lines = scriptLines.length ? scriptLines : splitLines(r.narration);
+      const rawLines = scriptLines.length ? scriptLines : splitLines(r.narration);
+      const lines = attachSpokenEnToLines(rawLines, r.spokenEn, {
+        config: voicePlayer.getConfig(),
+        uiLanguage
+      });
+      if (voicePlayer.isEnabled()) {
+        voicePlayer.prefetchLines(lines);
+      }
       storyDialogueTranscript = [];
       storyDialogueLastIndex = -1;
       storyDialogueFollow = true;
-      getStoryLineRunner().start(lines);
+      const runner = getStoryLineRunner();
+      runner.start(lines);
+      if (!runner.enabled && voicePlayer.isEnabled()) {
+        const combinedEn = lines.filter((l) => l && l.spokenText && !l.player).map((l) => l.spokenText).join(' ');
+        if (combinedEn) void voicePlayer.speakText(combinedEn, { emotion: state.storyEmotion || 'neutral' });
+      }
     } catch (_) {}
   }
 }
@@ -8205,6 +8589,7 @@ document.addEventListener('keydown',event=>{
     }
     if (/^[1-7]$/.test(String(event.key || ''))) {
       event.preventDefault();
+      voicePlayer.stop();
       getStoryLineRunner().skipAll();
       return;
     }

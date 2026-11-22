@@ -24,16 +24,25 @@ export function computeVnControlState({
   isPlaying = false,
   autoAdvance = true,
   typeSoundId = 'off',
+  voiceEnabled = false,
+  voiceSpeaking = false,
   ctrlHeld = false,
   lang = 'zh'
 } = {}) {
   const soundOn = Boolean(typeSoundId && typeSoundId !== 'off');
+  const voiceOn = Boolean(voiceEnabled);
+  const speaking = Boolean(voiceSpeaking);
   return {
     showSkip: Boolean(isPlaying || ctrlHeld),
     skipLabel: skipChipLabel(Boolean(ctrlHeld), lang),
     autoActive: Boolean(autoAdvance),
     autoLabel: lang === 'en' ? (autoAdvance ? 'Auto ON' : 'Auto') : (autoAdvance ? '自動開' : '自動'),
     soundActive: soundOn,
-    soundLabel: lang === 'en' ? (soundOn ? 'SFX ON' : 'SFX') : (soundOn ? '打字音' : '靜音')
+    soundLabel: lang === 'en' ? (soundOn ? 'SFX ON' : 'SFX') : (soundOn ? '打字音' : '靜音'),
+    voiceActive: voiceOn,
+    voiceSpeaking: speaking,
+    voiceLabel: lang === 'en'
+      ? (speaking ? 'Speaking' : (voiceOn ? 'Voice ON' : 'Voice'))
+      : (speaking ? '朗讀中' : (voiceOn ? '配音開' : '配音'))
   };
 }

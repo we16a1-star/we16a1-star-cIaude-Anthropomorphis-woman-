@@ -1557,3 +1557,31 @@ harness 回報 12.4%）。**門檻判定可用，但數字精度約 ±3 個百�
 - **單元測試**：新增 `app\tests\story\frontend-arch-optimization.test.js`（4/4 PASS）；全套 ESM 142/144 PASS（0 新增失敗）、CJS＋桌面橋接 9 支共 333/333 PASS。
 - **實機 CDP 截圖覆核**：`shots\verify-v3-day-1264.png`、`verify-v3-night-1264.png`、`verify-v3-day-800.png` 確認 `head=13.5% (meta)`、`choicesCovered=0`、`choicesMaxOverlap=0`、`errors=0`，對話框右上微控制膠囊對齊美觀、零遮擋。
 - **簡體／PII 掃描**：全數 **0 簡體、0 PII**。
+
+
+---
+
+## 2026-11-22（上午・D20 落地）Claude 英文（英國 `en-GB` · `Glassy` · 正常速度）雙軌語音引擎＋中文字幕英式配音
+
+依使用者指定之配音規格（口說語言：`英文（英國）en-GB`、風格：`Glassy` / `glassy`、速度：`正常 1.0x`）與拍板路線（雙軌引擎＋中文字幕英式英文配音），將原 D20 佔位開關升級為完整可用之視覺小說語音系統。
+
+### 1. 新增與修改檔案
+| 檔案 | 動作 | 改了什麼／為什麼 | 如何測試 |
+| --- | --- | --- | --- |
+| `app\www\config\voice.json` | 新增 | 登錄 Claude `en-GB` / `Glassy` (`glassy`) / `normal` (`1.0x`) 標準預設設定、中字英配與僅念角色台詞規則、Glassy 偏好英式女聲清單、ElevenLabs／OpenAI 相容預設參數與試聽例句 | `voice-tts.test.js`（7/7 PASS） |
+| `app\www\voice-tts.js` | 新增 | D20 雙軌語音合成引擎（借鏡 AnimaVN `vn/voice.ts` 之佇列、記憶體 LRU 快取、連續 3 次 5xx 熔斷與 `audioBus` 語音聲道自動壓低 BGM）：① 內建免金鑰 Web Speech API（優先配對 `Google UK English Female` / `Microsoft Libby` / `Sonia` 等 `en-GB` 女聲並校準 Glassy 清亮音高 `1.06` 與正常語速 `1.0x`）② 外接本機 GPT-SoVITS / IndexTTS 聲紋克隆、ElevenLabs API、OpenAI 相容 TTS API；含網址安全檢查與 API Key 本機隔離儲存（不進遊戲存檔匯出）③ `attachSpokenEnToLines` 精準將 AI `spokenEn` 陣列對齊角色引號對話句，略過旁白、動作與玩家台詞 | `voice-tts.test.js`（7/7 PASS） |
+| `app\www\line-runner.js` | 修改 | `normalizeEntry` 保留 `spokenText` 欄位；`LineRunner` 支援可選 `isVoiceBusy` 檢查，開啟自動播放時若角色仍在朗讀會禮貌等待配音結束（最長 15 秒），點擊／空白鍵／跳過仍立即優先 | `line-runner.test.js`＋`voice-tts.test.js` 全 PASS |
+| `app\www\vn-controls.js` | 修改 | `computeVnControlState` 新增 `voiceActive`、`voiceSpeaking` 與 `voiceLabel`（配音／配音開／朗讀中），完全向下相容既有測試 | `frontend-arch-optimization.test.js`＋`voice-tts.test.js` |
+| `app\www\app.js` | 修改 | 接線 `window.__voiceTts`、`#vnQuickVoice` 對話框快速開關、逐句播放朗讀與預合成、繁中模式下開啟語音時自動附加可選 `spokenEn` 提示詞規則並於 `parseWebReply` 安全正規化（舊模型未輸出亦不報錯）；將 D20 設定區升級為完整 `.vn-voice-panel`（保留 `#vnVoiceToggle` 與 `claude_novel_voice_tts_v21` 相容性，支援一鍵試聽 Glassy、即時偵測英式聲線與外接後端設定），補齊 `UI_EN` 雙語字典 | `vn-settings-integration.test.js`＋全套回歸 |
+| `app\www\art-plan.css` | 修改 | 新增羊皮紙暖金高對比 `.vn-voice-panel` 設定卡片樣式與 `.vn-quick-btn.is-speaking` 朗讀中脈衝高亮 | 實機 CDP 截圖覆核（1264×720 與 800×600） |
+| `app\tests\story\voice-tts.test.js` | 新增 | 7 大項單元測試：預設 `en-GB/Glassy/1.0x` 規格、金鑰隔離、中字英配對齊與旁白過濾、英式聲線挑選與本機診斷、三大外接請求與網址安全檢查、LRU 快取／熔斷／LineRunner 等待、前端接線 | 7/7 PASS |
+| `P0-決策點-D1-D12-紀錄.md` | 修改 | D20 狀態更新為「已完成（2026-11-22）」 | 文件核對 |
+
+### 2. 建置與實機驗收
+- **esbuild 重建**：`app\www\app.bundle.js` 860,625 bytes｜SHA256 `63362F0953999D8D0042B7AF3785964F61C006F46E47A0EE26DF3B09C9FB6340`。
+- **全套回歸**：ESM **149/151 PASS**（新增 7/7 全過，0 新增失敗；僅餘兩筆既定歷史基準差異）；CJS **8/8 檔案全 PASS**。
+- **實機 Chrome CDP 視覺與執行驗證**：
+  - 自動配對本機 Chromium 內建英國腔女聲 **`Google UK English Female`**（`en-GB`，已套用 Glassy 音調與正常語速）。
+  - `shots\verify-voice-story-1264.png`（`speakerToQuickBarGapPx = 51px`）與 `verify-voice-story-800.png`（`54px`）：對話框右上 `自動開 · 配音 · 靜音` 零重疊、零遮擋立繪。
+  - `shots\verify-voice-settings-1264.png`：羊皮紙設定卡對比清晰、核取方塊與滑桿排版工整。
+- **簡體／PII 掃描**：所有新增與修改檔案 **0 簡體字、0 新增 PII**。
