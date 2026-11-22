@@ -1,0 +1,29 @@
+{
+  "_note": "草稿，尚未接進 harness。用法見 HANDOFF-ANTIGRAVITY.md 4.4 方案 1：複製到 app\\www\\assets\\art-heads.json，由 shot-inject.html 優先讀取。headPct 是「髮頂距圖頂的比例」，以 measure-file.ps1 的數字為底、再用 1264×781 截圖肉眼確認。",
+  "_measuredAt": "2026-11-22",
+  "_installedSet": "2026-11-22 04:50 安裝（add-headroom-final.ps1 產出）",
+  "g43-story-default.jpg": {
+    "headPct": 0.132,
+    "headPx": 76,
+    "source": "measure-file + 截圖",
+    "note": "harness 掃描回報 12.7%，與實際相符"
+  },
+  "g43-story-soft-morning.jpg": {
+    "headPct": 0.153,
+    "headPx": 88,
+    "source": "measure-file 109px 太嚴、harness 71px 太鬆，取截圖目視 88px",
+    "note": "此張背景暖色最多，掃描值 12.4% 明顯低估"
+  },
+  "g43-cg-magic-light.jpg": {
+    "headPct": 0.142,
+    "headPx": 82,
+    "source": "measure-file",
+    "note": "harness 掃描回報 12.1%，低估約 2 個百分點"
+  },
+  "g43-story-reading.jpg": {
+    "headPct": 0.132,
+    "headPx": 76,
+    "source": "measure-file",
+    "note": "harness 掃描回報 14.6%，高估（命中的是背景亮部）"
+  }
+}

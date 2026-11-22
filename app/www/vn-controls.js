@@ -26,20 +26,31 @@ export function computeVnControlState({
   typeSoundId = 'off',
   voiceEnabled = false,
   voiceSpeaking = false,
+  bgmEnabled = false,
+  ambienceMode = 'off',
+  masterMuted = false,
   ctrlHeld = false,
   lang = 'zh'
 } = {}) {
-  const soundOn = Boolean(typeSoundId && typeSoundId !== 'off');
+  const sfxOn = Boolean(typeSoundId && typeSoundId !== 'off');
+  const bgmOn = Boolean(bgmEnabled);
+  const ambOn = Boolean(ambienceMode && ambienceMode !== 'off');
   const voiceOn = Boolean(voiceEnabled);
-  const speaking = Boolean(voiceSpeaking);
+  const anyAudioOn = !masterMuted && (sfxOn || bgmOn || ambOn || voiceOn);
+  const speaking = Boolean(voiceSpeaking) && !masterMuted;
   return {
     showSkip: Boolean(isPlaying || ctrlHeld),
     skipLabel: skipChipLabel(Boolean(ctrlHeld), lang),
     autoActive: Boolean(autoAdvance),
     autoLabel: lang === 'en' ? (autoAdvance ? 'Auto ON' : 'Auto') : (autoAdvance ? '自動開' : '自動'),
-    soundActive: soundOn,
-    soundLabel: lang === 'en' ? (soundOn ? 'SFX ON' : 'SFX') : (soundOn ? '打字音' : '靜音'),
-    voiceActive: voiceOn,
+    soundActive: anyAudioOn,
+    soundLabel: lang === 'en'
+      ? (masterMuted ? 'Muted' : (anyAudioOn ? 'Sound ON' : 'Sound'))
+      : (masterMuted ? '已靜音' : (anyAudioOn ? '聲音開' : '靜音')),
+    masterMuted: Boolean(masterMuted),
+    bgmActive: bgmOn && !masterMuted,
+    ambienceActive: ambOn && !masterMuted,
+    voiceActive: voiceOn && !masterMuted,
     voiceSpeaking: speaking,
     voiceLabel: lang === 'en'
       ? (speaking ? 'Speaking' : (voiceOn ? 'Voice ON' : 'Voice'))

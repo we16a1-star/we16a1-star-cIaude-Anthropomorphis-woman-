@@ -170,9 +170,10 @@ export class PromptAssembler {
       return { success: false, data: null, error: '缺少有效 text 對白欄位' };
     }
 
-    // 驗證 emotion
+    // 驗證 emotion（D21：接受 10 大正式情緒；既有別名如 warm 保留相容性，下游再經 normalizeStoryEmotion 收斂）
     let emotion = typeof parsed.emotion === 'string' ? parsed.emotion.toLowerCase().trim() : 'neutral';
-    if (!emotionsConfig.whitelist.includes(emotion)) {
+    const hasLegacyAlias = Boolean(emotionsConfig.aliases && Object.prototype.hasOwnProperty.call(emotionsConfig.aliases, emotion));
+    if (!emotionsConfig.whitelist.includes(emotion) && !hasLegacyAlias) {
       emotion = 'neutral';
     }
 

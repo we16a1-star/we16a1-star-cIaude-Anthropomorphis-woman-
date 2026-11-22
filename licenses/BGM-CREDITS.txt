@@ -1,0 +1,28 @@
+《Claude娘的圖書館》原創配樂授權與校驗聲明（BGM-CREDITS）
+================================================================
+
+來源與著作權：
+  本目錄（app/www/assets/bgm/*.m4a）全數 9 首背景音樂均由本專案自製原創，
+  樂譜設計來源為 tools/bgm/bgm-score.json（Antigravity 設計），
+  由 tools/bgm/render-bgm.mjs（Neon 實作）以純程式離線 DSP 合成 44.1 kHz 立體聲母帶，
+  並經 Windows 系統內建 Media Foundation 轉碼為 160 kbps AAC (.m4a)。
+  未使用任何第三方受版權保護之音訊取樣或外部音樂服務。
+
+授權條款：
+  MIT License / 專案自有原創（允許自由隨《Claude娘的圖書館》安裝檔散布與衍生修改）。
+  取得／製作日期：2026-11-22
+  母帶規格：44.1 kHz Stereo / -18 LUFS / True Peak <= -1.0 dBTP / 雙遍無縫循環
+  九首總體積：17.97 MB（符合 <= 25 MB 預算）
+
+曲目清單與 SHA256 校驗碼：
+1. bgm-title.m4a           | 書頁之間（主題曲） | 101.05s | 2.33 MB | SHA256: F7169701A9389667BF47764E32066C4C923D33B1F50ECC133234431B5D4B673D
+2. bgm-day-default.m4a     | 午後的閱覽室       |  91.43s | 2.11 MB | SHA256: E427992E523723F9388E37887EF66A9E90BE20038FADA9B8A38E3C1F1EA246CD
+3. bgm-morning-soft.m4a    | 晨光與紅茶         |  45.00s | 1.04 MB | SHA256: 9698AD06A7C7D9B39F3432AAA0AB29B5F6FFB30A96984BFDE5A8D0212108318A
+4. bgm-evening-reading.m4a | 暮色與白鴿         | 112.94s | 2.61 MB | SHA256: B24D68DB51427270FA483729711944FFDE41B645BBE6421E140A9FAA822C8C3A
+5. bgm-night-magic.m4a     | 掌心的微光         | 120.00s | 2.77 MB | SHA256: 712F459012A198CCCA1DF9F2E99D2F22D01BD66F12AE30CBBD43011E6892D2C3
+6. bgm-rainy-night.m4a     | 雨聲裡的燭火       | 128.00s | 2.95 MB | SHA256: A8EA1E2456257D6050A6C8054BA83096FC290BA541648D974A61150B5728CE03
+7. bgm-event-tender.m4a    | 沒說出口的那一頁   |  58.18s | 1.34 MB | SHA256: 1494BAC92CE8CFCC1EA3AA8205D2CC42F27DFF13424AD93022C8C55C4077C531
+8. bgm-event-playful.m4a   | 才不是故意的       |  68.57s | 1.58 MB | SHA256: 347304DD1FF0AAECAEBBA7253D262A37C2897CE4D85B5C4B6E6AD69B8D4ECC22
+9. bgm-wait.m4a            | 羽毛筆書寫中       |  53.33s | 1.23 MB | SHA256: D27A4BAA61A6D23CACE6C7D3EADA604313F76D27B09F83AB0E495811116D0F49
+
+（打包備註：下一階段建置安裝檔時，請將 licenses/BGM-CREDITS.txt 加入 package.json 之 build.files。）

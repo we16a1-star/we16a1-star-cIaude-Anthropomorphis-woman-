@@ -1,0 +1,473 @@
+{
+  "$schema": "claude-novel-bgm-score/v1",
+  "version": "2026-11-22-v1",
+  "designer": "Antigravity",
+  "renderer": "Neon",
+  "notation": {
+    "melody": "每小節一個字串；以空白分隔「音名:拍數」，音名用科學音高記法（C4 = 中央 C，# 升記號，b 降記號），R 為休止符；每小節拍數總和必須等於 timeSig 的拍數",
+    "chords": "每小節一個字串；同小節兩個和弦以空白分隔、平分拍數（例：\"D7sus4 D7\" 在 4/4 為各 2 拍）；斜線和弦 X/Y 表示低音為 Y",
+    "chordVocabulary": ["maj", "m", "7", "maj7", "m7", "m9", "maj9", "6", "sus4", "7sus4", "add9", "slash"],
+    "voicing": "和弦內聲部限制在 C3–C5，最小移動距離連接（voice leading）；低音聲部固定在 E1–E3 的根音或斜線低音",
+    "dynamics": "gainDb 為該層相對於 0 dBFS 的混音前電平；母帶目標 -18 LUFS、True Peak ≤ -1 dBTP"
+  },
+  "leitmotif": {
+    "id": "M-unfinished",
+    "name": "《未竟錄》動機",
+    "concept": "上行四音象徵好奇，長音停在三音後回落象徵故作從容；樂句結尾刻意停在導音或屬音不解決＝嘴硬。只有 bgm-event-tender 在最後一小節完整解決到主音＝坦率。",
+    "inD": "A4:0.5 D5:0.5 E5:1 F#5:1.5 E5:0.5 | D5:2",
+    "intervals": "上行完全四度 → 大二度 → 大二度 → 回落大二度 → 大二度"
+  },
+  "instruments": {
+    "felt-piano":   { "synth": "加法合成：基頻＋2/3/4/5 倍泛音，振幅 1, 0.45, 0.22, 0.12, 0.06；起音 8 ms、指數衰減 τ=1.6 s（高音區 τ 依音高線性縮短至 0.7 s）；低通 2.4 kHz、Q 0.5；力度隨機 ±6%", "range": "A2–C7" },
+    "string-pad":   { "synth": "3 個鋸齒波去諧 -7/0/+7 cents；低通 1.1 kHz 並以 0.15 Hz LFO 在 900–1300 Hz 緩慢掃動；起音 1.4 s、釋放 2.2 s", "range": "C3–C5" },
+    "pizzicato":    { "synth": "Karplus-Strong 撥弦，衰減係數 0.985、亮度濾波 0.45；起音即時；長度 ≤ 0.6 s", "range": "G2–A5" },
+    "harp":         { "synth": "Karplus-Strong 撥弦，衰減係數 0.996、亮度 0.6；自然延音 2–3 s", "range": "C2–G6" },
+    "celesta":      { "synth": "正弦基頻＋4 倍、7.1 倍非整數泛音（鐘聲感），振幅 1, 0.3, 0.08；起音 2 ms、衰減 τ=1.1 s", "range": "C5–C8" },
+    "music-box":    { "synth": "正弦基頻＋3 倍、6.2 倍泛音，振幅 1, 0.2, 0.1；衰減 τ=0.8 s；每音微走音 ±4 cents", "range": "C5–C8" },
+    "flute":        { "synth": "正弦＋2 倍泛音 0.15，加 3% 帶通氣聲雜訊（中心 2 kHz）；起音 60 ms；音長 > 0.6 s 時漸入 5.2 Hz、±12 cents 顫音", "range": "C4–C7" },
+    "clarinet":     { "synth": "奇次泛音（1, 3, 5, 7 倍，振幅 1, 0.33, 0.18, 0.08）；低通 1.8 kHz；起音 45 ms", "range": "D3–G6" },
+    "cello":        { "synth": "鋸齒波＋低通 1.4 kHz（Q 0.8），共鳴峰 300 Hz +3 dB；起音 120 ms；音長 > 0.8 s 時漸入 5 Hz、±15 cents 顫音", "range": "C2–A4" },
+    "violin":       { "synth": "鋸齒波＋低通 3.2 kHz、共鳴峰 2.8 kHz +2 dB；起音 90 ms；5.6 Hz、±14 cents 顫音", "range": "G3–E7" },
+    "bassoon":      { "synth": "方波 35% 占空比＋低通 1.2 kHz；起音 30 ms；斷奏長度 = 音符拍長 × 0.55", "range": "Bb1–Eb5" },
+    "glockenspiel": { "synth": "正弦基頻＋2.76 倍泛音 0.25；起音 1 ms、衰減 τ=0.9 s；整體高八度發聲", "range": "G5–C8" },
+    "marimba":      { "synth": "正弦基頻＋4 倍、10 倍泛音（0.25, 0.05）；衰減 τ=0.5 s；低通 3 kHz", "range": "C3–C7" },
+    "upright-bass": { "synth": "正弦＋三角波各半；低通 600 Hz；起音 15 ms、衰減 τ=1.2 s", "range": "E1–G3" },
+    "woodblock":    { "synth": "帶通雜訊脈衝（中心 1.8 kHz、Q 8），長度 40 ms", "range": "無音高" }
+  },
+  "mix": {
+    "reverb": "以程式產生的指數衰減立體聲雜訊作為脈衝響應（IR）：衰減時間依曲目 reverbSec，預延遲 18 ms，高頻阻尼（IR 低通 6 kHz）；混響濕聲比例依各層 sendDb",
+    "master": "總線：高通 30 Hz → 溫和壓縮（比例 2:1、門檻 -20 dBFS、起音 30 ms、釋放 250 ms）→ 真實峰值限制器 -1 dBTP → 整合響度正規化至 -18 LUFS ±1",
+    "seamlessLoop": "將完整曲式連續渲染兩遍，擷取第二遍的精確取樣範圍，使循環起點已包含上一輪的混響尾巴；檔案頭尾 2 ms 不做淡入淡出（避免循環處凹陷）"
+  },
+  "tracks": [
+    {
+      "id": "bgm-title",
+      "title": "書頁之間（主題曲）",
+      "use": "開始畫面",
+      "key": "D major",
+      "bpm": 76,
+      "timeSig": [4, 4],
+      "reverbSec": 2.4,
+      "form": ["A", "A2", "B", "A2"],
+      "sections": {
+        "A": {
+          "chords": ["D", "Bm", "G", "A", "D/F#", "G", "Em7", "A7"],
+          "melody": [
+            "A4:0.5 D5:0.5 E5:1 F#5:1.5 E5:0.5",
+            "D5:2 F#5:1 B4:1",
+            "G4:0.5 B4:0.5 D5:1 G5:1.5 F#5:0.5",
+            "E5:3 R:1",
+            "A4:0.5 D5:0.5 E5:1 F#5:1 A5:1",
+            "B5:1.5 A5:0.5 G5:1 F#5:1",
+            "E5:1 G5:1 F#5:1 D5:1",
+            "C#5:2 E5:1 R:1"
+          ],
+          "layers": [
+            { "inst": "felt-piano", "role": "melody", "gainDb": -9, "sendDb": -14 },
+            { "inst": "felt-piano", "role": "comp", "pattern": "broken-8ths-1-5-8-10", "gainDb": -18, "sendDb": -12 },
+            { "inst": "string-pad", "role": "pad", "gainDb": -22, "sendDb": -8 },
+            { "inst": "upright-bass", "role": "bass", "pattern": "root-half-notes", "gainDb": -17, "sendDb": -20 }
+          ]
+        },
+        "A2": {
+          "same": "A",
+          "changes": "旋律改由 violin 演奏（-11 dB）；felt-piano 旋律層移至高八度、改為每小節第 1 拍單音點綴（-20 dB）；加 harp 上行琶音（每小節 16 分音符 1-3-5-8，-21 dB）"
+        },
+        "B": {
+          "chords": ["Bm", "G", "D/F#", "A", "Bm", "G", "Em7", "Asus4 A7"],
+          "melody": [
+            "F#5:3 E5:1",
+            "D5:2 B4:2",
+            "A4:2 D5:1 F#5:1",
+            "E5:4",
+            "F#5:1 G5:1 A5:2",
+            "B5:2 G5:2",
+            "G5:1 F#5:1 E5:2",
+            "E5:2 C#5:2"
+          ],
+          "layers": [
+            { "inst": "celesta", "role": "melody", "gainDb": -14, "sendDb": -9 },
+            { "inst": "string-pad", "role": "pad", "gainDb": -19, "sendDb": -8 },
+            { "inst": "harp", "role": "comp", "pattern": "arp-up-8ths-1-5-8-10", "gainDb": -19, "sendDb": -11 },
+            { "inst": "upright-bass", "role": "bass", "pattern": "root-whole-notes", "gainDb": -18, "sendDb": -20 }
+          ]
+        }
+      },
+      "promptEn": "Gentle romantic visual-novel title theme, D major, 76 BPM, 4/4. Felt piano states a curious six-note rising motif (A-D-E-F#-E-D), warm string pad, upright bass, harp arpeggios, later a solo violin restates the melody and a celesta bridge. Cozy candlelit old library, scholarly and tender, phrases end unresolved on the leading tone. No vocals, no drums, seamless loop, about 100 seconds."
+    },
+    {
+      "id": "bgm-day-default",
+      "title": "午後的閱覽室",
+      "use": "scenePack day-default（古籍閱覽室・白天）",
+      "key": "G major",
+      "bpm": 84,
+      "timeSig": [4, 4],
+      "reverbSec": 1.8,
+      "form": ["A", "A2", "B", "B2"],
+      "sections": {
+        "A": {
+          "chords": ["Gmaj7", "Cmaj7", "Am7", "D7sus4 D7", "Bm7", "Em7", "Cmaj7", "D7sus4"],
+          "melody": [
+            "D5:0.5 G5:0.5 A5:1 B5:2",
+            "A5:1 G5:1 E5:2",
+            "C5:1 E5:1 G5:1 A5:1",
+            "A5:2 F#5:2",
+            "D5:0.5 F#5:0.5 A5:1 B5:2",
+            "G5:1.5 F#5:0.5 E5:2",
+            "E5:1 G5:1 B5:1 A5:1",
+            "A5:2 R:2"
+          ],
+          "layers": [
+            { "inst": "felt-piano", "role": "melody", "gainDb": -10, "sendDb": -15 },
+            { "inst": "pizzicato", "role": "comp", "pattern": "root-beat1-fifth-beat3", "gainDb": -17, "sendDb": -14 },
+            { "inst": "felt-piano", "role": "comp", "pattern": "block-chord-beat2-beat4-soft", "gainDb": -22, "sendDb": -12 },
+            { "inst": "upright-bass", "role": "bass", "pattern": "root-half-notes", "gainDb": -18, "sendDb": -22 }
+          ]
+        },
+        "A2": {
+          "same": "A",
+          "changes": "旋律改由 clarinet 演奏（-12 dB）；felt-piano 改為旋律下方三度的和聲線（自然音階內三度，-19 dB）"
+        },
+        "B": {
+          "chords": ["Em7", "Cmaj7", "Gmaj7/B", "Am7", "Em7", "Cmaj7", "Am7", "D7sus4 D7"],
+          "melody": ["R:4", "R:4", "R:4", "R:4", "R:4", "R:4", "R:4", "R:4"],
+          "layers": [
+            { "inst": "felt-piano", "role": "comp", "pattern": "broken-8ths-1-5-8-10", "gainDb": -15, "sendDb": -12 },
+            { "inst": "pizzicato", "role": "comp", "pattern": "root-beat1-fifth-beat3", "gainDb": -19, "sendDb": -14 },
+            { "inst": "string-pad", "role": "pad", "gainDb": -24, "sendDb": -9 },
+            { "inst": "upright-bass", "role": "bass", "pattern": "root-half-notes", "gainDb": -18, "sendDb": -22 }
+          ],
+          "note": "B 段旋律留白，讓玩家長時間閱讀不疲勞"
+        },
+        "B2": {
+          "same": "B",
+          "changes": "第 5–8 小節加入 clarinet 長音對位：E5:4 | E5:4 | D5:4 | C5:2 B4:2 ... 最後一小節 A4:4（-16 dB）"
+        }
+      },
+      "promptEn": "Calm afternoon library background music, G major, 84 BPM. Soft felt piano melody, light pizzicato strings, warm clarinet answer, upright bass, gentle and unobtrusive for long reading. Sunlight through tall windows, quiet scholarly warmth. No vocals, no drums, seamless loop, about 90 seconds."
+    },
+    {
+      "id": "bgm-morning-soft",
+      "title": "晨光與紅茶",
+      "use": "scenePack morning-soft（晨光）",
+      "key": "F major",
+      "bpm": 96,
+      "timeSig": [3, 4],
+      "reverbSec": 1.6,
+      "form": ["A", "A2", "B"],
+      "sections": {
+        "A": {
+          "chords": ["F", "C/E", "Dm", "Bb", "F/A", "Gm7", "C7sus4", "C7"],
+          "melody": [
+            "C5:1 F5:1 G5:1",
+            "G5:2 E5:1",
+            "F5:1 A5:1 D5:1",
+            "D5:2 R:1",
+            "C5:1 F5:1 A5:1",
+            "Bb5:1.5 A5:0.5 G5:1",
+            "F5:1 G5:2",
+            "E5:2 R:1"
+          ],
+          "layers": [
+            { "inst": "flute", "role": "melody", "gainDb": -11, "sendDb": -13 },
+            { "inst": "harp", "role": "comp", "pattern": "waltz-root-then-chord-chord", "gainDb": -17, "sendDb": -11 },
+            { "inst": "upright-bass", "role": "bass", "pattern": "root-dotted-half", "gainDb": -19, "sendDb": -22 }
+          ]
+        },
+        "A2": {
+          "same": "A",
+          "changes": "旋律改由 glockenspiel 演奏（-17 dB）並由 flute 在下方六度吹長音和聲（-16 dB）"
+        },
+        "B": {
+          "chords": ["Bb", "C", "Am7", "Dm", "Gm7", "C7sus4", "F", "C7"],
+          "melody": [
+            "D5:3",
+            "E5:3",
+            "C5:1 E5:1 A5:1",
+            "F5:3",
+            "D5:1 F5:1 Bb5:1",
+            "G5:3",
+            "A5:2 F5:1",
+            "G5:2 R:1"
+          ],
+          "layers": [
+            { "inst": "clarinet", "role": "melody", "gainDb": -13, "sendDb": -12 },
+            { "inst": "harp", "role": "comp", "pattern": "arp-up-8ths-1-5-8-10", "gainDb": -18, "sendDb": -11 },
+            { "inst": "string-pad", "role": "pad", "gainDb": -25, "sendDb": -9 },
+            { "inst": "upright-bass", "role": "bass", "pattern": "root-dotted-half", "gainDb": -19, "sendDb": -22 }
+          ]
+        }
+      },
+      "promptEn": "Bright gentle morning waltz, F major, 96 BPM, 3/4 time. Airy flute melody, harp waltz accompaniment, glockenspiel sparkle, light clarinet bridge. Fresh sunrise, steaming black tea, a young scholar humming while sorting books. No vocals, no drums, seamless loop, about 75 seconds."
+    },
+    {
+      "id": "bgm-evening-reading",
+      "title": "暮色與白鴿",
+      "use": "scenePack evening-reading（傍晚）",
+      "key": "C major",
+      "bpm": 68,
+      "timeSig": [4, 4],
+      "reverbSec": 2.2,
+      "form": ["A", "A2", "B", "B2"],
+      "sections": {
+        "A": {
+          "chords": ["Cmaj7", "Am7", "Fmaj7", "G6", "Em7", "Am7", "Dm7", "G7sus4"],
+          "melody": [
+            "E3:2 G3:1 B3:1",
+            "C4:2 A3:2",
+            "A3:1 C4:1 E4:2",
+            "D4:3 R:1",
+            "B3:2 G3:2",
+            "C4:1 E4:1 A3:2",
+            "F3:1 A3:1 C4:1 D4:1",
+            "D4:2 C4:2"
+          ],
+          "layers": [
+            { "inst": "cello", "role": "melody", "gainDb": -10, "sendDb": -12 },
+            { "inst": "felt-piano", "role": "comp", "pattern": "block-chord-beat1-held", "gainDb": -19, "sendDb": -11 },
+            { "inst": "string-pad", "role": "pad", "gainDb": -24, "sendDb": -8 }
+          ]
+        },
+        "A2": {
+          "same": "A",
+          "changes": "cello 旋律保留；felt-piano 在高音區（C5–G6）以每 2 拍一個音點綴旋律的上方三度（-21 dB）"
+        },
+        "B": {
+          "chords": ["Fmaj7", "Em7", "Dm7", "Cmaj7", "Fmaj7", "Em7", "Dm7", "G7sus4 G7"],
+          "melody": ["R:4", "R:4", "R:4", "R:4", "R:4", "R:4", "R:4", "R:4"],
+          "layers": [
+            { "inst": "felt-piano", "role": "comp", "pattern": "broken-8ths-1-5-8-10", "gainDb": -15, "sendDb": -11 },
+            { "inst": "upright-bass", "role": "bass", "pattern": "root-whole-notes", "gainDb": -19, "sendDb": -22 },
+            { "inst": "string-pad", "role": "pad", "gainDb": -23, "sendDb": -8 }
+          ]
+        },
+        "B2": {
+          "same": "B",
+          "changes": "第 1–8 小節 cello 低音長音對位：A3:4 | G3:4 | F3:4 | E3:4 | A3:4 | G3:4 | F3:4 | G3:2 F3:2（-14 dB）"
+        }
+      },
+      "promptEn": "Warm melancholic dusk reading music, C major, 68 BPM. Expressive solo cello melody, soft sustained piano chords, light string pad, upright bass. Sunset light through a library window, a white dove on the sill, slow and contemplative. No vocals, no drums, seamless loop, about 110 seconds."
+    },
+    {
+      "id": "bgm-night-magic",
+      "title": "掌心的微光",
+      "use": "scenePack night-magic（夜間）",
+      "key": "D dorian",
+      "bpm": 64,
+      "timeSig": [4, 4],
+      "reverbSec": 3.0,
+      "form": ["A", "A2", "B", "B2"],
+      "sections": {
+        "A": {
+          "chords": ["Dm9", "Bbmaj7", "Fmaj7/A", "Gm7", "Dm9", "Bbmaj7", "Gm7", "A7sus4 A7"],
+          "melody": [
+            "A5:1 E6:1 D6:2",
+            "F6:1.5 D6:0.5 A5:2",
+            "C6:1 A5:1 G5:2",
+            "Bb5:2 D6:2",
+            "A5:1 E6:1 F6:1 E6:1",
+            "D6:2 A5:2",
+            "G5:1 Bb5:1 D6:1 F6:1",
+            "E6:2 C#6:2"
+          ],
+          "layers": [
+            { "inst": "celesta", "role": "melody", "gainDb": -12, "sendDb": -7 },
+            { "inst": "string-pad", "role": "pad", "gainDb": -19, "sendDb": -6 },
+            { "inst": "harp", "role": "comp", "pattern": "arp-up-8ths-1-5-9-10-slow", "gainDb": -20, "sendDb": -9 },
+            { "inst": "upright-bass", "role": "bass", "pattern": "root-whole-notes", "gainDb": -19, "sendDb": -18 }
+          ]
+        },
+        "A2": {
+          "same": "A",
+          "changes": "旋律改由 music-box 演奏（-14 dB）；celesta 於每小節第 3 拍演奏旋律下方四度的回音（-22 dB）"
+        },
+        "B": {
+          "chords": ["Gm7", "Dm9", "Bbmaj7", "Fmaj7", "Gm7", "Dm9", "Bbmaj7", "A7sus4"],
+          "melody": ["R:4", "R:4", "R:4", "R:4", "R:4", "R:4", "R:4", "R:4"],
+          "layers": [
+            { "inst": "string-pad", "role": "pad", "gainDb": -17, "sendDb": -6 },
+            { "inst": "harp", "role": "comp", "pattern": "arp-up-8ths-1-5-9-10-slow", "gainDb": -19, "sendDb": -9 },
+            { "inst": "upright-bass", "role": "bass", "pattern": "root-whole-notes", "gainDb": -20, "sendDb": -18 }
+          ]
+        },
+        "B2": {
+          "same": "B",
+          "changes": "每 2 小節的第 1 拍加一個 celesta 單音閃光（依序 D6、F6、A5、C6、D6、F6、A5、E6，-18 dB）"
+        }
+      },
+      "promptEn": "Mysterious tender night magic music, D dorian, 64 BPM. Celesta and music box melody, shimmering harp arpeggios, deep soft string pad, upright bass. A girl holding a tiny glowing light in a dark library at midnight, wonder and quiet intimacy. No vocals, no drums, seamless loop, about 120 seconds."
+    },
+    {
+      "id": "bgm-rainy-night",
+      "title": "雨聲裡的燭火",
+      "use": "scenePack rainy-night（雨夜）；雨聲由 ambience.js 即時合成疊加，不可烘焙進本曲",
+      "key": "A minor",
+      "bpm": 60,
+      "timeSig": [4, 4],
+      "reverbSec": 2.8,
+      "form": ["A", "A2", "B", "B2"],
+      "sections": {
+        "A": {
+          "chords": ["Am9", "Fmaj7", "Cmaj7/E", "Dm7 G7sus4", "Am9", "Fmaj7", "Dm9", "Esus4 E7"],
+          "melody": [
+            "E5:2 B5:2",
+            "A5:2 E5:2",
+            "G5:3 R:1",
+            "F5:2 D5:2",
+            "E5:1 A5:1 B5:1 C6:1",
+            "A5:2 G5:1 E5:1",
+            "F5:2 E5:2",
+            "E5:2 G#5:2"
+          ],
+          "layers": [
+            { "inst": "felt-piano", "role": "melody", "gainDb": -11, "sendDb": -9 },
+            { "inst": "felt-piano", "role": "comp", "pattern": "block-chord-beat1-held", "gainDb": -21, "sendDb": -9 },
+            { "inst": "string-pad", "role": "pad", "gainDb": -23, "sendDb": -7 }
+          ]
+        },
+        "A2": {
+          "same": "A",
+          "changes": "加入 cello 低音對位（每小節和弦根音的長音，-15 dB）；鋼琴旋律力度 -2 dB 更內斂"
+        },
+        "B": {
+          "chords": ["Fmaj7", "G6", "Em7", "Am9", "Dm9", "G7sus4", "Cmaj7/E", "Esus4 E7"],
+          "melody": [
+            "C6:4",
+            "B5:2 D6:2",
+            "B5:2 G5:2",
+            "A5:4",
+            "F5:2 A5:2",
+            "G5:2 D5:2",
+            "E5:2 G5:2",
+            "B4:2 G#4:2"
+          ],
+          "layers": [
+            { "inst": "cello", "role": "melody", "gainDb": -12, "sendDb": -10, "octaveShift": -2 },
+            { "inst": "felt-piano", "role": "comp", "pattern": "broken-8ths-1-5-8-10-soft", "gainDb": -20, "sendDb": -9 },
+            { "inst": "string-pad", "role": "pad", "gainDb": -22, "sendDb": -7 }
+          ]
+        },
+        "B2": {
+          "same": "B",
+          "changes": "旋律回到 felt-piano 原八度（-12 dB），cello 改演奏和弦根音長音（-17 dB）"
+        }
+      },
+      "promptEn": "Quiet rainy night piano music, A minor, 60 BPM. Sparse intimate felt piano, low cello counter-line, soft string pad, candlelight warmth against cold rain, comforting rather than sad. No rain sound effects baked in, no vocals, no drums, seamless loop, about 125 seconds."
+    },
+    {
+      "id": "bgm-event-tender",
+      "title": "沒說出口的那一頁",
+      "use": "事件 CG：goodnight、vow、night_chat_reading",
+      "key": "D major",
+      "bpm": 66,
+      "timeSig": [4, 4],
+      "reverbSec": 2.6,
+      "form": ["A", "A2"],
+      "sections": {
+        "A": {
+          "sameAs": "bgm-title.A",
+          "changes": "主題曲 A 段完整重現：旋律改由 violin 獨奏（-10 dB），伴奏只用 felt-piano 長和弦（-19 dB）與 string-pad（-20 dB）",
+          "layers": [
+            { "inst": "violin", "role": "melody", "gainDb": -10, "sendDb": -9 },
+            { "inst": "felt-piano", "role": "comp", "pattern": "block-chord-beat1-held", "gainDb": -19, "sendDb": -10 },
+            { "inst": "string-pad", "role": "pad", "gainDb": -20, "sendDb": -7 }
+          ]
+        },
+        "A2": {
+          "chords": ["D", "Bm", "G", "A", "D/F#", "G", "Em7 A7", "D"],
+          "melody": [
+            "A4:0.5 D5:0.5 E5:1 F#5:1.5 E5:0.5",
+            "D5:2 F#5:1 B4:1",
+            "G4:0.5 B4:0.5 D5:1 G5:1.5 F#5:0.5",
+            "E5:3 R:1",
+            "A4:0.5 D5:0.5 E5:1 F#5:1 A5:1",
+            "B5:1.5 A5:0.5 G5:1 F#5:1",
+            "E5:1 G5:1 E5:1 C#5:1",
+            "D5:4"
+          ],
+          "layers": [
+            { "inst": "violin", "role": "melody", "gainDb": -10, "sendDb": -9 },
+            { "inst": "felt-piano", "role": "harmony-third-below", "gainDb": -15, "sendDb": -10 },
+            { "inst": "string-pad", "role": "pad", "gainDb": -17, "sendDb": -6 },
+            { "inst": "harp", "role": "comp", "pattern": "arp-up-8ths-1-5-8-10", "gainDb": -19, "sendDb": -9 },
+            { "inst": "upright-bass", "role": "bass", "pattern": "root-half-notes", "gainDb": -18, "sendDb": -18 }
+          ],
+          "note": "全專案唯一讓動機完整解決到主音 D 的地方（第 8 小節）＝放下嘴硬、坦率的瞬間；為了能循環，第 8 小節後接回 A 段時保留 D 和弦，不另加尾奏"
+        }
+      },
+      "promptEn": "Tender emotional romance cue, D major, 66 BPM. Solo violin plays a warm six-note rising theme (A-D-E-F#-E-D) over sustained piano and strings, second pass blooms with harp and bass and finally resolves home. Goodnight confession in candlelight, sincere and gentle, not dramatic. No vocals, no drums, seamless loop, about 60 seconds."
+    },
+    {
+      "id": "bgm-event-playful",
+      "title": "才不是故意的",
+      "use": "事件 CG：cheek_pinch、outing_memory、lakeside_sunset",
+      "key": "G major",
+      "bpm": 112,
+      "timeSig": [4, 4],
+      "reverbSec": 1.4,
+      "form": ["A", "A2", "A3", "A4"],
+      "sections": {
+        "A": {
+          "chords": ["G", "Em", "C", "D", "G", "Em", "Am7", "D7"],
+          "melody": [
+            "D5:0.5 G5:0.5 A5:0.5 B5:0.5 A5:1 R:1",
+            "G5:0.5 E5:0.5 R:0.5 B4:0.5 E5:2",
+            "E5:0.5 G5:0.5 C6:0.5 B5:0.5 A5:1 G5:1",
+            "F#5:1 A5:1 D5:2",
+            "D5:0.5 G5:0.5 A5:0.5 B5:0.5 A5:1 R:1",
+            "G5:0.5 E5:0.5 G5:0.5 B5:0.5 E5:2",
+            "A5:0.5 C6:0.5 E5:0.5 G5:0.5 A5:2",
+            "F#5:1 D5:0.5 E5:0.5 F#5:1 R:1"
+          ],
+          "layers": [
+            { "inst": "pizzicato", "role": "melody", "gainDb": -10, "sendDb": -15 },
+            { "inst": "bassoon", "role": "bass", "pattern": "root-fifth-quarters-staccato", "gainDb": -15, "sendDb": -18 },
+            { "inst": "woodblock", "role": "perc", "pattern": "offbeat-8ths-beats-2-4", "gainDb": -24, "sendDb": -20 }
+          ]
+        },
+        "A2": { "same": "A", "changes": "旋律改由 clarinet 斷奏（音長 × 0.6，-12 dB）；pizzicato 改演奏和弦反拍（-18 dB）" },
+        "A3": { "same": "A", "changes": "旋律改由 glockenspiel（-16 dB）＋ flute 低八度齊奏（-15 dB）；woodblock 靜音" },
+        "A4": { "same": "A", "changes": "全部合奏：pizzicato 旋律＋ clarinet 下方三度和聲＋ bassoon＋ woodblock；最後一小節保留 R:1 讓循環接回時有呼吸" }
+      },
+      "promptEn": "Playful light comedic cue, G major, 112 BPM. Bouncy pizzicato strings melody, staccato bassoon bass, clarinet and glockenspiel answers, soft woodblock on offbeats. A proud tsundere girl flustered after her cheek is pinched, teasing and cute, not slapstick. No vocals, no drum kit, seamless loop, about 70 seconds."
+    },
+    {
+      "id": "bgm-wait",
+      "title": "羽毛筆書寫中",
+      "use": "AI 生成等待畫面（wait-interlude，選配）",
+      "key": "D major",
+      "bpm": 72,
+      "timeSig": [4, 4],
+      "reverbSec": 2.0,
+      "form": ["A", "A"],
+      "sections": {
+        "A": {
+          "chords": ["Dmaj7", "Gmaj7", "Bm7", "Asus4", "Dmaj7", "Gmaj7", "Em7", "Asus4"],
+          "melody": ["R:4", "R:4", "R:4", "R:4", "R:4", "R:4", "R:4", "R:4"],
+          "layers": [
+            { "inst": "marimba", "role": "comp", "pattern": "arp-8ths-1-5-9-3-up", "gainDb": -15, "sendDb": -11 },
+            { "inst": "string-pad", "role": "pad", "gainDb": -25, "sendDb": -8 }
+          ],
+          "note": "零旋律、低存在感；等待畫面最短只停留 0.7 秒，需能在任意位置淡入淡出"
+        }
+      },
+      "promptEn": "Minimal ambient waiting loop, D major, 72 BPM. Soft marimba arpeggios and a faint string pad, no melody, calm and patient like a quill writing a letter. No vocals, no drums, seamless loop, about 55 seconds."
+    }
+  ],
+  "patterns": {
+    "broken-8ths-1-5-8-10": "每拍兩個八分音符，依序彈奏和弦根音、五音、高八度根音、高八度三音，循環",
+    "broken-8ths-1-5-8-10-soft": "同上，力度 -4 dB、每小節最後一個八分音符省略",
+    "arp-up-8ths-1-5-8-10": "八分音符上行琶音：根音、五音、八度、十度（三音高八度），每拍兩音",
+    "arp-up-8ths-1-5-9-10-slow": "八分音符上行琶音：根音、五音、九音、十度；每小節僅前兩拍彈奏，後兩拍讓聲音延續",
+    "arp-8ths-1-5-9-3-up": "八分音符：根音、五音、九音、高八度三音，每小節重複兩次",
+    "root-half-notes": "每 2 拍彈一次根音（斜線和弦彈低音）",
+    "root-whole-notes": "每小節第 1 拍彈根音並延續整小節",
+    "root-dotted-half": "3/4 拍每小節第 1 拍彈根音延續 3 拍",
+    "root-beat1-fifth-beat3": "第 1 拍根音、第 3 拍五音",
+    "root-fifth-quarters-staccato": "四分音符交替根音與五音，斷奏（音長 × 0.55）",
+    "block-chord-beat2-beat4-soft": "第 2、4 拍彈和弦內聲部，力度 -6 dB，音長 0.5 拍",
+    "block-chord-beat1-held": "第 1 拍彈完整和弦並延續整小節",
+    "waltz-root-then-chord-chord": "3/4 圓舞曲：第 1 拍低音根音，第 2、3 拍彈和弦內聲部",
+    "offbeat-8ths-beats-2-4": "第 2、4 拍的後半拍各敲一下"
+  }
+}

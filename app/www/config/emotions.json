@@ -1,26 +1,38 @@
 {
   "whitelist": [
     "neutral",
-    "shy",
+    "happy",
     "proud",
-    "focused",
-    "warm",
-    "sad",
+    "shy",
     "surprised",
-    "angry",
-    "curious"
+    "dizzy",
+    "curious",
+    "focused",
+    "worried",
+    "tender"
   ],
   "defaultEmotion": "neutral",
+  "aliases": {
+    "warm": "tender",
+    "gentle": "tender",
+    "sad": "worried",
+    "anxious": "worried",
+    "concerned": "worried",
+    "angry": "proud",
+    "blush": "shy",
+    "smug": "proud",
+    "thinking": "focused"
+  },
   "descriptions": {
     "neutral": "日常平靜從容",
-    "shy": "害羞臉紅、慌張用書遮臉",
+    "happy": "開心、輕笑、眉眼彎彎",
     "proud": "得意、下巴微揚、心裡期待稱讚",
+    "shy": "害羞臉紅、慌張用書遮臉",
+    "surprised": "驚訝微張嘴、眨眼愣住",
+    "dizzy": "暈眩、疲倦或手忙腳亂",
+    "curious": "好奇直視、認真探究",
     "focused": "專注蹙眉、拿筆在《未竟錄》寫字、想通時指你看",
-    "warm": "溫和微笑、倒茶關照",
-    "sad": "難過、失落",
-    "surprised": "驚訝微張嘴",
-    "angry": "氣鼓鼓、眉頭輕蹙但依然可愛",
-    "curious": "好奇直視、認真探究"
+    "worried": "擔憂蹙眉、放輕語氣關照對方",
+    "tender": "溫柔深情、放軟姿態細心陪伴"
   }
 }
-

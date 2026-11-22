@@ -137,6 +137,14 @@ if (tab && stage && defaultArt && cgArt && grade && transition && dialogue) {
         defaultArt.alt = alt;
         defaultArt.dataset.art = scene || 'default';
         setTone(tone);
+        try {
+          if (window.__claudeBus?.emit) {
+            window.__claudeBus.emit('scene:changed', { sceneKey: scene || 'default', tone, background: file });
+          } else {
+            window.__bgmPlayer?.setScene?.(scene || 'default');
+            window.__ambience?.setScene?.(scene || 'default');
+          }
+        } catch (_) {}
         if (underlayArt && !underlayArt.hidden) {
           underlayTimer = setTimeout(() => {
             if (generation !== artGeneration) return;
@@ -201,6 +209,10 @@ if (tab && stage && defaultArt && cgArt && grade && transition && dialogue) {
       cgArt.style.removeProperty('cursor');
       transition.style.removeProperty('transition');
       activeCg = '';
+      try {
+        if (window.__claudeBus?.emit) window.__claudeBus.emit('cg:ended', {});
+        else window.__bgmPlayer?.clearEvent?.();
+      } catch (_) {}
       applyEmotionArt();
       if (pendingCg) { const next = pendingCg; pendingCg = null; showCg(next); }
     }, 500);
@@ -246,6 +258,10 @@ if (tab && stage && defaultArt && cgArt && grade && transition && dialogue) {
     transition.dataset.mode = 'cg-dark';
     transition.classList.add('is-active');
     setTone(event.tone);
+    try {
+      if (window.__claudeBus?.emit) window.__claudeBus.emit('cg:started', { id: event.id, artId: event.artId || '', tone: event.tone || '' });
+      else window.__bgmPlayer?.setEvent?.(event.id);
+    } catch (_) {}
     cgArt.style.opacity = '0';
     cgArt.hidden = false;
     cgArt.alt = event.alt;
@@ -332,6 +348,10 @@ if (tab && stage && defaultArt && cgArt && grade && transition && dialogue) {
               if (!merged.has(p.id)) merged.set(p.id, p);
             }
             scenePacks = [...merged.values()];
+            try {
+              if (window.__claudeBus?.emit) window.__claudeBus.emit('scenepacks:loaded', { config: cfg });
+              else window.__bgmPlayer?.registerScenePacks?.(cfg);
+            } catch (_) {}
           }
         })
         .catch(() => {});

@@ -3,7 +3,7 @@
   "bgmEnabled": false,
   "defaultBgm": null,
   "supportedFormats": ["mp3", "ogg", "wav", "m4a"],
-  "note": "D18＋AnimaVN 場景包結構化定義：五大書庫場景已登錄，BGM 保留佔位待音訊素材就緒後啟用",
+  "note": "D18＋BGM-3：五大書庫場景包均已綁定原創無縫循環 M4A 配樂；version 與 bgmEnabled 保留出廠預設以維持既有測試相容，實際播放開關由本機偏好 claude_novel_bgm_v1 控制",
   "scenePacks": [
     {
       "id": "day-default",
@@ -14,7 +14,7 @@
       "background": "g43-story-default.jpg",
       "alt": "克勞德站在窗前，日間故事預設立繪",
       "tone": "warm",
-      "bgm": null,
+      "bgm": { "id": "bgm-day-default", "title": "午後的閱覽室", "file": "assets/bgm/bgm-day-default.m4a" },
       "effectClass": "scene-fx-warm-sun",
       "mirrored": false,
       "aliases": ["default", "day", "library-day", "白天", "日間"]
@@ -28,7 +28,7 @@
       "background": "g43-story-soft-morning.jpg",
       "alt": "克勞德在日光中溫柔傾聽",
       "tone": "warm",
-      "bgm": null,
+      "bgm": { "id": "bgm-morning-soft", "title": "晨光與紅茶", "file": "assets/bgm/bgm-morning-soft.m4a" },
       "effectClass": "scene-fx-morning-glow",
       "mirrored": false,
       "aliases": ["soft-morning", "morning", "晨光", "清晨"]
@@ -42,7 +42,7 @@
       "background": "g43-story-reading.jpg",
       "alt": "傍晚的克勞德與窗台白鴿，為夜間信鳥故事鋪梗",
       "tone": "warm",
-      "bgm": null,
+      "bgm": { "id": "bgm-evening-reading", "title": "暮色與白鴿", "file": "assets/bgm/bgm-evening-reading.m4a" },
       "effectClass": "scene-fx-sunset-dusk",
       "mirrored": false,
       "aliases": ["evening", "dusk", "sunset", "傍晚", "暮色"]
@@ -56,7 +56,7 @@
       "background": "g43-cg-magic-light.jpg",
       "alt": "夜色中克勞德手托微光，夜間立繪",
       "tone": "night",
-      "bgm": null,
+      "bgm": { "id": "bgm-night-magic", "title": "掌心的微光", "file": "assets/bgm/bgm-night-magic.m4a" },
       "effectClass": "scene-fx-moonlight",
       "mirrored": false,
       "aliases": ["night", "midnight", "夜間", "深夜"]
@@ -70,7 +70,7 @@
       "background": "g43-story-rainy-night.jpg",
       "alt": "雨夜中的古籍閱覽室，窗外細雨與桌前燭光",
       "tone": "night",
-      "bgm": null,
+      "bgm": { "id": "bgm-rainy-night", "title": "雨聲裡的燭火", "file": "assets/bgm/bgm-rainy-night.m4a" },
       "effectClass": "scene-fx-rainy-night",
       "mirrored": false,
       "aliases": ["rain", "rainy", "雨夜", "雷雨"]

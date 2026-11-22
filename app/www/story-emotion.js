@@ -5,8 +5,9 @@ const EMOTION_ALIASES = {
   embarrassed: 'shy', blush: 'shy', '害羞': 'shy',
   thinking: 'focused', reading: 'focused', concentrating: 'focused', '專注': 'focused',
   '好奇': 'curious', '開心': 'happy', '驚訝': 'surprised', '暈': 'dizzy', '日常': 'neutral',
-  worried: 'worried', anxious: 'worried', concerned: 'worried', '擔憂': 'worried', '心疼': 'worried', '擔心': 'worried', '焦慮': 'worried',
-  tender: 'tender', gentle: 'tender', affectionate: 'tender', warm: 'tender', '溫柔': 'tender', '眷戀': 'tender', '柔和': 'tender'
+  worried: 'worried', anxious: 'worried', concerned: 'worried', sad: 'worried', '擔憂': 'worried', '心疼': 'worried', '擔心': 'worried', '焦慮': 'worried', '難過': 'worried',
+  tender: 'tender', gentle: 'tender', affectionate: 'tender', warm: 'tender', '溫柔': 'tender', '眷戀': 'tender', '柔和': 'tender',
+  angry: 'proud', '氣鼓鼓': 'proud'
 };
 
 export function normalizeStoryEmotion(value) {

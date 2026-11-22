@@ -129,7 +129,7 @@ test('P1-03 案6：欄位級降級不重試（emotion／action／delta／flag）
   const send = () => {
     calls++;
     return {
-      text: JSON.stringify({ text: '  你好  ', emotion: 'HAPPY', action: 'dance', affection_delta: 99, flag: ' event ' })
+      text: JSON.stringify({ text: '  你好  ', emotion: 'ECSTATIC', action: 'dance', affection_delta: 99, flag: ' event ' })
     };
   };
   const result = await callStructuredTurn({ state: { stage: 'A' }, send });

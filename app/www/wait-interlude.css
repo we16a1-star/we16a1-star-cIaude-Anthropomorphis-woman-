@@ -27,6 +27,18 @@
   .wait-interlude,.wait-hint{transition:none}
   .wait-line.is-swapping{animation:none}
 }
-/* G44 共存（追加）：中介畫面顯示時收起既有內嵌忙碌圖（兩者同源素材，交接不看破綻）；
-   鍵在 .is-visible，只在畫面真的出現時生效；不動 style.css / app.js/app.bundle.js。 */
-#tab-story:has(.wait-interlude.is-visible) #choices .story-busy-art{display:none}
+/* G44 共存（追加）＋ D25 無障礙修正：中介畫面顯示時改以視覺隱藏收起內嵌忙碌圖（避免畫面重疊破綻），
+   同時保留 aria-live 朗讀文字於無障礙樹內供螢幕閱讀器正常播報；不動 style.css / app.js。 */
+#tab-story:has(.wait-interlude.is-visible) #choices .story-busy-art{
+  position:absolute;
+  width:1px;
+  height:1px;
+  margin:-1px;
+  padding:0;
+  overflow:hidden;
+  clip:rect(0 0 0 0);
+  clip-path:inset(50%);
+  border:0;
+  opacity:0;
+  pointer-events:none;
+}

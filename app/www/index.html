@@ -383,10 +383,34 @@
 <div class="character-rename">
 <div class="character-rename-actions">
 <button id="sheetAddCardBtn" type="button">＋ 新增角色卡</button>
+<button id="sheetImportCardBtn" type="button">⬆ 匯入角色卡 (PNG/JSON)</button>
+<button id="sheetQuickCardBtn" type="button">⚡ 快速建卡</button>
+<button id="sheetAuditionCardBtn" type="button">▶ VN 逐句試播</button>
 <button id="sheetEditBtn" type="button">編輯角色卡</button>
 <button id="sheetDeleteCardBtn" type="button" hidden>刪除角色卡</button>
+<input id="sheetImportCardFile" type="file" accept=".png,.json,image/png,application/json" hidden>
 </div>
-<p class="note">角色卡只顯示在角色頁，跟隨目前存檔保存（可新增多張、隨時切換）；AI 提示詞使用的人設請用故事頁的「✎ 人設／世界觀」修改。</p>
+<p class="note" id="sheetCardIoStatus" role="status" aria-live="polite"></p>
+<div id="sheetQuickCardBox" class="vn-quick-card-box" hidden>
+<label>角色名稱<input id="quickCardName" maxlength="60" placeholder="例如：林曉"></label>
+<label>角色定位／簡介<input id="quickCardTagline" maxlength="120" placeholder="例如：深夜來訪的古籍修復師"></label>
+<label>個性與背景<textarea id="quickCardPersonality" rows="2" maxlength="1000" placeholder="溫和冷靜、熟知絕版書裝幀，與 Claude 娘是舊識。"></textarea></label>
+<label>說話風格<input id="quickCardStyle" maxlength="160" placeholder="語氣平靜有禮，偶爾輕聲吐槽"></label>
+<label>開場台詞（支援 &lt;emotion:...&gt; 與 VN 劇本格式）<textarea id="quickCardFirstMes" rows="2" maxlength="800" placeholder="<emotion:curious>林曉：「打擾了，請問《未竟錄》的殘頁還在這層書庫嗎？」"></textarea></label>
+<div class="character-rename-actions">
+<button id="quickCardCreateBtn" type="button">建立並加入故事</button>
+<button id="quickCardCancelBtn" type="button">取消</button>
+</div>
+</div>
+<div id="sheetCardAuditionBox" class="vn-card-audition" hidden>
+<div class="vn-card-audition-head">
+<strong id="sheetAuditionSpeaker">VN 劇本逐句試播</strong>
+<span id="sheetAuditionMeta" class="vn-card-audition-meta"></span>
+<button id="sheetAuditionCloseBtn" type="button">關閉</button>
+</div>
+<div id="sheetAuditionText" class="vn-card-audition-text" tabindex="0" title="點擊可瞬間顯示本句或進入下一句"></div>
+</div>
+<p class="note">角色卡跟隨目前存檔保存（最多 12 張、可匯入 SillyTavern／AnimaVN PNG 或 JSON）；勾選的角色卡會自動併入提示詞，並由 VN 劇本解析與逐句演出引擎自動辨識多角色說話人與名牌。</p>
 </div>
 <p>這是一款由 AI 即時演算的互動文字小說。每回合都會根據歷史、好感度、角色設定與你的行動生成新的劇情。</p>
 <div class="character-rename">

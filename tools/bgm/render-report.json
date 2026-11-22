@@ -1,0 +1,95 @@
+{
+  "sampleRate": 44100,
+  "tracks": [
+    {
+      "id": "bgm-title",
+      "title": "書頁之間（主題曲）",
+      "bars": 32,
+      "durationSec": 101.05,
+      "lufsApprox": -18,
+      "peakDb": -2.75,
+      "wavBytes": 17825728,
+      "elapsedMs": 46511
+    },
+    {
+      "id": "bgm-day-default",
+      "title": "午後的閱覽室",
+      "bars": 32,
+      "durationSec": 91.43,
+      "lufsApprox": -18,
+      "peakDb": -3.63,
+      "wavBytes": 16128044,
+      "elapsedMs": 30807
+    },
+    {
+      "id": "bgm-morning-soft",
+      "title": "晨光與紅茶",
+      "bars": 24,
+      "durationSec": 45,
+      "lufsApprox": -18,
+      "peakDb": -5.74,
+      "wavBytes": 7938044,
+      "elapsedMs": 9236
+    },
+    {
+      "id": "bgm-evening-reading",
+      "title": "暮色與白鴿",
+      "bars": 32,
+      "durationSec": 112.94,
+      "lufsApprox": -18,
+      "peakDb": -4.05,
+      "wavBytes": 19922868,
+      "elapsedMs": 59620
+    },
+    {
+      "id": "bgm-night-magic",
+      "title": "掌心的微光",
+      "bars": 32,
+      "durationSec": 120,
+      "lufsApprox": -18,
+      "peakDb": -1.06,
+      "wavBytes": 21168044,
+      "elapsedMs": 52400
+    },
+    {
+      "id": "bgm-rainy-night",
+      "title": "雨聲裡的燭火",
+      "bars": 32,
+      "durationSec": 128,
+      "lufsApprox": -18,
+      "peakDb": -2.72,
+      "wavBytes": 22579244,
+      "elapsedMs": 64171
+    },
+    {
+      "id": "bgm-event-tender",
+      "title": "沒說出口的那一頁",
+      "bars": 16,
+      "durationSec": 58.18,
+      "lufsApprox": -18,
+      "peakDb": -3.3,
+      "wavBytes": 10263316,
+      "elapsedMs": 23510
+    },
+    {
+      "id": "bgm-event-playful",
+      "title": "才不是故意的",
+      "bars": 32,
+      "durationSec": 68.57,
+      "lufsApprox": -18,
+      "peakDb": -2.95,
+      "wavBytes": 12096044,
+      "elapsedMs": 3908
+    },
+    {
+      "id": "bgm-wait",
+      "title": "羽毛筆書寫中",
+      "bars": 16,
+      "durationSec": 53.33,
+      "lufsApprox": -18,
+      "peakDb": -5.46,
+      "wavBytes": 9408044,
+      "elapsedMs": 20375
+    }
+  ]
+}

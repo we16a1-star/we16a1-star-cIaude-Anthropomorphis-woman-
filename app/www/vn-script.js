@@ -27,7 +27,7 @@ const SCRIPT_LINE_RE = /^(\s*\**\s*([^\s，。！？、：:「」『』“”"*]
 const ANY_QUOTE_RE = /[「『“"]/;
 const NOT_A_NAME_RE = /^[她他它我你您]|(說|道|問|答|喊|叫|笑|嚷|吼|念|講|語|想|唱|嘆|低語)$/;
 
-const INLINE_TAG_RE = /<(emotion|sprite|scene|bg)\s*[:：]\s*([^>\n]{1,40})>|\[(emotion|sprite|scene|bg)\s*[:：]\s*([^\]\n]{1,40})\]|[<＜]\s*(我)\s*[>＞]/gi;
+const INLINE_TAG_RE = /<(emotion|sprite|scene|bg|image|cg)\s*[:：]\s*([^>\n]{1,160})>|\[(emotion|sprite|scene|bg|image|cg)\s*[:：]\s*([^\]\n]{1,160})\]|[<＜]\s*(我)\s*[>＞]/gi;
 
 /**
  * 摘除行內演出標籤，並回傳乾淨正文、標籤命中位置、以及乾淨索引 → 原文索引對照表。
@@ -53,7 +53,9 @@ function extractInlineTags(rawText) {
     } else {
       const rawKind = (match[1] || match[3] || '').toLowerCase();
       const label = (match[2] || match[4] || '').trim();
-      const kind = (rawKind === 'scene' || rawKind === 'bg') ? 'scene' : 'emotion';
+      const kind = (rawKind === 'scene' || rawKind === 'bg')
+        ? 'scene'
+        : ((rawKind === 'image' || rawKind === 'cg') ? 'image' : 'emotion');
       if (label) {
         tags.push({ kind, label, raw: rawTag, cleanPos: clean.length, rawStart: match.index, rawEnd: match.index + rawTag.length });
       }
@@ -185,16 +187,22 @@ function splitNarrationSentences(piece, baseOffset, maxChars) {
 }
 
 /**
- * 解析單一自然段
+ * 解析單一自然段（支援主角、玩家與已啟用的多角色卡名稱辨識）
  */
-function parseParagraph(para, offset, { charName, userName, maxLineChars }) {
+function parseParagraph(para, offset, { charName, extraCharMap, userName, maxLineChars }) {
   const spans = [];
   if (!para || PUNCT_ONLY_RE.test(para)) return spans;
 
-  // 劇本式「角色名：台詞」（無引號，且只認角色名或玩家名，避免誤認「時間：晚上八點」）
+  const isKnownSpeaker = (name) => (
+    name === charName
+    || name === userName
+    || (extraCharMap && extraCharMap.has(name))
+  );
+
+  // 劇本式「角色名：台詞」（無引號，且只認主角、已啟用角色卡或玩家名，避免誤認「時間：晚上八點」）
   if (!ANY_QUOTE_RE.test(para)) {
     const script = SCRIPT_LINE_RE.exec(para);
-    if (script && (script[2] === charName || script[2] === userName)) {
+    if (script && isKnownSpeaker(script[2])) {
       const body = script[3].replace(/\s*\**\s*$/, '').trim();
       if (!body) return spans;
       const bodyOffset = offset + script[1].length;
@@ -268,6 +276,7 @@ function parseParagraph(para, offset, { charName, userName, maxLineChars }) {
  * @param {string} text - AI 回覆原文
  * @param {object} [options]
  * @param {string} [options.charName='Claude娘'] - 主角名稱
+ * @param {Array<string|{id?:string,name:string}>} [options.extraCharNames=[]] - 同台演出的額外角色卡名稱清單
  * @param {string} [options.userName='User'] - 玩家名稱
  * @param {number} [options.maxLineChars=90] - 單句最大字數
  * @param {boolean} [options.inferEmotion=true] - 是否對無標籤句啟用強情緒關鍵詞推斷
@@ -280,6 +289,16 @@ export function parseVnScript(text, options = {}) {
 
   const charName = String(options.charName || 'Claude娘');
   const userName = String(options.userName || 'User');
+  const extraCharMap = new Map();
+  if (Array.isArray(options.extraCharNames)) {
+    for (const item of options.extraCharNames) {
+      if (typeof item === 'string' && item.trim()) {
+        extraCharMap.set(item.trim(), null);
+      } else if (item && typeof item === 'object' && typeof item.name === 'string' && item.name.trim()) {
+        extraCharMap.set(item.name.trim(), item.id ? String(item.id) : null);
+      }
+    }
+  }
   const maxLineChars = Number.isFinite(Number(options.maxLineChars))
     ? Math.max(20, Math.round(Number(options.maxLineChars)))
     : MAX_VN_LINE_CHARS;
@@ -300,7 +319,7 @@ export function parseVnScript(text, options = {}) {
     const paraEnd = nl === -1 ? clean.length : nl;
     const para = clean.slice(paraStart, paraEnd);
     if (para.trim()) {
-      rawSpans.push(...parseParagraph(para, paraStart, { charName, userName, maxLineChars }));
+      rawSpans.push(...parseParagraph(para, paraStart, { charName, extraCharMap, userName, maxLineChars }));
     }
     if (nl === -1) break;
     paraStart = nl + 1;
@@ -308,7 +327,7 @@ export function parseVnScript(text, options = {}) {
 
   // 將摘除的標籤映射到第一個 end > tag.cleanPos 的句子（同 AnimaVN script.ts 規則）
   const hits = [];
-  const lineTags = rawSpans.map(() => ({ emotion: null, scene: null, player: false }));
+  const lineTags = rawSpans.map(() => ({ emotion: null, scene: null, imagePrompt: null, player: false }));
 
   for (const tag of tags) {
     let targetIdx = rawSpans.findIndex(sp => sp.end > tag.cleanPos);
@@ -323,6 +342,8 @@ export function parseVnScript(text, options = {}) {
       lineTags[targetIdx].emotion = resolved;
     } else if (tag.kind === 'scene') {
       lineTags[targetIdx].scene = tag.label;
+    } else if (tag.kind === 'image') {
+      lineTags[targetIdx].imagePrompt = tag.label;
     }
     hits.push({ kind: tag.kind, label: tag.label, raw: tag.raw, lineIndex: targetIdx });
   }
@@ -349,15 +370,29 @@ export function parseVnScript(text, options = {}) {
       : normalizedRaw.length;
     ends.push(endRaw);
 
+    const speakerCardId = (!isPlayer && speaker && extraCharMap.has(speaker))
+      ? extraCharMap.get(speaker)
+      : null;
+    const speakerRole = isPlayer
+      ? 'user'
+      : (!speaker
+        ? 'narration'
+        : (speaker === charName
+          ? 'main'
+          : (extraCharMap.has(speaker) ? 'card' : 'other')));
+
     lines.push({
       text: lineText,
       speaker,
+      speakerRole,
+      speakerCardId,
       kind: sp.kind,
       named: Boolean(sp.named),
       player: isPlayer,
       emotion: explicitEmotion || inferredEmotion || null,
       emotionSource: explicitEmotion ? 'tag' : (inferredEmotion ? 'fallback' : null),
       scene: tagged.scene || null,
+      imagePrompt: tagged.imagePrompt || null,
       endOffset: endRaw
     });
   }

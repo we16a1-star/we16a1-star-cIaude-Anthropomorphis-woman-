@@ -1585,3 +1585,76 @@ harness 回報 12.4%）。**門檻判定可用，但數字精度約 ±3 個百�
   - `shots\verify-voice-story-1264.png`（`speakerToQuickBarGapPx = 51px`）與 `verify-voice-story-800.png`（`54px`）：對話框右上 `自動開 · 配音 · 靜音` 零重疊、零遮擋立繪。
   - `shots\verify-voice-settings-1264.png`：羊皮紙設定卡對比清晰、核取方塊與滑桿排版工整。
 - **簡體／PII 掃描**：所有新增與修改檔案 **0 簡體字、0 新增 PII**。
+
+
+---
+
+## 2026-11-22（上午・Neon 執行完成）UI × 美術 × 配樂製作計畫（11 項工作包全落地：ART-1～4 / BGM-1～3 / UI-1～4）
+
+依 [HANDOFF-NEON-UI美術配樂製作計畫.md](HANDOFF-NEON-UI美術配樂製作計畫.md) 與使用者拍板之 D21–D26，完成全部 4 階段、11 個工作包與實機視覺驗收。
+
+### 1. 美術線（ART-1 ～ ART-4）
+| 檔案 | 動作 | 改了什麼／為什麼 | 如何測試 |
+| --- | --- | --- | --- |
+| `app\www\config\emotions.json`、`story-emotion.js`、`prompt-assembler.js`、`portrait-anim.js`、`app.js` | 修改 | **ART-1 / D21**：全面擴充至 10 大正式情緒（`neutral, happy, proud, shy, surprised, dizzy, curious, focused, worried, tender`），`emotions.json`／AI 中英文提示詞／`STORY_EMOTIONS` 三方完全一致；`portrait-anim.js` 加入 `resolveExpressionFaceAsset()` 消滅 `curious`／`worried`／`tender` 404；保留 `warm` 等歷史別名收斂相容 | `emotion-whitelist-alignment.test.js`（2/2 PASS）＋ `p1-03-llm-client.test.js`＋ `expression-affinity.test.cjs` |
+| `app\www\assets\expressions\happy.webp` | 補回 | **ART-2 / D26**：由原版補回遺漏之 `happy.webp`（56,298 bytes，SHA256 `94BD0F92…796958A`） | `emotion-whitelist-alignment.test.js` |
+| `tools\art-drafts\ART-2\draft-{curious,worried,tender}.png`、`tools\art-prompts\ART-2-表情差分提示詞.md`、`ART-3-CG補件提示詞.md` | 新增 | **ART-2 / ART-3 / D26**：產出三格缺口表情草稿供使用者挑選（絕不覆蓋正式素材）；盤點確認主線 9 事件＋雨夜零缺圖並交付兩張選配圖鑑／後日談提示詞 | 人工目視覆核三張 1024×1024 草稿 |
+| `app\www\assets\ui\sunburst-seal.svg`、`ornament-divider.svg` | 新增 | **ART-4**：古籍羊皮紙 × 暖金零字型 SVG 視覺點綴素材 | 靜態資產確認 |
+
+### 2. 配樂線（BGM-1 ～ BGM-3）
+| 檔案 | 動作 | 改了什麼／為什麼 | 如何測試 |
+| --- | --- | --- | --- |
+| `tools\bgm\BGM-規格書.md`、`tools\bgm\render-bgm.mjs`、`tools\bgm\render-report.json` | 新增 | **BGM-1 / BGM-3 / D24**：依 `bgm-score.json` 實作純 Node.js 離線 DSP 合成器（15 種樂器、最小距離聲部連接、立體聲阻尼混響、雙遍無縫循環、-18 LUFS／-1 dBTP 母帶）並以 Windows Media Foundation 轉碼 44.1 kHz 立體聲 160 kbps AAC | 9 首全渲染成功，總體積 17.97 MB（≤ 25 MB） |
+| `app\www\assets\bgm\bgm-*.m4a`（9 首）、`licenses\BGM-CREDITS.txt`、`app\www\config\scenePacks.json` | 新增／修改 | **BGM-3**：9 首原創無縫循環配樂全數入庫並附完整 SHA256 與自製原創授權聲明；`scenePacks.json` 五場景全數綁定曲檔，同時保留 `version: "v2.0-placeholder"`、`bgmEnabled: false`、`defaultBgm: null` 相容既有測試 | `bgm-player.test.js`（3/3 PASS）＋ `scene-packs.test.js`（4/4 PASS）＋ Chrome 真實 `AudioContext.decodeAudioData` 驗證 91.43s |
+| `app\www\bgm-player.js`、`app\www\ambience.js`、`app\www\story-art.js` | 新增／修改 | **BGM-2**：1.2 秒交叉淡入淡出、同曲不重播、缺檔靜默降級、對接 `audioBus` `bgm` 聲道與語音 Ducking；`ambience.js` 零音檔程序化合成雨夜細雨與壁爐聲；`story-art.js` 維持零 top-level import，經 `window.__bgmPlayer`／`window.__ambience` 連動場景與事件曲 | `bgm-player.test.js`＋ 8 支 CJS 測試全 PASS |
+
+### 3. UI 與無障礙線（UI-1 ～ UI-4）
+| 檔案 | 動作 | 改了什麼／為什麼 | 如何測試 |
+| --- | --- | --- | --- |
+| `app\www\app.js`、`app\www\art-plan.css`、`app\www\vn-controls.js` | 修改 | **UI-1 / UI-2 / D22 / D23**：設定頁重整為可摺疊三分組（文字與演出／聲音／畫面與 CG，展開狀態存 `claude_novel_settings_sections_v1`），保留全部既有 ID 與 class；新增主音量（修正初始 100%）、BGM 面板、環境音控制、字級按鈕；快捷列「靜音」升級為全部聲音總開關（右鍵／長按 450ms 展開聲音子選單與對話回顧） | `backlog.test.js`＋`vn-settings-integration.test.js`＋實機 CDP 截圖覆核 |
+| `app\www\backlog.js`、`app\tests\story\backlog.test.js` | 新增 | **UI-3**：唯讀對話回顧（最近 30 筆、200 回合開啟 < 100 ms、支援 D20 英文配音單句重聽、綁定未使用快捷鍵 `H` 與 `Esc` 關閉，不衝突既有 `L` 快速讀檔） | `backlog.test.js`（2/2 PASS） |
+| `app\www\wait-interlude.css`、`tools\i18n-check.mjs` | 修改／新增 | **UI-4 / D25**：等待中介畫面隱藏內嵌忙碌圖由 `display:none` 改為視覺隱藏保留 `aria-live`；補齊所有 `UI_EN` 翻譯鍵與 `aria-label`／`aria-live`／`:focus-visible` 鍵盤焦點框 | `tools/i18n-check.mjs` **545/545（0 缺漏）** |
+
+### 4. 最終建置與全套驗收
+- **esbuild 重建**：`app\www\app.bundle.js` **889,010 bytes**（0 warnings）｜SHA256 `B5999649D7286A3E719F70111BDF0FBABDE7530BCC35DF68AAE4FB5C4D39A4D9`。
+- **全套自動化測試**：ESM **156/158 PASS**（+7 支新測試全 PASS，僅餘 2 筆既定歷史基準差異）；CJS **8/8 檔案全 PASS**。
+- **實機 Chrome CDP 截圖目視驗收**：`shots\neon-story-day-1264.png`（gap `51px`）、`neon-story-day-800.png`（gap `54px`）、`neon-story-night-popover-1264.png`、`neon-settings-3groups-1264.png`、`neon-settings-audio-1264.png`、`neon-backlog-1264.png`、`neon-settings-en-1264.png`；0 runtime exceptions。
+- **簡體／PII 掃描**：全數 23 支新增／修改檔案 **0 簡體、0 新增 PII**。
+
+
+---
+
+## 2026-11-22（中午）架構重構與模組解耦（事件匯流排、音訊協調層、純函式解析器、雙語字典抽離與匯出安全加固）
+
+針對 `app.js` 膨脹（原 646 KB / 8,923 行）、跨模組散落 `window.__*` 全域呼叫、回覆解析與 DOM 耦合、以及存檔匯出尚未全面過濾憑證等核心架構瓶頸，進行五項零回歸結構重構：
+
+| 檔案 | 動作 | 改了什麼／為什麼 | 如何測試 |
+| --- | --- | --- | --- |
+| `app\www\event-bus.js` | 新增 | 零相依輕量型事件匯流排（`EventBus`、`claudeBus`、`window.__claudeBus`），支援 `on/once/off/emit` 與監聽器例外隔離；讓零頂層 import 之 `story-art.js` 透過標準事件（`scene:changed`、`cg:started`、`cg:ended`、`scenepacks:loaded`）與音訊／UI 解耦 | `architecture-refactor.test.js`（4/4 PASS） |
+| `app\www\audio-coordinator.js` | 新增 | 統一音訊協調層（單一真實來源）：整合 `audioBus`、`bgmPlayer`、`ambienceEngine`、`voicePlayer`、`typeSound`、主音量／靜音持久化、單次手勢解鎖與 `claudeBus` 自動場景／CG 切曲路由 | `architecture-refactor.test.js` |
+| `app\www\turn-reply-parser.js` | 新增 | 純函式故事回合回覆解析器（`parseStoryTurnReply`、`sanitizeChoices`、`clampAffectionDelta`、`extractStoryJson`），整合 `splitThinkingText` 剝除 `<think>` 思考塊、7 選項去重驗證、10 情緒語意回退與 `spokenEn` 正規化，零 DOM 相依 | `architecture-refactor.test.js` |
+| `app\www\ui-en.js`、`tools\i18n-check.mjs` | 新增／修改 | 將 1,338 鍵雙語字典（1,344 行 / 167.7 KB）自 `app.js` 獨立抽離，`app.js` 精簡至 **478 KB（7,480 行，減少 1,443 行）**；`i18n-check.mjs` 支援直接檢查 `ui-en.js` | `tools/i18n-check.mjs` **545/545（0 缺漏）** |
+| `app\www\app.js`、`app\www\story-art.js` | 修改 | 暴露統一 `window.__claudeRuntime` 門面（保留既有 `window.__*` 相容別名）；`exportData()` 與 `exportKit()` 全數經 `sanitizeExportPayload()` 遞迴淨化防外洩 API Key／Token；`story-art.js` 改走 `window.__claudeBus` 事件發射（維持零 import 相容 CJS） | 全套 ESM **160/162 PASS**、CJS **8/8 PASS**、Chrome CDP 0 runtime exceptions |
+
+- **esbuild 重建**：`app\www\app.bundle.js` **892,821 bytes**（0 warnings）｜SHA256 `0DAFBC1D7946A7A37E88D9FF1417EF19ECEF85195E234DA769A9DD2A150340E6`。
+- **簡體中文掃描**：所有新增與修改模組 **0 簡體**。
+
+
+## 2026-11-22（Harness 插件架構 × 後端檢查除錯面板 × 角色卡 PNG/JSON 匯入 × 多角色 VN 劇本引擎）
+
+| 檔案 | 動作 | 改了什麼／為什麼 | 如何測試 |
+|---|---|---|---|
+| `app/www/plugin-registry.js` | 新增 | Harness 風格可擴充插件註冊表（`PluginRegistry` / `pluginRegistry`）：預載 7 項核心插件、支援 6 種生命週期 Hook（`onPrompt`／`onReply`／`onScriptParsed`／`onLine`／`onScene`／`onTurn`）、嚴格錯誤隔離、宣告式自訂 JSON 插件編譯與 `localStorage` 持久化 | `plugin-debug-cards-vn.test.js`（PASS） |
+| `app/www/backend-debug.js` | 新增 | 後端連線檢查與運行期除錯器（`BackendDebugger` / `backendDebugger`）：即時追蹤 `claudeBus` 最新 80 筆事件、六項系統與 `GET /api/health` 診斷、`POST /api/model-check` 探測、嚴格淨化除錯報告輸出（零金鑰外洩） | `plugin-debug-cards-vn.test.js` + Chrome CDP（6 OK / 0 WARN / 0 FAIL） |
+| `app/www/character-card-importer.js` | 新增 | 純前端 PNG（`ccv3`／`chara` `tEXt`/`iTXt` Base64 UTF-8 JSON ＋縮圖擷取）與 JSON（SillyTavern V1/V2/V3 與本作格式）角色卡解析器、內嵌世界書萃取、快速建卡器與角色頁 VN 試播控制器 | `plugin-debug-cards-vn.test.js` 合成 PNG 二進位解碼（PASS） |
+| `app/www/workshop-harness-ui.js` | 新增 | 獨立抽離創意工坊「🔌 插件管理（Harness Plugins）」與「🛠 後端檢查與 VN 除錯面板（含互動式 VN 劇本解析與逐句試播器）」UI 模組，維持 `app.js` 精簡（7,964 行） | Chrome CDP 實機互動與截圖驗收（0 例外） |
+| `app/www/vn-script.js`、`app/www/line-runner.js` | 修改 | 擴充 `parseVnScript` 支援 `extraCharNames` 多角色卡辨識與 `speakerRole`/`speakerCardId` 元資料；`LineRunner` 保留多角色欄位並補 `advance()` 別名 | `plugin-debug-cards-vn.test.js`（PASS） |
+| `app/www/app.js`、`app/www/index.html`、`app/www/art-plan.css`、`app/www/ui-en.js`、`app/www/app.bundle.js` | 修改／重建 | 整合外掛 Hook 至提示詞／回覆／逐句演出管線；`onLineMeta` 依說話人動態切換 `#dialogueName`；角色頁新增匯入角色卡、快速建卡與 VN 逐句試播；重建 `app.bundle.js`（940,672 bytes，0 warnings，SHA256 `84C660FF…7D96`） | ESM 164/166 PASS（0 新增失敗）、CJS 1/1 PASS、`i18n-check` 545/545（0 漏翻） |
+| `tools/backend-check.mjs` | 新增 | 本機後端 `/api/health`、設定檔 JSON、10 情緒契約、9 首 BGM 體積預算與 16 個核心模組一鍵檢查 CLI | `node tools/backend-check.mjs`（4 OK / 1 WARN / 0 FAIL） |
+| `app/tests/story/plugin-debug-cards-vn.test.js` | 新增 | 4 組整合單元測試，涵蓋插件系統、後端除錯與淨化、PNG/JSON 角色卡匯入、以及多角色 VN 劇本逐句演出 | `node --test` 4/4 PASS |
+| `tools/art-drafts/ART-2/draft-curious.png` | 更新 | 依官方三視圖與 `story-daily.webp` 質感精修 `curious` v4 近景草稿（待確認後再轉 `.webp` 入庫；`worried`/`tender` v4 待圖片模型配額於 15:24 重置後補畫） | 視覺檢視確認 |
+| `app/server/server.js` | 新增（覆蓋層） | 逐行審查真實 Express 後端並修復 4 項前後端漂移 Bug：① `outputContract`/`modelCheckPrompt` 補齊 `worried`/`tender`（10 情緒前後端同步）；② `extractJsonObject` 先經 `splitThinkingText` 剝除 `<think>` 偽 JSON；③ `parse()` 正規化保留 D20 `spokenEn`；④ `buildPrompt()` 接收 Harness `pluginDirectives` 並新增唯讀 `GET /api/debug/status` 診斷端點 | `node tools/backend-check.mjs` 實機啟動 Express 伺服器跑完 11 OK / 1 WARN / 0 FAIL |
+| `app/www/workshop-harness-ui.js`、`app/www/app.js`、`app/www/ui-en.js`、`app/www/app.bundle.js` | 修改／重建 | Harness 插件面板新增「⬆ 匯入插件檔 (.json)」與「⬇ 匯出自訂插件」；`characterCardsUseText()` 加入多角色 VN 劇本說話人標註提示；`callAI()` 同步傳遞 `pluginDirectives` 給後端 API；重建 `app.bundle.js`（942,894 bytes，0 warnings，SHA256 `BE185E3C…6ED8`） | ESM 164/166 PASS（0 新增失敗）、`i18n-check` 545/545（0 漏翻） |
+| `app/server/server.js` | 修改（覆蓋層） | 新增真實 `POST /api/image` 圖片生成端點（支援 Gemini / Imagen、OpenAI Images、自訂 OpenAI 相容端點與本機 SD WebUI `/sdapi/v1/txt2img`，含協議安全檢查、90s 逾時與 Token/CORS 防護）；`/api/health` 與 `/api/debug/status` 同步回報 `capabilities.imageGen` | `node tools/backend-check.mjs` 12 OK / 1 WARN / 0 FAIL |
+| `app/www/image-gen.js` | 新增 | API 場景生圖設定持久化、三視圖外觀鎖定提示詞強化（奶油白披肩＋太陽菊＋無眼鏡）、`dataUrlToImageFile` 轉檔自動匯入舞台控制器，與「🖼 場景與插圖」API 生圖 UI 面板 | `plugin-debug-cards-vn.test.js` + Chrome CDP 端到端實測（`imgHidden=false`, `imgWidth=1024`, 0 例外） |
+| `app/www/vn-script.js`、`app/www/line-runner.js`、`app/www/workshop-harness-ui.js`、`app/www/app.js`、`app/www/app.bundle.js` | 修改／重建 | `parseVnScript` 與 `LineRunner` 正式支援 `<image:...>` / `<cg:...>` 行內生圖演出標籤（乾淨摘除不殘留字幕）；`onLineMeta` 支援遇到 `<image:...>` 自動 API 生圖並匯入舞台（具去重鎖）；工坊 VN 除錯器新增「✨ 依劇本 `<image:...>` 生圖匯入」；重建 `app.bundle.js`（955,371 bytes，0 warnings，SHA256 `BDCCE4B0…FBFF`） | ESM 165/167 PASS（0 新增失敗）、`i18n-check` 545/545（0 漏翻） |

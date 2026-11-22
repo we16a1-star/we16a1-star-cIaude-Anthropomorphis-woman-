@@ -1006,8 +1006,18 @@ function showFace(stage, animator, name, hold, crop = null) {
   state.faceTimer = setTimeout(() => { el.remove(); if (isStoryPortrait) { state.displayedEmotion = null; restoreStoryEmotionVisual(); } }, hold + 250);
 }
 
-const EMOTION_HOLDS = { neutral: 1800, happy: 2200, proud: 2600, shy: 3500, surprised: 2200, dizzy: 2200, curious: 5000, focused: 9000 };
-const EMOTION_CLASSES = ['neutral','happy','proud','shy','surprised','dizzy','curious','focused'];
+const EMOTION_HOLDS = { neutral: 1800, happy: 2200, proud: 2600, shy: 3500, surprised: 2200, dizzy: 2200, curious: 5000, focused: 9000, worried: 3200, tender: 3500 };
+const EMOTION_CLASSES = ['neutral','happy','proud','shy','surprised','dizzy','curious','focused','worried','tender'];
+
+function resolveExpressionFaceAsset(emotion) {
+  if (emotion === 'neutral') return 'story-daily';
+  if (emotion === 'proud') return 'story-proud';
+  if (emotion === 'shy' || emotion === 'tender') return 'story-shy';
+  if (emotion === 'focused' || emotion === 'worried') return 'story-focused';
+  if (emotion === 'curious') return 'surprised';
+  if (emotion === 'happy' || emotion === 'surprised' || emotion === 'dizzy') return emotion;
+  return 'story-daily';
+}
 
 function clearStoryEmotionVisual() {
   const stage = document.querySelector('.vn-stage');
@@ -1031,11 +1041,7 @@ function applyStoryEmotionVisual({ repeat = false } = {}) {
   stage?.setAttribute('data-emotion-intensity', String(state.storyEmotionIntensity));
   state.pendingEmotion = emotion;
   if (state.faceOk !== true) return;
-  const name = emotion === 'neutral' ? 'story-daily'
-    : emotion === 'proud' ? 'story-proud'
-    : emotion === 'shy' ? 'story-shy'
-    : emotion === 'focused' ? 'story-focused'
-    : emotion === 'curious' ? 'curious' : emotion;
+  const name = emotion === 'neutral' ? 'story-daily' : resolveExpressionFaceAsset(emotion);
   const animator = state.animators.find(item => item.img.id === 'storyPortrait');
   const portraitStage = animator?.img.closest('.vn-stage');
   const anchor = portraitStage && animator.faceAnchor(portraitStage);
@@ -1054,6 +1060,8 @@ function applyStoryEmotionVisual({ repeat = false } = {}) {
   el.classList.toggle('pa-proud', emotion === 'proud');
   el.classList.toggle('pa-shy', emotion === 'shy');
   el.classList.toggle('pa-focused', emotion === 'focused');
+  el.classList.toggle('pa-worried', emotion === 'worried');
+  el.classList.toggle('pa-tender', emotion === 'tender');
   el.classList.toggle('pa-daily', emotion === 'neutral');
   el.dataset.face = name;
   el.style.backgroundImage = `url("${FACE_DIR}${name}.webp")`;

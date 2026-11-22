@@ -18,22 +18,26 @@ export { STORAGE_KEY_LINE_MODE, STORAGE_KEY_LINE_SPEED, STORAGE_KEY_LINE_AUTOPLA
 
 function normalizeEntry(entry) {
   if (typeof entry === 'string') {
-    return { text: entry, speaker: null, kind: 'narration', emotion: null, scene: null, player: false, spokenText: null, endOffset: null };
+    return { text: entry, speaker: null, speakerRole: 'narration', speakerCardId: null, named: false, kind: 'narration', emotion: null, scene: null, imagePrompt: null, player: false, spokenText: null, endOffset: null };
   }
   if (entry && typeof entry === 'object') {
     return {
       text: String(entry.text || ''),
       speaker: entry.speaker ?? null,
+      speakerRole: entry.speakerRole || (entry.player ? 'user' : (entry.speaker ? 'main' : 'narration')),
+      speakerCardId: entry.speakerCardId ?? null,
+      named: Boolean(entry.named),
       kind: entry.kind || 'narration',
       emotion: entry.emotion || null,
       emotionSource: entry.emotionSource || null,
       scene: entry.scene || null,
+      imagePrompt: typeof entry.imagePrompt === 'string' && entry.imagePrompt.trim() ? entry.imagePrompt.trim() : null,
       player: Boolean(entry.player),
       spokenText: typeof entry.spokenText === 'string' && entry.spokenText.trim() ? entry.spokenText.trim() : null,
       endOffset: Number.isFinite(Number(entry.endOffset)) ? Number(entry.endOffset) : null
     };
   }
-  return { text: '', speaker: null, kind: 'narration', emotion: null, scene: null, player: false, spokenText: null, endOffset: null };
+  return { text: '', speaker: null, speakerRole: 'narration', speakerCardId: null, named: false, kind: 'narration', emotion: null, scene: null, imagePrompt: null, player: false, spokenText: null, endOffset: null };
 }
 
 export class LineRunner {
@@ -343,6 +347,13 @@ export class LineRunner {
     this.isPlaying = false;
     if (this.onFinish) this.onFinish();
     return false;
+  }
+
+  /**
+   * 步進別名（等同 nextOrSkip）
+   */
+  advance() {
+    return this.nextOrSkip();
   }
 
   /**
