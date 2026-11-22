@@ -113,6 +113,7 @@ if (tab && stage && defaultArt && cgArt && grade && transition && dialogue) {
     if (defaultArt.getAttribute('src') === src) {
       defaultArt.alt = alt;
       defaultArt.dataset.art = scene || 'default';
+      stage.dataset.sceneKey = scene || 'default';
       setTone(tone);
       return;
     }
@@ -136,6 +137,7 @@ if (tab && stage && defaultArt && cgArt && grade && transition && dialogue) {
         defaultArt.style.opacity = '1';
         defaultArt.alt = alt;
         defaultArt.dataset.art = scene || 'default';
+        stage.dataset.sceneKey = scene || 'default';
         setTone(tone);
         try {
           if (window.__claudeBus?.emit) {

@@ -3,6 +3,7 @@ import express from 'express'; import cors from 'cors';
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenAI } from '@google/genai';
 import path from 'node:path';
+import fs from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {openingStylePrompt} from '../www/opening-styles.js'; import {craftRules,filteredPromptRules,promptTweaksExtraLines,authorNoteLines} from '../www/prompt-rules.js'; import {worldBookPromptLines} from '../www/world-book.js';
 import {affectionStageOf,normalizeMilestoneKey,normalizeStoryClock,realStoryClock,stageByKey,storyClockLabel} from '../www/story-clock.js';
@@ -372,18 +373,41 @@ async function generateImage(body={}){
   const e=new Error(`不支援的圖片生成供應商：${provider}（僅支援 gemini、openai、compatible）`);
   e.status=400;throw e;
 }
-app.get('/api/health',(req,res)=>res.json({ok:true,apiVersion:'2.1-harness',capabilities:{story:true,modelCheck:true,imageGen:true},emotions:STORY_EMOTIONS,profiles:configuredProfiles()}));
-app.get('/api/debug/status',(req,res)=>res.json({
+const SERVER_DIR=path.dirname(fileURLToPath(import.meta.url));
+const BGM_DIR=path.resolve(SERVER_DIR,'../www/assets/bgm');
+function listBgmAssets(){
+  try{
+    if(!fs.existsSync(BGM_DIR))return {ok:false,count:0,totalMb:0,tracks:[]};
+    const exts=/\.(m4a|mp3|ogg|wav)$/i;
+    const files=fs.readdirSync(BGM_DIR).filter(f=>exts.test(f)).sort();
+    let totalBytes=0;
+    const tracks=files.map(file=>{
+      const size=fs.statSync(path.join(BGM_DIR,file)).size;
+      totalBytes+=size;
+      return {id:file.replace(exts,''),file:`assets/bgm/${file}`,sizeBytes:size};
+    });
+    return {ok:tracks.length>0,count:tracks.length,totalMb:Math.round(totalBytes/(1024*1024)*100)/100,tracks};
+  }catch{return {ok:false,count:0,totalMb:0,tracks:[]};}
+}
+function logApiError(route,status,message){
+  const tag=status>=500?'ERROR':'WARN';
+  console.warn(`[API ${tag}] ${route} -> HTTP ${status}: ${String(message||'').slice(0,180)}`);
+}
+app.get('/api/health',(req,res)=>{const bgm=listBgmAssets();res.json({ok:true,apiVersion:'2.1-harness',capabilities:{story:true,modelCheck:true,imageGen:true,bgmList:true},bgmCount:bgm.count,emotions:STORY_EMOTIONS,profiles:configuredProfiles()});});
+app.get('/api/debug/status',(req,res)=>{const bgm=listBgmAssets();res.json({
   ok:true,
   apiVersion:'2.1-harness',
-  capabilities:{story:true,modelCheck:true,imageGen:true},
+  capabilities:{story:true,modelCheck:true,imageGen:true,bgmList:true},
   nodeVersion:process.version,
   uptimeSec:Math.round(process.uptime()),
+  bgmCount:bgm.count,
+  bgmTotalMb:bgm.totalMb,
   emotions:STORY_EMOTIONS,
   profiles:configuredProfiles()
-}));
-app.post('/api/story',async(req,res)=>{try{const b=req.body||{};let out=b.provider==='gemini'?await gemini(b):b.provider==='anthropic'?await anthropic(b):await compatible(b);res.json(out)}catch(e){console.error(e);const message=String(e?.message||'AI error');const upstreamStatus=Number(e?.status||e?.statusCode||0);const status=upstreamStatus>=400&&upstreamStatus<=599?upstreamStatus:(/RESOURCE_EXHAUSTED|rate.?limit|quota|too many requests|usage limit/i.test(message)?429:500);res.status(status).json({error:message,status})}});
-app.post('/api/image',async(req,res)=>{try{res.json(await generateImage(req.body||{}));}catch(e){console.error(e);const message=String(e?.message||'image generation failed');const upstreamStatus=Number(e?.status||e?.statusCode||0);const status=upstreamStatus>=400&&upstreamStatus<=599?upstreamStatus:(/RESOURCE_EXHAUSTED|rate.?limit|quota/i.test(message)?429:500);res.status(status).json({error:message,status});}});
+});});
+app.get('/api/bgm/list',(req,res)=>res.json(listBgmAssets()));
+app.post('/api/story',async(req,res)=>{try{const b=req.body||{};let out=b.provider==='gemini'?await gemini(b):b.provider==='anthropic'?await anthropic(b):await compatible(b);res.json(out)}catch(e){const message=String(e?.message||'AI error');const upstreamStatus=Number(e?.status||e?.statusCode||0);const status=upstreamStatus>=400&&upstreamStatus<=599?upstreamStatus:(/RESOURCE_EXHAUSTED|rate.?limit|quota|too many requests|usage limit/i.test(message)?429:500);logApiError('/api/story',status,message);res.status(status).json({error:message,status})}});
+app.post('/api/image',async(req,res)=>{try{res.json(await generateImage(req.body||{}));}catch(e){const message=String(e?.message||'image generation failed');const upstreamStatus=Number(e?.status||e?.statusCode||0);const status=upstreamStatus>=400&&upstreamStatus<=599?upstreamStatus:(/RESOURCE_EXHAUSTED|rate.?limit|quota/i.test(message)?429:500);logApiError('/api/image',status,message);res.status(status).json({error:message,status});}});
 app.post('/api/model-check',async(req,res)=>{try{res.json(await probeModel(req.body||{}));}catch(e){res.status(400).json({error:String(e?.message||'model check failed')})}});
 export function startApiServer({port=PORT,host='127.0.0.1',token=''}={}){desktopToken=String(token||'');return new Promise((resolve,reject)=>{const server=app.listen(port,host);server.once('listening',()=>resolve(server));server.once('error',reject);});}
 // 直接執行（自架網頁版）模式：預設只綁 127.0.0.1（「自架者自己的機器」＝僅本機可用）。

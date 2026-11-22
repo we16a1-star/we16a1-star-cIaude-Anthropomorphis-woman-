@@ -1375,5 +1375,9 @@ export const UI_EN = {
   '已透過 API 生成並匯入插圖到目前場景。': 'Generated via API and imported into the current scene.',
   '✨ API 圖片生成並自動匯入': '✨ API Image Generation & Auto-Import',
   '✨ API 生成並匯入舞台': '✨ Generate via API & Import to Stage',
-  '✨ 依劇本 <image:...> 生圖匯入': '✨ Generate & Import from <image:...> Tag'
+  '✨ 依劇本 <image:...> 生圖匯入': '✨ Generate & Import from <image:...> Tag',
+  '📚 切換圖書館時段背景（即時聯動光影、粒子與環境音）': '📚 Switch Library Time Background (syncs lighting, particles & ambience)',
+  '動態光影與環境粒子（陽光浮塵／月光微粒／細雨）': 'Dynamic lighting & ambient particles (sun dust / moonlight / rain)',
+  '電影感微呼吸景深與柔和滑鼠視差': 'Cinematic subtle Ken Burns breath & soft mouse parallax',
+  '左側文字保護暗角（左暗護字・右亮透人）': 'Left-side text readability vignette (clearer text & brighter portrait)'
 };

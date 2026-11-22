@@ -90,10 +90,11 @@ test('BGM-2 / BGM-3: scenePacks.json 維持 bgmEnabled:false 且九首 M4A 配�
   }
 });
 
-test('BGM-2: 偏好持久化、預設關閉、同曲不重播與缺檔靜默降級', async () => {
+test('BGM-2: 偏好持久化、預設開啟帶入、情緒／等待切歌、手動鎖定與缺檔靜默降級', async () => {
   const store = makeMemoryStorage();
   assert.deepEqual(loadBgmPreference(store), DEFAULT_BGM_PREF);
-  assert.equal(DEFAULT_BGM_PREF.enabled, false, 'BGM 預設關閉避免突襲出聲');
+  assert.equal(DEFAULT_BGM_PREF.enabled, true, 'BGM 預設開啟以讓玩家首次互動即自然帶入遊戲');
+  assert.equal(DEFAULT_BGM_PREF.emotionReactive, true, '預設開啟隨劇情情緒微調配樂');
   assert.equal(BGM_CROSSFADE_SEC, 1.2, '預設 1.2 秒交叉淡入淡出');
 
   const saved = saveBgmPreference({ enabled: true, volume: 0.8 }, store);
@@ -114,6 +115,9 @@ test('BGM-2: 偏好持久化、預設關閉、同曲不重播與缺檔靜默降�
     }
   });
 
+  // 驗證完整九首配樂清單
+  assert.equal(player.listDistinctTracks().length, 9);
+
   // 第一次播放 day-default
   const ok1 = await player.syncPlayback();
   assert.equal(ok1, true);
@@ -133,6 +137,24 @@ test('BGM-2: 偏好持久化、預設關閉、同曲不重播與缺檔靜默降�
   assert.equal(okMiss1, false);
   assert.equal(okMiss2, false);
   assert.equal(fetchCalls, 2, '缺檔只請求一次即快取失敗，不再重複 404');
+
+  // 情緒轉 tender 自動對應《沒說出口的那一頁》
+  player.currentSceneKey = 'default';
+  player.applyStoryEmotion('tender');
+  assert.equal(player.resolveTargetTrack().id, 'bgm-event-tender');
+
+  // 等待模式自動對應《羽毛筆書寫中》，結束即回原曲
+  player.setWaiting(true);
+  assert.equal(player.resolveTargetTrack().id, 'bgm-wait');
+  player.setWaiting(false);
+  assert.equal(player.resolveTargetTrack().id, 'bgm-event-tender');
+
+  // 手動鎖定曲目優先於情緒與場景，解除後恢復自動
+  player.setManualTrack('rainy-night');
+  assert.equal(player.resolveTargetTrack().id, 'bgm-rainy-night');
+  player.clearManualTrack();
+  player.applyStoryEmotion('neutral');
+  assert.equal(player.resolveTargetTrack().id, 'bgm-day-default');
 
   player.stop(0.02);
 });

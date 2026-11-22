@@ -98,9 +98,16 @@ async function runEmbeddedServerAudit() {
 
     const dbg = await req('/api/debug/status');
     if (dbg.status === 200 && dbg.body?.ok === true && dbg.body?.nodeVersion) {
-      push('server-debug-endpoint', 'OK', `GET /api/debug/status 通過（Node ${dbg.body.nodeVersion}）`);
+      push('server-debug-endpoint', 'OK', `GET /api/debug/status 通過（Node ${dbg.body.nodeVersion}，BGM ${dbg.body.bgmCount ?? 0} 首）`);
     } else {
       push('server-debug-endpoint', 'FAIL', `GET /api/debug/status 異常：status=${dbg.status}`);
+    }
+
+    const bgmRes = await req('/api/bgm/list');
+    if (bgmRes.status === 200 && bgmRes.body?.ok === true && bgmRes.body.count >= 9 && bgmRes.body.totalMb <= 25) {
+      push('server-bgm-api', 'OK', `GET /api/bgm/list 通過（${bgmRes.body.count} 首原創配樂，${bgmRes.body.totalMb} MB <= 25 MB）`);
+    } else {
+      push('server-bgm-api', 'FAIL', `GET /api/bgm/list 異常：status=${bgmRes.status} count=${bgmRes.body?.count}`);
     }
 
     const noTok = await req('/api/health', { auth: false });
@@ -231,7 +238,7 @@ function checkAssetsAndModules() {
   const required = [
     'app.js', 'app.bundle.js', 'event-bus.js', 'audio-coordinator.js', 'turn-reply-parser.js',
     'ui-en.js', 'plugin-registry.js', 'backend-debug.js', 'character-card-importer.js',
-    'workshop-harness-ui.js', 'image-gen.js', 'vn-script.js', 'line-runner.js', 'voice-tts.js', 'bgm-player.js',
+    'workshop-harness-ui.js', 'image-gen.js', 'scene-atmosphere.js', 'bgm-immersion-ui.js', 'vn-script.js', 'line-runner.js', 'voice-tts.js', 'bgm-player.js',
     'ambience.js', 'backlog.js'
   ];
   const missing = required.filter((f) => !fs.existsSync(path.join(WWW, f)));

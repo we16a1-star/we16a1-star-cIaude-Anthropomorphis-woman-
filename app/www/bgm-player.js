@@ -12,8 +12,22 @@
 import { audioBus } from './audio-bus.js';
 
 export const STORAGE_KEY_BGM_PREF = 'claude_novel_bgm_v1';
-export const DEFAULT_BGM_PREF = Object.freeze({ enabled: false, volume: 0.65 });
+// 以「讓用戶帶入遊戲」為優先：預設開啟柔和配樂，並在首次點擊／按鍵互動時自動解鎖淡入（不違反瀏覽器自動播放政策）
+export const DEFAULT_BGM_PREF = Object.freeze({ enabled: true, volume: 0.62, emotionReactive: true });
 export const BGM_CROSSFADE_SEC = 1.2;
+
+/** 九首完整原創配樂清單（供沉浸音樂盒選曲與後端健檢使用） */
+export const BGM_TRACK_LIST = Object.freeze([
+  { key: 'title',           id: 'bgm-title',           title: '書頁之間（主題曲）',   mood: '開局與門廊', file: 'assets/bgm/bgm-title.m4a' },
+  { key: 'soft-morning',    id: 'bgm-morning-soft',    title: '晨光與紅茶',           mood: '清晨日常',   file: 'assets/bgm/bgm-morning-soft.m4a' },
+  { key: 'default',         id: 'bgm-day-default',     title: '午後的閱覽室',         mood: '日間書庫',   file: 'assets/bgm/bgm-day-default.m4a' },
+  { key: 'evening-reading', id: 'bgm-evening-reading', title: '暮色與白鴿',           mood: '傍晚餘暉',   file: 'assets/bgm/bgm-evening-reading.m4a' },
+  { key: 'night',           id: 'bgm-night-magic',     title: '掌心的微光',           mood: '深夜獨處',   file: 'assets/bgm/bgm-night-magic.m4a' },
+  { key: 'rainy-night',     id: 'bgm-rainy-night',     title: '雨聲裡的燭火',         mood: '雨夜書桌',   file: 'assets/bgm/bgm-rainy-night.m4a' },
+  { key: 'goodnight',       id: 'bgm-event-tender',    title: '沒說出口的那一頁',     mood: '溫柔深情',   file: 'assets/bgm/bgm-event-tender.m4a' },
+  { key: 'cheek_pinch',     id: 'bgm-event-playful',   title: '才不是故意的',         mood: '俏皮傲嬌',   file: 'assets/bgm/bgm-event-playful.m4a' },
+  { key: 'wait',            id: 'bgm-wait',            title: '羽毛筆書寫中',         mood: '等待思索',   file: 'assets/bgm/bgm-wait.m4a' }
+]);
 
 /** 場景鍵與事件旗標對應之預設曲目註冊表（可由 scenePacks.json 覆寫） */
 export const DEFAULT_BGM_CATALOG = Object.freeze({
@@ -47,8 +61,9 @@ function clamp01(v, fallback) {
 export function normalizeBgmPreference(raw = {}) {
   const src = raw && typeof raw === 'object' ? raw : {};
   return {
-    enabled: Boolean(src.enabled),
-    volume: clamp01(src.volume, DEFAULT_BGM_PREF.volume)
+    enabled: src.enabled === undefined ? DEFAULT_BGM_PREF.enabled : Boolean(src.enabled),
+    volume: clamp01(src.volume, DEFAULT_BGM_PREF.volume),
+    emotionReactive: src.emotionReactive === undefined ? DEFAULT_BGM_PREF.emotionReactive : Boolean(src.emotionReactive)
   };
 }
 
@@ -87,6 +102,10 @@ export class BgmPlayer {
     this.missingUrls = new Set();
     this.currentSceneKey = 'default';
     this.overrideEventKey = '';
+    this.manualTrackKey = '';
+    this.emotionTrackKey = '';
+    this.isWaitingMode = false;
+    this.customTrack = null; // { id, title, buffer }
     this.activeTrackId = '';
     this.activeTrackTitle = '';
     this.activeVoice = null; // { source, gain, trackId }
@@ -95,6 +114,14 @@ export class BgmPlayer {
     try {
       this.bus.setLevel('bgm', this.pref.volume);
     } catch (_) {}
+  }
+
+  listDistinctTracks() {
+    const out = BGM_TRACK_LIST.map((t) => ({ ...t }));
+    if (this.customTrack) {
+      out.unshift({ key: '__custom__', id: this.customTrack.id, title: this.customTrack.title, mood: '自訂音樂', file: '__custom__' });
+    }
+    return out;
   }
 
   subscribe(fn) {
@@ -115,8 +142,12 @@ export class BgmPlayer {
     return {
       enabled: this.pref.enabled,
       volume: this.pref.volume,
+      emotionReactive: this.pref.emotionReactive,
       sceneKey: this.currentSceneKey,
       eventKey: this.overrideEventKey,
+      manualTrackKey: this.manualTrackKey,
+      isWaiting: this.isWaitingMode,
+      hasCustomTrack: Boolean(this.customTrack),
       activeTrackId: this.activeTrackId,
       activeTrackTitle: this.activeTrackTitle || target?.title || '',
       isPlaying: Boolean(this.activeVoice),
@@ -160,13 +191,97 @@ export class BgmPlayer {
   }
 
   resolveTargetTrack() {
+    if (this.manualTrackKey === '__custom__' && this.customTrack) {
+      return { id: this.customTrack.id, title: this.customTrack.title, file: '__custom__', buffer: this.customTrack.buffer };
+    }
+    if (this.manualTrackKey && this.catalog[this.manualTrackKey]) {
+      return this.catalog[this.manualTrackKey];
+    }
     if (this.overrideEventKey && this.catalog[this.overrideEventKey]) {
       return this.catalog[this.overrideEventKey];
+    }
+    if (this.isWaitingMode && this.catalog.wait) {
+      return this.catalog.wait;
+    }
+    if (this.pref.emotionReactive && this.emotionTrackKey && this.catalog[this.emotionTrackKey]) {
+      return this.catalog[this.emotionTrackKey];
     }
     if (this.currentSceneKey && this.catalog[this.currentSceneKey]) {
       return this.catalog[this.currentSceneKey];
     }
     return this.catalog.default || null;
+  }
+
+  /** 手動鎖定指定曲目（例如從沉浸音樂盒點選）；傳入空字串即回到跟隨劇情自動配樂 */
+  setManualTrack(trackKey) {
+    const key = String(trackKey || '').trim();
+    this.manualTrackKey = key;
+    if (key && !this.pref.enabled) {
+      this.pref = saveBgmPreference({ enabled: true }, this.storage);
+    }
+    if (this.pref.enabled) {
+      void this.syncPlayback();
+    } else {
+      this.emit();
+    }
+  }
+
+  clearManualTrack() {
+    if (!this.manualTrackKey) return;
+    this.manualTrackKey = '';
+    if (this.pref.enabled) void this.syncPlayback();
+    else this.emit();
+  }
+
+  /** 依當回合情緒柔和帶動配樂氛圍（tender→溫柔深情、proud→俏皮傲嬌，其餘回歸場景主旋律） */
+  applyStoryEmotion(emotion) {
+    const e = String(emotion || '').trim().toLowerCase();
+    let nextKey = '';
+    if (e === 'tender') nextKey = 'goodnight';
+    else if (e === 'proud') nextKey = 'cheek_pinch';
+    if (nextKey === this.emotionTrackKey) return;
+    this.emotionTrackKey = nextKey;
+    if (this.pref.enabled && this.pref.emotionReactive && !this.manualTrackKey && !this.overrideEventKey) {
+      void this.syncPlayback();
+    } else {
+      this.emit();
+    }
+  }
+
+  /** 等待 AI 回覆時柔和切入《羽毛筆書寫中》，回覆到達即淡回劇情配樂 */
+  setWaiting(waiting) {
+    const next = Boolean(waiting);
+    if (next === this.isWaitingMode) return;
+    this.isWaitingMode = next;
+    if (this.pref.enabled && !this.manualTrackKey && !this.overrideEventKey) {
+      void this.syncPlayback();
+    } else {
+      this.emit();
+    }
+  }
+
+  /** 匯入使用者本機音檔（MP3/M4A/OGG/WAV）作為沉浸自訂背景音樂 */
+  async loadCustomAudioFile(file) {
+    if (!file || typeof file.arrayBuffer !== 'function') {
+      throw new Error('請選擇有效的音訊檔案（MP3 / M4A / OGG / WAV）');
+    }
+    try {
+      this.bus.unlock();
+      this.bus.setActive(true);
+    } catch (_) {}
+    const ctx = this.bus.context;
+    if (!ctx) throw new Error('目前環境不支援 Web Audio 解碼');
+    if (ctx.state !== 'running') {
+      try { await ctx.resume(); } catch (_) {}
+    }
+    const ab = await file.arrayBuffer();
+    const decoded = await ctx.decodeAudioData(ab.slice(0));
+    const title = String(file.name || '自訂音樂').replace(/\.[^.]+$/, '').slice(0, 48);
+    this.customTrack = { id: 'custom-' + Date.now(), title: `自訂：${title}`, buffer: decoded };
+    this.manualTrackKey = '__custom__';
+    this.pref = saveBgmPreference({ enabled: true }, this.storage);
+    await this.syncPlayback(true);
+    return { title: this.customTrack.title, duration: decoded.duration || 0 };
   }
 
   setScene(sceneKey) {
@@ -285,7 +400,7 @@ export class BgmPlayer {
     }
 
     const token = ++this.switchToken;
-    const buffer = await this.loadBuffer(target.file);
+    const buffer = target.buffer ? target.buffer : await this.loadBuffer(target.file);
     if (!buffer || token !== this.switchToken) return false;
 
     const fadeSec = this.crossfadeSec;

@@ -108,6 +108,8 @@ import { parsePngCharacterCard, parseJsonCharacterCard, toGameCharacterCard, cre
 import { parseVnScript } from './vn-script.js';
 import { createWorkshopHarnessPanels } from './workshop-harness-ui.js';
 import { sceneImageGenerator, ensureSceneApiImageGenUi } from './image-gen.js';
+import { sceneAtmosphere } from './scene-atmosphere.js';
+import { mountBgmImmersionUi } from './bgm-immersion-ui.js';
 // P1-05（玩家安全界線）：危機本機攔截＋低落陪伴提示詞；網頁與 API 兩條生成管線都強制附加安全段。
 import { SafetyModule, withSafetyPromptSupport } from './safety-module.js';
 // P1-02（S2 提示詞組裝與開發者檢視）：工坊「開發者檢視」六區塊面板。
@@ -229,6 +231,7 @@ if (typeof window !== 'undefined') {
     cards: { parsePngCharacterCard, parseJsonCharacterCard, toGameCharacterCard, createQuickCharacterCard },
     vnScript: { parseVnScript, splitScriptLines },
     imageGen: sceneImageGenerator,
+    atmosphere: sceneAtmosphere,
     typeSound: { TYPE_SOUNDS, load: loadTypeSoundPreference, save: saveTypeSoundPreference, play: playTypeSound },
     macro: { evaluateMacros, createMacroEnv },
     openBacklog: openBacklogModal
@@ -6319,6 +6322,9 @@ ensureSceneApiImageGenUi({
   getExtraCharNames: () => selectedCharacterCards().map((c) => c.name),
   importSceneIllustration
 });
+sceneAtmosphere.mount();
+sceneAtmosphere.mountControlsUi(() => uiLanguage);
+mountBgmImmersionUi({ bgmPlayer, ambienceEngine, audioBus, getUiLanguage: () => uiLanguage });
 $('importLatestImageBtn').onclick=importLatestDownloadedImage;
 $('portraitToggleBtn').onclick=togglePortraitOverScene;
 $('removeSceneImageBtn').onclick=removeSceneIllustration;

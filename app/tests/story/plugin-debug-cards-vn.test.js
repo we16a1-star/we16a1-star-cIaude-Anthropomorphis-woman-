@@ -21,6 +21,7 @@ import {
 import { parseVnScript } from '../../www/vn-script.js';
 import { LineRunner } from '../../www/line-runner.js';
 import { SceneImageGenerator, buildEnhancedImagePrompt, dataUrlToImageFile } from '../../www/image-gen.js';
+import { SceneAtmosphereEngine, resolveAtmospherePreset } from '../../www/scene-atmosphere.js';
 
 function createMemoryStorage() {
   const map = new Map();
@@ -154,7 +155,7 @@ const tests = [
     });
 
     assert.equal(report.ok, true);
-    assert.equal(report.checks.length, 6);
+    assert.equal(report.checks.length, 7);
     assert.equal(report.summary.fail, 0);
 
     const sanitized = dbg.buildSanitizedReport({ token: 'ghp_secret_abc', safeField: 'hello' });
@@ -316,6 +317,31 @@ const tests = [
 
     const f = dataUrlToImageFile(`data:image/png;base64,${tinyPngB64}`, 'test.png');
     assert.equal(f.type, 'image/png');
+  }],
+
+  ['SceneAtmosphereEngine: 五場景光影/粒子預設解析與偏好持久化', async () => {
+    assert.equal(resolveAtmospherePreset('default').effectClass, 'scene-fx-warm-sun');
+    assert.equal(resolveAtmospherePreset('soft-morning').effectClass, 'scene-fx-morning-glow');
+    assert.equal(resolveAtmospherePreset('evening-reading').effectClass, 'scene-fx-sunset-dusk');
+    assert.equal(resolveAtmospherePreset('night').effectClass, 'scene-fx-moonlight');
+    assert.equal(resolveAtmospherePreset('rainy-night').particleMode, 'rain-candle');
+
+    const storage = createMemoryStorage();
+    const bus = new EventBus();
+    const atmo = new SceneAtmosphereEngine({ storage, bus });
+    assert.equal(atmo.getPrefs().atmosphereFx, true);
+    assert.equal(atmo.getPrefs().depthMotion, true);
+    assert.equal(atmo.getPrefs().readabilityVignette, true);
+
+    atmo.setPrefs({ depthMotion: false });
+    const atmo2 = new SceneAtmosphereEngine({ storage, bus });
+    assert.equal(atmo2.getPrefs().depthMotion, false);
+    assert.equal(atmo2.getPrefs().atmosphereFx, true);
+
+    atmo2.setScene('rainy-night');
+    assert.equal(atmo2.sceneKey, 'rainy-night');
+    assert.ok(atmo2.particles.some((p) => p.kind === 'rain'));
+    assert.ok(atmo2.particles.some((p) => p.kind === 'ember'));
   }]
 ];
 

@@ -85,19 +85,20 @@
     pointer-events: none;
   }
 
-  /* 9.9：暗底只留左段 x 0–46%（品牌與標籤）。中間 46–82% 完全透明，
-     不壓暗角色頭頂；右段由 .account-bar 自己的小圓角底提供。 */
+  /* 9.9：暗底只留左段 x 0–46%（品牌與標籤），右緣柔順淡出融入書庫背景，不壓暗角色頭頂。 */
   #app #tab-story .game-hud::before {
     content: "";
     position: absolute;
     left: 0;
     top: 0;
     bottom: 0;
-    width: 46%;
-    border-radius: 0 0 16px 0;
-    border-bottom: 1px solid rgba(212, 185, 117, .16);
-    background: linear-gradient(180deg, rgba(18, 12, 8, .94) 0%, rgba(18, 12, 8, .88) 54%, rgba(18, 12, 8, .78) 100%);
-    box-shadow: 0 10px 24px -20px rgba(0, 0, 0, .85);
+    width: 48%;
+    border-radius: 0 0 22px 0;
+    border-bottom: 1px solid rgba(212, 185, 117, .14);
+    background: linear-gradient(95deg, rgba(16, 11, 7, .88) 0%, rgba(16, 11, 7, .74) 72%, rgba(16, 11, 7, 0) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 78%, transparent 100%);
+    mask-image: linear-gradient(90deg, #000 0%, #000 78%, transparent 100%);
     pointer-events: none;
   }
 
@@ -1788,6 +1789,374 @@
   appearance: auto !important;
   -webkit-appearance: checkbox !important;
   accent-color: #d9a441;
+}
+
+/* ══ 遊戲中背景優化：五場景光束、動態氛圍粒子、左暗護字右亮透人、微呼吸視差 ═══ */
+#app #tab-story .vn-stage {
+  --bg-parallax-x: 0px;
+  --bg-parallax-y: 0px;
+}
+
+@keyframes bgKenBurnsBreath {
+  0%, 100% {
+    scale: 1.028;
+  }
+  50% {
+    scale: 1.048;
+  }
+}
+
+@keyframes bgLightDrift {
+  0%, 100% {
+    opacity: .76;
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    opacity: 1;
+    transform: translate3d(10px, -6px, 0);
+  }
+}
+
+@keyframes bgCandlePulse {
+  0%, 100% {
+    opacity: .68;
+  }
+  35% {
+    opacity: .92;
+  }
+  68% {
+    opacity: .78;
+  }
+}
+
+/* 電影感微呼吸景深＋阻尼滑鼠視差（不影響開始畫面與 CG） */
+#app #tab-story.bg-depth-motion:not(.story-empty):not(.g43-story-opening):not(.has-bundled-cg) .story-default-art,
+#app #tab-story.bg-depth-motion:not(.story-empty):not(.g43-story-opening):not(.has-bundled-cg) .scene-generated-image {
+  transform: translate3d(var(--bg-parallax-x, 0px), var(--bg-parallax-y, 0px), 0);
+  animation: bgKenBurnsBreath 26s ease-in-out infinite;
+  will-change: transform;
+  transform-origin: 64% 44%;
+}
+
+/* 右側人物清透提亮＋左側文字保護暗角（左暗護字、右亮透人） */
+#app #tab-story.bg-readability-vignette:not(.story-empty):not(.g43-story-opening) .story-art-grade::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(92deg, rgba(14, 10, 7, .58) 0%, rgba(16, 11, 8, .34) 38%, rgba(18, 12, 8, .05) 60%, rgba(255, 240, 214, .03) 100%),
+    linear-gradient(180deg, rgba(12, 8, 5, .24) 0%, rgba(12, 8, 5, 0) 20%, rgba(12, 8, 5, 0) 76%, rgba(12, 8, 5, .42) 100%);
+}
+
+/* 光束與色調動態層（位於背景與立繪之間，絕不遮擋點擊） */
+#app #tab-story .scene-light-layer,
+#app #tab-story .scene-atmosphere-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+#app #tab-story .scene-light-layer {
+  mix-blend-mode: screen;
+  opacity: 0;
+  transition: opacity .85s ease, background .85s ease;
+}
+
+#app #tab-story.bg-fx-enabled:not(.story-empty):not(.g43-story-opening) .scene-light-layer {
+  opacity: 1;
+}
+
+#app #tab-story.story-empty .scene-light-layer,
+#app #tab-story.g43-story-opening .scene-light-layer,
+#app #tab-story.story-empty .scene-atmosphere-canvas,
+#app #tab-story.g43-story-opening .scene-atmosphere-canvas {
+  opacity: 0;
+}
+
+/* 五大書庫場景專屬光影（對齊 config/scenePacks.json effectClass） */
+#app #tab-story .vn-stage.scene-fx-warm-sun .scene-light-layer {
+  background:
+    linear-gradient(122deg, rgba(255, 224, 152, .22) 0%, rgba(255, 216, 136, .08) 28%, transparent 56%),
+    radial-gradient(ellipse 46% 52% at 74% 32%, rgba(255, 232, 174, .18) 0%, transparent 72%);
+  animation: bgLightDrift 14s ease-in-out infinite;
+}
+
+#app #tab-story .vn-stage.scene-fx-morning-glow .scene-light-layer {
+  background:
+    linear-gradient(115deg, rgba(255, 245, 218, .26) 0%, rgba(255, 236, 194, .10) 34%, transparent 62%),
+    radial-gradient(ellipse 52% 48% at 68% 24%, rgba(255, 248, 228, .22) 0%, transparent 70%);
+  animation: bgLightDrift 16s ease-in-out infinite;
+}
+
+#app #tab-story .vn-stage.scene-fx-sunset-dusk .scene-light-layer {
+  background:
+    linear-gradient(126deg, rgba(255, 166, 88, .24) 0%, rgba(236, 128, 72, .10) 32%, transparent 60%),
+    radial-gradient(ellipse 50% 54% at 76% 36%, rgba(255, 190, 118, .20) 0%, transparent 72%);
+  animation: bgLightDrift 15s ease-in-out infinite;
+}
+
+#app #tab-story .vn-stage.scene-fx-moonlight .scene-light-layer {
+  background:
+    linear-gradient(132deg, rgba(132, 178, 255, .18) 0%, rgba(92, 138, 224, .06) 36%, transparent 64%),
+    radial-gradient(circle at 60% 62%, rgba(255, 214, 134, .18) 0%, rgba(255, 192, 102, .05) 34%, transparent 64%);
+  animation: bgLightDrift 18s ease-in-out infinite;
+}
+
+#app #tab-story .vn-stage.scene-fx-rainy-night .scene-light-layer {
+  background:
+    linear-gradient(138deg, rgba(110, 152, 216, .16) 0%, transparent 48%),
+    radial-gradient(ellipse 42% 46% at 28% 78%, rgba(255, 184, 96, .22) 0%, rgba(255, 152, 68, .06) 44%, transparent 72%),
+    radial-gradient(ellipse 36% 40% at 72% 42%, rgba(255, 206, 132, .11) 0%, transparent 70%);
+  animation: bgCandlePulse 4.6s ease-in-out infinite;
+}
+
+/* 尊重系統減少動態偏好 */
+@media (prefers-reduced-motion: reduce) {
+  #app #tab-story .story-default-art,
+  #app #tab-story .scene-generated-image,
+  #app #tab-story .scene-light-layer {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* 故事選單內「切換圖書館時段背景」控制列 */
+.bg-atmosphere-controls {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(212, 185, 117, .28);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bg-preset-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bg-preset-pill {
+  padding: 5px 11px !important;
+  border-radius: 999px !important;
+  font-size: 12px !important;
+  border: 1px solid rgba(212, 185, 117, .36) !important;
+  background: rgba(34, 24, 17, .72) !important;
+  color: #EAE0CE !important;
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, color .18s ease;
+}
+
+.bg-preset-pill:hover {
+  border-color: #E6C77F !important;
+  background: rgba(58, 42, 28, .86) !important;
+}
+
+.bg-preset-pill.is-active {
+  border-color: #E6C77F !important;
+  background: rgba(188, 136, 52, .34) !important;
+  color: #FFF4DC !important;
+  font-weight: 700;
+}
+
+.bg-atmo-check {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.bg-atmo-check input[type="checkbox"] {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  flex: 0 0 16px !important;
+  appearance: auto !important;
+  -webkit-appearance: checkbox !important;
+  accent-color: #d9a441;
+}
+
+.api-img-check input[type="checkbox"]::before,
+.api-img-check input[type="checkbox"]::after,
+.bg-atmo-check input[type="checkbox"]::before,
+.bg-atmo-check input[type="checkbox"]::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* ══ 沉浸式圖書館音樂膠囊與快捷選曲音樂盒（BGM Immersion） ═══════════════ */
+#app #tab-story .story-tool-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vn-bgm-now-pill {
+  margin-left: auto;
+  appearance: none;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 185, 117, .38);
+  background: rgba(24, 17, 12, .78);
+  color: #EBD8B2;
+  font-size: 11.5px;
+  line-height: 1.5;
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 210px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: auto;
+  backdrop-filter: blur(6px);
+  transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+
+.vn-bgm-now-pill:hover {
+  border-color: #E6C77F;
+  background: rgba(42, 30, 20, .92);
+}
+
+.vn-bgm-now-pill.is-playing {
+  border-color: rgba(233, 193, 104, .75);
+  box-shadow: 0 0 12px rgba(217, 164, 65, .22);
+  color: #FFF2D2;
+}
+
+.vn-bgm-jukebox {
+  position: absolute;
+  left: var(--ap-gutter, 20px);
+  bottom: calc(var(--ap-status-h, 28px) + 12px);
+  z-index: 65;
+  width: min(360px, calc(100vw - 32px));
+  max-height: min(460px, 72dvh);
+  overflow: auto;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(217, 164, 65, .52);
+  background: linear-gradient(165deg, rgba(34, 24, 17, .96), rgba(20, 14, 10, .97));
+  color: #F3EADB;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, .62);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vn-bgm-jukebox[hidden] {
+  display: none !important;
+}
+
+.vn-bgm-jukebox-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13.5px;
+  color: #E9C168;
+}
+
+.vn-bgm-jukebox-head button {
+  appearance: none;
+  border: 1px solid rgba(212, 185, 117, .35);
+  background: transparent;
+  color: #E8D9BD;
+  border-radius: 8px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.vn-bgm-jukebox-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.vn-bgm-jukebox-vol {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #DCCEB6;
+}
+
+.vn-bgm-jukebox-vol input[type="range"] {
+  flex: 1;
+  accent-color: #d9a441;
+}
+
+.vn-bgm-jukebox-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.vn-bgm-jukebox-actions button {
+  flex: 1;
+  padding: 5px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(212, 185, 117, .38);
+  background: rgba(52, 37, 25, .82);
+  color: #F3EADB;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.vn-bgm-jukebox-actions button:disabled {
+  opacity: .48;
+  cursor: default;
+}
+
+.vn-bgm-track-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vn-bgm-track-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 9px;
+  border-radius: 8px;
+  border: 1px solid rgba(212, 185, 117, .2);
+  background: rgba(255, 245, 224, .05);
+  color: #F0E4CF;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.vn-bgm-track-item:hover {
+  border-color: rgba(233, 193, 104, .55);
+  background: rgba(255, 245, 224, .1);
+}
+
+.vn-bgm-track-item.is-active {
+  border-color: #E9C168;
+  background: rgba(217, 164, 65, .24);
+  color: #FFF4DC;
+  font-weight: 700;
+}
+
+.vn-bgm-track-item small {
+  font-size: 11px;
+  opacity: .72;
+}
+
+.vn-bgm-jukebox-status {
+  margin: 0 !important;
+  font-size: 11.5px;
+  color: #D7C6A8;
 }
 
 

@@ -144,14 +144,17 @@ export class BackendDebugger {
       }
       const data = await res.json();
       const profiles = data && typeof data.profiles === 'object' ? Object.keys(data.profiles) : [];
-      const imgCap = data?.capabilities?.imageGen ? ' · /api/image 生圖就緒' : '';
+      const caps = [];
+      if (data?.capabilities?.imageGen) caps.push('/api/image');
+      if (data?.capabilities?.bgmList) caps.push(`/api/bgm/list(${data.bgmCount ?? 0}首)`);
+      const capStr = caps.length ? ` · 能力：${caps.join(', ')}` : '';
       return {
         id: 'backendHealth',
         label: '後端 API 伺服器 (/api/health)',
         status: data?.ok ? 'ok' : 'warn',
         latencyMs,
         detail: data?.ok
-          ? `連線正常（${latencyMs} ms；已偵測 ${profiles.length} 組供應商：${profiles.join(', ') || '無'}${imgCap}）`
+          ? `連線正常（${latencyMs} ms；供應商 ${profiles.length} 組：${profiles.join(', ') || '無'}${capStr}）`
           : `後端回報異常狀態（${latencyMs} ms）`
       };
     } catch (err) {
@@ -335,6 +338,35 @@ export class BackendDebugger {
       });
     } catch (err) {
       checks.push({ id: 'vnEngine', label: 'VN 劇本解析與多角色逐句引擎', status: 'fail', detail: String(err?.message || err) });
+    }
+
+    // 7. 原創 BGM 音檔可存取性與沉浸播放健康度
+    try {
+      const fetcher = ctx.fetchImpl || (typeof fetch === 'function' ? fetch : null);
+      const audioSnap = ctx.audioCoordinator?.getSnapshot?.() || null;
+      const bgmSnap = audioSnap?.bgm || null;
+      if (fetcher && typeof window !== 'undefined' && /^https?:/i.test(window.location?.protocol || '')) {
+        const probeUrl = 'assets/bgm/bgm-day-default.m4a';
+        const res = await fetcher(probeUrl, { method: 'HEAD' }).catch(() => null);
+        const ok = Boolean(res && res.ok);
+        checks.push({
+          id: 'bgmAssets',
+          label: '沉浸 BGM 配樂資產可存取性',
+          status: ok ? 'ok' : 'warn',
+          detail: ok
+            ? `原創配樂可即時串流（${bgmSnap?.enabled ? '已啟用' : '已關閉'}；目前曲目：${bgmSnap?.activeTrackTitle || '待解鎖'}）`
+            : `無法存取 ${probeUrl}（請確認 app/www/assets/bgm/ 檔案完整）`
+        });
+      } else {
+        checks.push({
+          id: 'bgmAssets',
+          label: '沉浸 BGM 配樂資產可存取性',
+          status: 'ok',
+          detail: `BGM 模組就緒（${bgmSnap?.enabled ? '預設開啟自動淡入' : '已關閉'}；目前曲目：${bgmSnap?.activeTrackTitle || '午後的閱覽室'}）`
+        });
+      }
+    } catch (err) {
+      checks.push({ id: 'bgmAssets', label: '沉浸 BGM 配樂資產可存取性', status: 'warn', detail: String(err?.message || err) });
     }
 
     const report = {

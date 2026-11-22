@@ -1012,9 +1012,11 @@ const EMOTION_CLASSES = ['neutral','happy','proud','shy','surprised','dizzy','cu
 function resolveExpressionFaceAsset(emotion) {
   if (emotion === 'neutral') return 'story-daily';
   if (emotion === 'proud') return 'story-proud';
-  if (emotion === 'shy' || emotion === 'tender') return 'story-shy';
-  if (emotion === 'focused' || emotion === 'worried') return 'story-focused';
-  if (emotion === 'curious') return 'surprised';
+  if (emotion === 'shy') return 'story-shy';
+  if (emotion === 'focused') return 'story-focused';
+  if (emotion === 'curious') return 'story-curious';
+  if (emotion === 'worried') return 'story-worried';
+  if (emotion === 'tender') return 'story-tender';
   if (emotion === 'happy' || emotion === 'surprised' || emotion === 'dizzy') return emotion;
   return 'story-daily';
 }
