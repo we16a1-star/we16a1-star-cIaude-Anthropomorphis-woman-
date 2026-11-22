@@ -10,6 +10,7 @@
 <link rel="icon" href="assets/icon.jpg">
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="wait-interlude.css">
+<link rel="stylesheet" href="art-plan.css">
 </head>
 <body>
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -24,7 +25,7 @@
        G4 角色頁       ：#tab-profile    G5 創意工坊：#tab-workshop
        G6 設定頁       ：#tab-settings   G7 編輯對話框：#storyEditDialog／#sheetEditDialog
      提醒：id 與 class 是 app.js 與測試的接點，改結構請保留；
-     純外觀請改 style.css 最下方的【GALGAME 外觀】區段；英譯字典在 app.js 的 UI_EN。
+     純外觀請改 style.css 最下方的【GALGAME 外觀】區段；美術計畫覆蓋層在 art-plan.css（最後載入）；英譯字典在 app.js 的 UI_EN。
      分頁切換靠 .tab-btn[data-tab] 與 .tab-panel（app.js SECTION 16），新增頁面照抄即可。
      ═══════════════════════════════════════════════════════════════════ -->
 <div id="app">
@@ -53,7 +54,7 @@
 <!-- G0 舞台：背景層與立繪層（場景插圖與立繪由 app.js 切換 hidden／class） -->
 <div class="vn-stage" aria-label="故事場景：知識之塔">
 <div class="stage-shelves" aria-hidden="true"></div>
-<div class="stage-scene-label"><span>✦</span> 古籍閱覽室 · 雨夜</div>
+<div class="stage-scene-label" hidden><span>✦</span> 古籍閱覽室</div>
 <img id="startSceneArt" class="start-scene-art" src="assets/g43-start-opening.jpg" alt="克勞德站在窗前，橘葉輕揚">
 <img id="startCharacterArt" class="start-character-art" src="assets/g43-start-character.png" alt="克勞德伸手邀請你進入故事">
 <img id="storyDefaultArt" class="story-default-art" src="assets/g43-story-default.jpg" alt="克勞德在窗前安靜等待">
@@ -62,6 +63,7 @@
 <div id="storySceneTransition" class="story-scene-transition" aria-hidden="true"></div>
 <img id="sceneGeneratedImage" class="scene-generated-image" alt="本場景插圖" hidden>
 <img id="storyPortrait" class="story-portrait" src="assets/portrait.webp" alt="Claude娘">
+<span id="customPortraitBadge" class="custom-portrait-badge" hidden>自訂立繪</span>
 <div class="pa-daily-tea" aria-hidden="true"><i></i><i></i><i></i><b>☕</b></div>
 <!-- G16｜開始介面專用立繪（只在「尚未開始故事」且沒換自訂角色圖時顯示；CSS 控制） -->
 <img id="startPortrait" class="story-portrait start-portrait start-artwork-motion" data-pa-static="true" src="assets/portrait-start.webp" alt="Claude娘開局插畫">
@@ -502,9 +504,11 @@
 </div>
 <h2>相簿</h2>
 <div class="album-grid" id="albumGrid"></div>
-<div id="albumLightbox" class="album-lightbox" hidden>
+<div id="albumLightbox" class="album-lightbox" role="dialog" aria-modal="true" aria-label="相簿插圖" hidden>
+  <button id="albumLightboxPrev" class="album-lightbox-arrow prev" type="button" aria-label="上一張插圖" title="上一張插圖（←）">‹</button>
   <img id="albumLightboxImg" alt="">
-  <button id="albumLightboxClose" type="button">✕</button>
+  <button id="albumLightboxNext" class="album-lightbox-arrow next" type="button" aria-label="下一張插圖" title="下一張插圖（→）">›</button>
+  <button id="albumLightboxClose" type="button" aria-label="關閉插圖" title="關閉（Esc）">✕</button>
 </div>
 <h2>AI 帳號與 API 連線</h2>
 <div class="account-center">
@@ -596,6 +600,9 @@
 <button id="webRefreshModelsBtn" type="button">立即更新模型清單</button>
 <button id="webSwitchAccountBtn" type="button">新增／切換 Google 帳號</button>
 <label class="note" style="display:flex;align-items:center;gap:7px"><input id="askAccountToggle" type="checkbox"> 開啟 Gemini 時先選 Google 帳號（不自動沿用上次登入的帳號）</label>
+<label class="note" style="display:flex;align-items:center;gap:7px"><input id="desktopHelperToggle" type="checkbox"> 桌面輔助（實驗性）：允許遊戲把「自動化專用」Chrome／Edge 視窗帶到前景</label>
+<button id="focusAiBrowserBtn" type="button" disabled>聚焦 AI 登入瀏覽器</button>
+<p class="note" id="desktopHelperStatus" aria-live="polite">桌面輔助預設關閉。開啟後只會聚焦本遊戲啟動的 Chrome／Edge，不會讀取其他視窗、剪貼簿或螢幕畫面。</p>
 </div>
 <p class="note">若看到 about:blank 或自動化接不上，按「重新啟動自動化瀏覽器」。它只會關閉這個專用視窗，不會動到你平常的 Chrome；Google 帳號仍由你在官網輸入，App 不會讀取或保存密碼，也不會使用 Windows Hello／PIN。</p>
 </div>

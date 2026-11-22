@@ -1,9 +1,79 @@
 {
   "version": "v2.0-placeholder",
-  "scenePacks": [],
   "bgmEnabled": false,
   "defaultBgm": null,
   "supportedFormats": ["mp3", "ogg", "wav", "m4a"],
-  "note": "D18：待用戶提供音樂音效素材後啟用實際播放"
+  "note": "D18＋AnimaVN 場景包結構化定義：五大書庫場景已登錄，BGM 保留佔位待音訊素材就緒後啟用",
+  "scenePacks": [
+    {
+      "id": "day-default",
+      "sceneKey": "default",
+      "name": "古籍閱覽室 · 白天",
+      "nameEn": "Rare Books Room · Day",
+      "timeGroup": "day",
+      "background": "g43-story-default.jpg",
+      "alt": "克勞德站在窗前，日間故事預設立繪",
+      "tone": "warm",
+      "bgm": null,
+      "effectClass": "scene-fx-warm-sun",
+      "mirrored": false,
+      "aliases": ["default", "day", "library-day", "白天", "日間"]
+    },
+    {
+      "id": "morning-soft",
+      "sceneKey": "soft-morning",
+      "name": "古籍閱覽室 · 晨光",
+      "nameEn": "Rare Books Room · Morning",
+      "timeGroup": "day",
+      "background": "g43-story-soft-morning.jpg",
+      "alt": "克勞德在日光中溫柔傾聽",
+      "tone": "warm",
+      "bgm": null,
+      "effectClass": "scene-fx-morning-glow",
+      "mirrored": false,
+      "aliases": ["soft-morning", "morning", "晨光", "清晨"]
+    },
+    {
+      "id": "evening-reading",
+      "sceneKey": "evening-reading",
+      "name": "古籍閱覽室 · 傍晚",
+      "nameEn": "Rare Books Room · Evening",
+      "timeGroup": "day",
+      "background": "g43-story-reading.jpg",
+      "alt": "傍晚的克勞德與窗台白鴿，為夜間信鳥故事鋪梗",
+      "tone": "warm",
+      "bgm": null,
+      "effectClass": "scene-fx-sunset-dusk",
+      "mirrored": false,
+      "aliases": ["evening", "dusk", "sunset", "傍晚", "暮色"]
+    },
+    {
+      "id": "night-magic",
+      "sceneKey": "night",
+      "name": "古籍閱覽室 · 夜間",
+      "nameEn": "Rare Books Room · Night",
+      "timeGroup": "night",
+      "background": "g43-cg-magic-light.jpg",
+      "alt": "夜色中克勞德手托微光，夜間立繪",
+      "tone": "night",
+      "bgm": null,
+      "effectClass": "scene-fx-moonlight",
+      "mirrored": false,
+      "aliases": ["night", "midnight", "夜間", "深夜"]
+    },
+    {
+      "id": "rainy-night",
+      "sceneKey": "rainy-night",
+      "name": "古籍閱覽室 · 雨夜",
+      "nameEn": "Rare Books Room · Rainy Night",
+      "timeGroup": "night",
+      "background": "g43-story-rainy-night.jpg",
+      "alt": "雨夜中的古籍閱覽室，窗外細雨與桌前燭光",
+      "tone": "night",
+      "bgm": null,
+      "effectClass": "scene-fx-rainy-night",
+      "mirrored": false,
+      "aliases": ["rain", "rainy", "雨夜", "雷雨"]
+    }
+  ]
 }
-

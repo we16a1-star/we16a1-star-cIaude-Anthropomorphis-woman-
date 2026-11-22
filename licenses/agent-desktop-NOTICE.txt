@@ -1,0 +1,7 @@
+﻿agent-desktop
+Copyright (c) Vercel Labs
+Licensed under the Apache License, Version 2.0
+
+This product includes agent-desktop (https://github.com/vercel-labs/agent-desktop),
+a desktop automation CLI, used only to focus the Chrome/Edge window started by
+this application. Full license text: licenses/agent-desktop-Apache-2.0.txt

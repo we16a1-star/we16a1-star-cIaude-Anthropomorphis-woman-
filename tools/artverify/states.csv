@@ -1,0 +1,8 @@
+﻿"state","tone","choices","dialogue","status","wait","album","menu","portrait","headTopPx","errors"
+"story","night/night","442x320.8 n=8","442x139.9","bottom 98.5%","visible=False","lightbox=False grid=0x0","open=False 0x0","0x0 right=0","92.6","0"
+"wait","night/night","442x3.4 n=0","442x139.9","bottom 98.5%","visible=True","lightbox=False grid=0x0","open=False 0x0","0x0 right=0","92.6","0"
+"start","/","442x501.5 n=0","0x0","bottom 0%","visible=False","lightbox=False grid=0x0","open=False 0x0","0x0 right=0",,"0"
+"album","night/night","0x0 n=8","0x0","bottom 0%","visible=False","lightbox=True grid=884x685.1","open=False 0x0","0x0 right=0",,"0"
+"menu","night/night","442x320.8 n=8","442x139.9","bottom 98.5%","visible=False","lightbox=False grid=0x0","open=True 1248x686","0x0 right=0","92.6","0"
+"custom","/","442x320.8 n=8","442x139.9","bottom 98.5%","visible=False","lightbox=False grid=0x0","open=False 0x0","333x576.2 right=1198.1","92.6","0"
+"custom-t","/","442x320.8 n=8","442x139.9","bottom 98.5%","visible=False","lightbox=False grid=0x0","open=False 0x0","326.2x576.2 right=1198.1","92.6","0"

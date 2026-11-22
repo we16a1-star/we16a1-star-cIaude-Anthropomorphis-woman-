@@ -8,12 +8,8 @@ const transition = document.getElementById('storySceneTransition');
 const dialogue = document.getElementById('dialogueText');
 if (tab && stage && defaultArt && cgArt && grade && transition && dialogue) {
   const image = name => `assets/${name}`;
-  // v2.5j：這兩個預設圖的人物在左半，需水平鏡射到右側以避開左側選項與對話框。
-  // 換成人物已在右側的新圖時，從清單移除該檔名（或改成新檔名）即可同步取消鏡射。
-  const mirroredDefaultFiles = new Set([
-    'g43-cg-magic-light.jpg',
-    'g43-story-soft-morning.jpg',
-  ]);
+  // v2.5j/WP5：三大場景新素材（日間、晨光、夜間）已全數換為右側人物，鏡射清單正式歸零除役！
+  const mirroredDefaultFiles = new Set([]);
   // v5 Step 2：ratio＝16:9 或 portrait；portrait 由 CSS 以前景完整＋背景模糊呈現。
   const cgEvents = [
     { flag: 'moon_bird', id: 'moon-bird', artId: '36372', file: 'g43-cg-moon-bird.jpg', alt: '月夜中發光信鳥送來書信的劇情 CG', once: true, tone: 'night', ratio: '16:9', blurBg: false },
@@ -30,6 +26,8 @@ if (tab && stage && defaultArt && cgArt && grade && transition && dialogue) {
     // G43（WP6）：36629 臥室 CG，只供 WP7 本機條件呼叫；不掛 flag，不作預設或唯一素材。
     { id: 'nightgown', artId: '36629', file: 'g43-cg-goodnight-nightgown.jpg', alt: '克勞德夜裡穿著睡袍的臥室 CG', once: false, tone: 'night', ratio: 'portrait', blurBg: true },
     { flag: 'lakeside_sunset', id: 'lakeside-sunset', artId: '36622', file: 'g43-cg-lakeside.jpg', alt: '夕陽下湖畔的克勞德外出回憶 CG', once: true, tone: 'warm', ratio: 'portrait', blurBg: true },
+    // G43（WP2）：雨夜專屬 CG；克勞德持書燭光 CG，佩戴日芒雛菊髮飾。
+    { flag: 'rainy_night', id: 'rainy-night', artId: '36686', file: 'g43-cg-rainy-night-claude.jpg', alt: '雨夜中克勞德在燭光書桌旁手持古籍的劇情 CG', once: false, tone: 'night', ratio: '16:9', blurBg: false },
   ];
 
   // D16：晚安事件依設定偏好選擇 36455 臥室主 CG 或 36628 蓋被讀書 CG。
@@ -62,8 +60,30 @@ if (tab && stage && defaultArt && cgArt && grade && transition && dialogue) {
   let neutralTurns = 0;
   let cgTimer = 0;
   let transitionTimer = 0;
+  let underlayTimer = 0;
   let cgTransitionTimer = 0;
   let openingFlashTimer = 0;
+
+  // AnimaVN 雙層無閃爍疊圖底墊（借鏡 vn/stackedLayers.ts）：
+  // 換圖時舊圖停留於底墊維持不透明，新圖載入後於上層淡入覆蓋，淡完立即隱藏釋放 GPU 合成層。
+  let underlayArt = null;
+  if (defaultArt.parentNode && typeof document.createElement === 'function') {
+    underlayArt = document.createElement('img');
+    underlayArt.className = 'story-default-art story-art-underlay';
+    underlayArt.alt = '';
+    underlayArt.hidden = true;
+    underlayArt.setAttribute('aria-hidden', 'true');
+    defaultArt.parentNode.insertBefore(underlayArt, defaultArt);
+  }
+
+  // 溫和預載四大核心場景圖，避免玩家首次切換時段時出現網路等待閃爍
+  if (typeof Image === 'function' && typeof window !== 'undefined' && !window.__jsdom) {
+    setTimeout(() => {
+      for (const f of ['g43-story-default.jpg', 'g43-story-soft-morning.jpg', 'g43-cg-magic-light.jpg', 'g43-story-reading.jpg']) {
+        try { const pre = new Image(); pre.decoding = 'async'; pre.src = image(f); } catch (_) {}
+      }
+    }, 600);
+  }
   let artGeneration = 0;
   let cgGeneration = 0;
   let cgStartedAt = 0;
@@ -98,7 +118,17 @@ if (tab && stage && defaultArt && cgArt && grade && transition && dialogue) {
     }
     const generation = ++artGeneration;
     clearTimeout(transitionTimer);
-    defaultArt.style.opacity = '0';
+    clearTimeout(underlayTimer);
+    const prevSrc = defaultArt.getAttribute('src') || '';
+    const reduced = prefersReducedMotion();
+    if (underlayArt && prevSrc && prevSrc !== src && !reduced) {
+      underlayArt.src = prevSrc;
+      underlayArt.hidden = false;
+      underlayArt.style.opacity = '1';
+      if (defaultArt.style.scale) underlayArt.style.scale = defaultArt.style.scale;
+      else underlayArt.style.removeProperty('scale');
+    }
+    defaultArt.style.opacity = reduced ? '1' : '0';
     defaultArt.onload = () => {
       if (generation !== artGeneration) return;
       requestAnimationFrame(() => {
@@ -107,6 +137,13 @@ if (tab && stage && defaultArt && cgArt && grade && transition && dialogue) {
         defaultArt.alt = alt;
         defaultArt.dataset.art = scene || 'default';
         setTone(tone);
+        if (underlayArt && !underlayArt.hidden) {
+          underlayTimer = setTimeout(() => {
+            if (generation !== artGeneration) return;
+            underlayArt.hidden = true;
+            underlayArt.removeAttribute('src');
+          }, 440);
+        }
       });
     };
     defaultArt.src = src;
@@ -121,12 +158,20 @@ if (tab && stage && defaultArt && cgArt && grade && transition && dialogue) {
   function applyEmotionArt() {
     if (hasUserOverride() || tab.classList.contains('has-bundled-cg') || tab.classList.contains('g43-story-opening')) return;
     if (timeGroup === 'night') {
-      setStoryArt('g43-cg-magic-light.jpg', '夜色中克勞德手托微光，夜間立繪', 'night', 'night');
+      if (currentScene === 'rainy-night') {
+        setStoryArt('g43-story-rainy-night.jpg', '雨夜中的古籍閱覽室，窗外細雨與桌前燭光', 'rainy-night', 'night');
+      } else {
+        setStoryArt('g43-cg-magic-light.jpg', '夜色中克勞德手托微光，夜間立繪', 'night', 'night');
+      }
       return;
     }
     const emotion = stage.dataset.storyEmotion || 'neutral';
     if (emotion === 'shy' || emotion === 'curious') {
       setStoryArt('g43-story-soft-morning.jpg', '克勞德在日光中溫柔傾聽', 'soft-morning', 'warm');
+    } else if (currentScene === 'evening-reading') {
+      // 傍晚讀書是獨立場景（不是情緒差分）。class 變動（開相簿、AI 等待等）會重跑
+      // applyEmotionArt；若不保留，玩家看到一半的傍晚圖會被悄悄換回日間預設圖。
+      setStoryArt('g43-story-reading.jpg', '傍晚的克勞德與窗台白鴿，為夜間信鳥故事鋪梗', 'evening-reading', 'warm');
     } else {
       setStoryArt('g43-story-default.jpg', '克勞德站在窗前，日間故事預設立繪', 'default', 'warm');
     }
@@ -255,6 +300,69 @@ if (tab && stage && defaultArt && cgArt && grade && transition && dialogue) {
     return true;
   }
 
+  // G43（WP2）：雨夜場景手動／本機顯示入口；自訂立繪或自訂場景時不覆蓋。
+  function showRainyNightScene() {
+    if (hasUserOverride()) return false;
+    currentScene = 'rainy-night';
+    setStoryArt('g43-story-rainy-night.jpg', '雨夜中的古籍閱覽室，窗外細雨與桌前燭光', 'rainy-night', 'night');
+    return true;
+  }
+
+  // AnimaVN 場景包資料驅動層（借鏡 plugins/scenePacks.ts）：
+  // 內建五大書庫場景兜底，並於瀏覽器環境非同步同步 config/scenePacks.json，遵守「不跨日夜組」與不鏡射原則。
+  const builtinScenePacks = [
+    { id: 'day-default', sceneKey: 'default', timeGroup: 'day', background: 'g43-story-default.jpg', alt: '克勞德站在窗前，日間故事預設立繪', tone: 'warm', aliases: ['default', 'day', '白天', '日間'] },
+    { id: 'morning-soft', sceneKey: 'soft-morning', timeGroup: 'day', background: 'g43-story-soft-morning.jpg', alt: '克勞德在日光中溫柔傾聽', tone: 'warm', aliases: ['soft-morning', 'morning', '晨光', '清晨'] },
+    { id: 'evening-reading', sceneKey: 'evening-reading', timeGroup: 'day', background: 'g43-story-reading.jpg', alt: '傍晚的克勞德與窗台白鴿，為夜間信鳥故事鋪梗', tone: 'warm', aliases: ['evening', 'dusk', 'sunset', '傍晚', '暮色'] },
+    { id: 'night-magic', sceneKey: 'night', timeGroup: 'night', background: 'g43-cg-magic-light.jpg', alt: '夜色中克勞德手托微光，夜間立繪', tone: 'night', aliases: ['night', 'midnight', '夜間', '深夜'] },
+    { id: 'rainy-night', sceneKey: 'rainy-night', timeGroup: 'night', background: 'g43-story-rainy-night.jpg', alt: '雨夜中的古籍閱覽室，窗外細雨與桌前燭光', tone: 'night', aliases: ['rain', 'rainy', '雨夜', '雷雨'] }
+  ];
+  let scenePacks = builtinScenePacks.slice();
+  if (typeof fetch === 'function') {
+    try {
+      fetch('config/scenePacks.json')
+        .then(r => (r && r.ok ? r.json() : null))
+        .then(cfg => {
+          if (cfg && Array.isArray(cfg.scenePacks) && cfg.scenePacks.length) {
+            const merged = new Map();
+            for (const p of cfg.scenePacks) {
+              if (p && p.id && p.background) merged.set(String(p.id).toLowerCase(), p);
+            }
+            for (const p of builtinScenePacks) {
+              if (!merged.has(p.id)) merged.set(p.id, p);
+            }
+            scenePacks = [...merged.values()];
+          }
+        })
+        .catch(() => {});
+    } catch (_) {}
+  }
+
+  function findScenePack(query, respectTimeGroup = true) {
+    const key = String(query || '').trim().toLowerCase();
+    if (!key) return null;
+    const hit = scenePacks.find(p =>
+      String(p.id || '').toLowerCase() === key ||
+      String(p.sceneKey || '').toLowerCase() === key ||
+      (Array.isArray(p.aliases) && p.aliases.some(a => String(a || '').toLowerCase() === key))
+    ) || null;
+    if (!hit) return null;
+    if (respectTimeGroup && hit.timeGroup && hit.timeGroup !== timeGroup) return null;
+    return hit;
+  }
+
+  function applyScenePack(query, options = {}) {
+    if (hasUserOverride() || tab.classList.contains('has-bundled-cg')) return false;
+    const pack = findScenePack(query, options.respectTimeGroup !== false);
+    if (!pack) return false;
+    setStoryArt(pack.background, pack.alt || pack.name || '', pack.sceneKey || pack.id, pack.tone || (pack.timeGroup === 'night' ? 'night' : 'warm'));
+    return true;
+  }
+
+  function listScenePacks() {
+    return scenePacks.map(p => ({ id: p.id, sceneKey: p.sceneKey, timeGroup: p.timeGroup, background: p.background, tone: p.tone }));
+  }
+
   // 稀有晚安 CG 一點即關；其他 CG 維持原本 5 秒自動結束，不攔截點擊。
   cgArt.addEventListener('click', () => {
     if (activeCg === 'rare-goodnight') finishCg();
@@ -290,7 +398,9 @@ if (tab && stage && defaultArt && cgArt && grade && transition && dialogue) {
     // 36370（只保留 36370_1）：傍晚讀書、白鴿停窗台的鋪梗場景；非情緒切換。
     if (/傍晚|暮色|夕陽|日落/.test(text) && /白鴿|鴿子|鳥停在窗台|窗台.{0,8}白鳥/.test(text)) {
       setStoryArt('g43-story-reading.jpg', '傍晚的克勞德與窗台白鴿，為夜間信鳥故事鋪梗', 'evening-reading', 'warm');
-    } else if (timeGroup === 'night' && currentScene !== 'night') {
+    } else if (timeGroup === 'night' && (/雨夜|暴雨|窗外雷雨|窗外雨聲|細雨|淅淅瀝瀝|雨絲|聽著雨聲/.test(text) || stage.dataset.storyWeather === 'rain')) {
+      setStoryArt('g43-story-rainy-night.jpg', '雨夜中的古籍閱覽室，窗外細雨與桌前燭光', 'rainy-night', 'night');
+    } else if (timeGroup === 'night' && currentScene !== 'night' && currentScene !== 'rainy-night') {
       returnToTimeDefault();
     }
 
@@ -328,6 +438,6 @@ if (tab && stage && defaultArt && cgArt && grade && transition && dialogue) {
   }).observe(tab, { attributes: true, attributeOldValue: true, attributeFilter: ['class'] });
   applyEmotionArt();
   inspectDialogue();
-  // 測試與 app.js 的顯示入口；只暴露這兩個唯讀／顯示方法。
-  window.__storyArt = { showRareGoodnight, showBedroomScene, isCgActive: () => !!activeCg };
+  // 測試與 app.js 的顯示入口；只暴露唯讀／顯示方法。
+  window.__storyArt = { showRareGoodnight, showBedroomScene, showRainyNightScene, applyScenePack, listScenePacks, isCgActive: () => !!activeCg };
 }

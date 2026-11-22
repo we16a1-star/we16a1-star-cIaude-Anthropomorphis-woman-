@@ -2439,9 +2439,9 @@ body.is-fullscreen .choices{max-height:30dvh}
    G18.1 舞台已用 overflow:hidden 裁切，加上 layout/paint containment，
          讓立繪待機與對話框更新只重繪舞台內部，不牽動整頁。
    G18.2 立繪待機時，全螢幕覆蓋層（選單／回想／離開／Game Over／對話框）
-         會蓋住人物；暫停待機動畫，避免覆蓋層的 backdrop-filter 每帧重算。
+         會蓋住人物；暫停待機動畫，避免覆蓋層的 backdrop-filter 每幀重算。
    G18.3 對話框與選項按鈕本身已接近不透明，移除 backdrop-filter；這兩層正好
-         疊在會持續移動的立繪上，移除後可明顯減少每帧模糊成本。 */
+         疊在會持續移動的立繪上，移除後可明顯減少每幀模糊成本。 */
 .vn-stage{contain:layout paint}
 @media (prefers-reduced-motion:no-preference){
   #app:has(#gameMenu:not([hidden])) #tab-story:not(.text-only) .story-portrait,
@@ -2687,13 +2687,13 @@ body.is-fullscreen .choices{max-height:30dvh}
 .album-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;padding:8px 0}
 .album-item{position:relative;border:1px solid rgba(226,190,130,.35);border-radius:8px;overflow:hidden;background:rgba(43,26,18,.35);cursor:pointer}
 .album-item img{width:100%;height:120px;object-fit:cover;display:block}
-.album-item .album-title{padding:4px 6px;font-size:12px;color:#f0e2c6;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.album-item .album-title{padding:4px 6px;font-size:calc(12px * var(--story-font-scale,1));color:#f0e2c6;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .album-item.album-locked{cursor:default;opacity:.55}
-.album-item.album-locked .album-lock{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:32px;background:rgba(0,0,0,.35)}
+.album-item.album-locked .album-lock{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:calc(32px * var(--story-font-scale,1));background:rgba(0,0,0,.35)}
 .album-lightbox{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.85)}
 .album-lightbox[hidden]{display:none}
 .album-lightbox img{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px}
-#albumLightboxClose{position:absolute;top:16px;right:16px;font-size:24px;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:50%;width:40px;height:40px;cursor:pointer}
+#albumLightboxClose{position:absolute;top:16px;right:16px;font-size:calc(24px * var(--story-font-scale,1));background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:50%;width:40px;height:40px;cursor:pointer}
 .story-art-grade{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:0;transition:opacity 180ms ease-out}
 .story-art-grade[data-tone="warm"]{background:#b76532;opacity:.10;mix-blend-mode:multiply}
 .story-art-grade[data-tone="night"]{background:radial-gradient(ellipse 42% 55% at 72% 58%,rgba(255,169,94,.24),transparent 100%);opacity:1;mix-blend-mode:screen}
@@ -2875,7 +2875,7 @@ body.is-fullscreen .choices{max-height:30dvh}
 .vn-performance-settings-group h2 {
   font-family: var(--serif);
   color: var(--accent);
-  font-size: 16px;
+  font-size: calc(16px * var(--story-font-scale,1));
   margin: 0 0 12px;
 }
 .vn-line-mode-label, .vn-voice-label {

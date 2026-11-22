@@ -174,3 +174,39 @@ export function collectStoredSlots(storage) {
   out.sort((a, b) => (Number(b.parsed?.updatedAt) || 0) - (Number(a.parsed?.updatedAt) || 0));
   return out;
 }
+
+const SENSITIVE_EXPORT_KEY_RE = /(api[_-]?key|secret|access[_-]?token|refresh[_-]?token|authorization|bearer|password|private[_-]?key)/i;
+
+/**
+ * 借鏡 AnimaVN 備份安全準則（金鑰不入備份）：遞迴淨化匯出物件中的敏感憑證欄位，
+ * 不修改原始物件，確保玩家分享或備份存檔時絕不外洩 API Key。
+ */
+export function sanitizeExportPayload(input) {
+  if (input === null || input === undefined) return input;
+  if (Array.isArray(input)) return input.map(item => sanitizeExportPayload(item));
+  if (typeof input !== 'object') return input;
+  const clean = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (SENSITIVE_EXPORT_KEY_RE.test(key)) continue;
+    clean[key] = sanitizeExportPayload(value);
+  }
+  return clean;
+}
+
+/**
+ * 升級／覆寫前快照守衛（借鏡 AnimaVN startup backup guard）：
+ * 先把既有槽位複製到該格 backup key 並讀回驗證，避免寫入中斷造成存檔損毀。
+ */
+export function snapshotSlotBeforeWrite(storage, id) {
+  if (!storage || !id) return false;
+  try {
+    const existing = storage.getItem(slotKey(id));
+    if (!existing) return false;
+    const parsed = JSON.parse(existing);
+    if (!isSlotPayload(parsed)) return false;
+    writeVerified(storage, slotBackupKey(id), existing, isSlotPayload);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}

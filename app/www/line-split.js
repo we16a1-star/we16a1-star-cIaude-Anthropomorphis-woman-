@@ -12,6 +12,18 @@
  * 4. 括號動作描寫：（……）或 (……) 若前後有台詞，動作描寫或台詞可分開演出。
  */
 
+import { parseVnScript } from './vn-script.js';
+
+/**
+ * 結構化切句入口（串接 AnimaVN 風格 vn-script 解析管線）
+ * 回傳包含 text / speaker / kind / emotion / scene / endOffset 的劇本陣列。
+ * @param {string} text
+ * @param {object} [options]
+ */
+export function splitScriptLines(text, options = {}) {
+  return parseVnScript(text, options).lines;
+}
+
 /**
  * 檢查是否為終止型標點
  */

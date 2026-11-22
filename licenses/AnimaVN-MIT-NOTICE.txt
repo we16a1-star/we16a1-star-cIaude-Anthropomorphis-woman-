@@ -1,0 +1,20 @@
+Architectural Inspiration Attribution — AnimaVN (MIT License)
+
+本專案（《Claude娘的圖書館》）部分前端架構設計概念借鏡自開源專案 AnimaVN：
+- Repository: https://github.com/JayziLi/AnimaVN
+- License: MIT License
+
+借鏡與移植之 AnimaVN（MIT License, Copyright (c) 2026 JayziLi）模組清單：
+1. 視覺小說逐句劇本解析與行內標籤定位（vn-script.js / line-runner.js）
+2. 情緒語意兜底映射與句級微表情觸發（emotion-fallback.js）
+3. 場景包資料驅動登錄與分層綁定模型（scene-packs.js / config/scenePacks.json）
+4. Anthropic Prompt Cache 靜態前綴區塊切分與 Token 預算比例條（llm-client.js / prompt-inspector.js）
+5. 匯出備份敏感金鑰淨化與寫入前快照守衛（save-storage.js）
+6. 串流與整段思考標籤拆分器與思考深度參數轉譯（thinking-splitter.js，移植自 AnimaBackend/app/llm/reasoning.py & thinking.py）
+7. 多聲道音訊總線與現場合成打字音效（audio-bus.js / type-sound.js，移植自 frontend/src/debug/vn/audioBus.ts & typeSound.ts）
+8. 世界書進階正則、選擇性副鍵與遞迴掃描引擎（world-book.js，移植自 frontend/src/debug/lib/worldInfo.ts）
+9. 酒館相容宏展開引擎（macro-engine.js，移植自 frontend/src/debug/lib/macroEngine.ts & macroDefs.ts）
+10. 無閃爍雙層疊圖過場狀態機與對話框快進膠囊（stacked-layers.js / vn-controls.js / story-art.js，移植自 frontend/src/debug/vn/stackedLayers.ts & skipChip.ts）
+
+完整 MIT 授權條文見同目錄之 AnimaVN-MIT-LICENSE.txt。
+聲明：本專案未採用 AnimaVN 之任何角色圖檔或 CC BY-NC-SA 授權之範例素材（deepseek-chan）。

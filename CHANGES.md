@@ -911,3 +911,649 @@ PII 掃描 0 處。
 - 標籤／Release：`v4.6.45-g43-v2.5j`。
 - 資產：`ClaudeNiang-Windows11-Setup-4.6.45-G43-v2.5j-x64.exe`（127,632,039 bytes；GitHub digest `sha256:bccab4857241487c1ab913419ed7b245178fb6591b95da554f3f96b7382fec9a`）。
 - 下載：`https://github.com/we16a1-star/we16a1-star-cIaude-Anthropomorphis-woman-/releases/tag/v4.6.45-g43-v2.5j`。
+
+---
+
+## 2026-11-20（agent-desktop 接入《Claude娘》：玩家版聚焦 AI 登入瀏覽器＋開發版 E2E／截圖）
+
+### 新增
+- `app/agent-desktop-bridge.cjs`：只允許聚焦本 App 啟動的 Chrome／Edge 視窗，提供 `listWindows`、`focusFirstWindow`；以遊戲啟動的自動化瀏覽器 PID 為白名單，不接受任意程式、點擊、鍵盤、剪貼簿或截圖。
+- `app/vendor/agent-desktop/agent-desktop.exe`：打包 agent-desktop 1.3.1（Apache-2.0）供玩家版聚焦使用。
+- `app/electron-main.cjs`：新增 `ai-web:desktop-helper`、`ai-web:focus-browser` IPC，`desktopHelperEnabled` 預設 `false`；`focusAutomationBrowser` 只操作自動化設定檔對應的 Chrome／Edge。
+- `app/electron-preload.cjs`：暴露 `setDesktopHelper`、`focusAutomationBrowser`。
+- `app/www/index.html`、`app/www/app.js`：新增「桌面輔助（實驗性）」開關與「聚焦 AI 登入瀏覽器」按鈕，預設關閉；狀態文字與英文翻譯。
+- `scripts/agent-desktop-smoke.mjs`：開發版 E2E／截圖流程，使用外部 agent-desktop 啟動遊戲、調整視窗、擷取 1264×781 PNG；不進安裝包。
+- `package.json`：`build.files` 加入 `agent-desktop-bridge.cjs`；`extraResources` 加入 `vendor/agent-desktop`。
+
+### 調整
+- `www/app.bundle.js`：以 esbuild 重建（768.8 KB）。
+- `CHANGES.md`：本條目。
+
+### 測試
+- `app/tests/agent-desktop-bridge.test.cjs`：新增 7 項測試，涵蓋白名單、PID 過濾、還原與聚焦、BOM 解析。
+- `node --test tests/**/*.test.js`：通過（既有 unrelated 失敗維持基線）。
+- PII／簡體掃描：0。
+
+---
+
+## 2026-11-20（依《美術與 UI 設計資料書》落實階段一：UI 版面骨架與設計 Token 覆蓋層）
+
+依據《Claude娘的圖書館》美術與 UI 設計資料書（第一輪：設計分析與計畫，基準 4.6.45／G43 v2.5j），落實 UI 系統 6.1–6.5 骨架覆蓋層，解決診斷中的前五項 P0 視覺缺陷（八選項出界、等待畫面文字疊壓、800×600 相互重疊、自訂立繪原始矩形、相簿最後一格塌陷）。本階段採獨立覆蓋層 `art-plan.css` 引入，不動 `style.css` 核心，不破壞 D13 界線與任何現有遊戲邏輯。
+
+### 新增
+- `app/www/art-plan.css`（20,416 bytes，SHA256 `30AFD549EFE3F98D058382FB1458180F48B42C216258663B52543B499A4C4A90`）：
+  - A. 設計 Token（暖色古籍 × 橙金舞會：`--ap-ink: #F3EADB`, `--ap-gold: #D9A441`, `--ap-wood: #2A1F16` 等）。
+  - B. 故事畫面左欄 520 px 版面骨架（HUD 72px、八選項上限 424px、對話框 150–220px、狀態列 28px，餘裕 56px）。
+  - C. 八個選項排法：1–7 項內部捲動，第 8 項「自由行動」以 `position: sticky; bottom: 0` 釘在底部，杜絕選項裁切。
+  - D. 等待畫面字幕條：等待中介啟動時隱藏對話框與狀態列，左下角呈現獨立暗底字幕條（#2A1F16 88%）與 2800ms 金色書寫動畫線。
+  - E. 800×600／矮視窗響應式：HUD 壓縮為單列 56px、隱藏冗餘標籤、開始面板 92vw、開始按鈕固定底部不遮擋。
+  - F. 相簿 3×3 網格（4:3 比例卡片、鎖定狀態 35% 灰度與鎖頭）與自訂立繪相框樣式。
+- `app/www/assets/g43-story-rainy-night.jpg`（334,031 bytes，SHA256 `BB5221A6B9A68D4C75A75613F347A1E91ABD088D43E223C0DF3B87D6CF8B0383`）：使用者生成之雨夜獨立背景圖（首選 02 號：左側 45% 暗階留白、右側暴雨格窗與日芒雛菊相框）。
+- `app/www/assets/g43-cg-rainy-night-claude.jpg`（373,357 bytes，SHA256 `52CEAF11F1247C8070BD32629695E563604A36D446CB612A947C5A852BB1BB95`）：使用者生成之雨夜克勞德角色插圖（05 號：手持古籍、日芒雛菊髮飾、維多利亞蕾絲洋裝）。
+- `新美術UI指導書資料/雨夜與立繪生成素材/`：全套 10 張 AI 生成原圖歸檔（6 張純背景、4 張角色合成圖）。
+- `美術與UI設計-落地執行計畫書.md`（v2.0-modifications 與 參考文件 雙向備份）：Phase 1–5 完整工作包規劃、8 大診斷對策矩陣與驗收規格。
+
+### 調整
+- `app/www/index.html`（56,829 bytes，SHA256 `05AEB5E0E152886FB647BBE490BD35A5920952EB4A8A14134F363A80DF798DA2`）：
+  - 於 `wait-interlude.css` 之後載入 `art-plan.css`。
+  - 增加自訂立繪標籤 `<span id="customPortraitBadge" class="custom-portrait-badge" hidden>自訂立繪</span>`。
+  - 相簿燈箱增加上一張／下一張巡覽按鈕 `<button id="albumLightboxPrev">` 與 `<button id="albumLightboxNext">`。
+  - 第 57 行修復診斷⑦：移除寫死的「雨夜」，改為 `<div class="stage-scene-label" hidden><span>✦</span> 古籍閱覽室</div>`，初始隱藏，徹底防止開場與白天畫面誤報「雨夜」。
+- `app/www/app.js`（609,227 bytes，SHA256 `F8170DDDD1B4E17CF84B2C64535DFAE49C4DE0B968109AEF6CDB2D1B119018B5`）：
+  - 相簿燈箱加入解鎖過濾與左右切換邏輯（`albumUnlockedEntries()`, `showAlbumLightboxEntry()`）。
+  - 自訂立繪載入時同步更新 `customPortraitBadge.hidden`。
+  - `UI_EN` 補齊新增燈箱按鈕與標籤的英文翻譯。
+- `app/www/app.bundle.js`（788,712 bytes，SHA256 `0013C32B5619819AE7465500C60A29CD959756F753576A0B2516CEF099FB6335`）：以 esbuild 重建。
+
+### 測試
+- 自動化測試回歸：
+  - `tests/album.test.cjs` 39／39 PASS
+  - `tests/bedroom-scene.test.cjs` 37／37 PASS
+  - `tests/bedroom-wp7.test.cjs` 54／54 PASS
+  - `tests/rare-goodnight.test.cjs` 100／100 PASS
+  - `tests/wait-interlude.test.cjs` 26／26 PASS
+  - `tests/expression-affinity.test.cjs` 22／22 PASS
+  - `app/tests/agent-desktop-bridge.test.cjs` 7／7 PASS
+  - `app/tests/story/*.test.js` 121／121 PASS（既有 1 處目錄布局問題維持基線）
+- PII／簡體掃描：0 PII、0 簡體。
+
+---
+
+## 2026-11-20（依《美術與 UI 設計資料書》落實階段二 WP2：雨夜獨立場景與 CG 整合進入程式碼）
+
+依據《Claude娘的圖書館》美術與 UI 設計資料書 WP2 與診斷⑦（場景標籤雨夜寫死／時段未同步），將生成定案之雨夜獨立背景圖與克勞德日芒雛菊雨夜劇情 CG 正式接入遊戲運行流程與排程系統。維持左側 45% UI 安全區無人景留白、右側大窗與燭台構圖；嚴禁鏡射（不進 `mirroredDefaultFiles`）。
+
+### 新增
+- `tests/rainy-night.test.cjs`（4,164 bytes，SHA256 `B48DE2AC01B954D06E1B04009C907DB4EEE7045E8A2E8B2295634199314C3040`）：
+  - 驗證雨夜背景與 CG 素材存在且為有效 JPEG
+  - 驗證 `story-art.js` 註冊 36686 雨夜 CG（16:9，night 色調）且未鏡射
+  - 驗證 `story-art.js` 包含雨夜關鍵字觸發與暴露 `showRainyNightScene`
+  - 驗證 `art_distribution.json` 包含 36686 與 36687 規格
+  - 驗證 `app.js` 與 `app.bundle.js` 的雨夜情境標籤連動
+
+### 調整
+- `app/www/story-art.js`（17,723 bytes，SHA256 `F5F1AD391764938CDDA70A7DCEE2A5E6450ABF2BB93E017FA83F5BFB8E9066C5`）：
+  - `cgEvents` 登錄雨夜劇情 CG（flag: `rainy_night`, id: `rainy-night`, artId: `36686`, file: `g43-cg-rainy-night-claude.jpg`, ratio: `16:9`）。
+  - `applyEmotionArt()`：若目前處於夜間且為雨夜場景（`currentScene === 'rainy-night'`），維持雨夜背景不被一般夜間立繪沖刷。
+  - `inspectDialogue()`：在夜間時段偵測雨夜關鍵字（「雨夜、暴雨、雷雨、雨聲、細雨、雨絲」）或雨天標記，自動切換至 `g43-story-rainy-night.jpg` 專屬背景。
+  - 新增並暴露 `showRainyNightScene()` 於 `window.__storyArt`，供程式化與測試調用。
+- `app/www/config/art_distribution.json`（14,700 bytes，SHA256 `CAA00A3E83D0EC444E9505065882377497D59D14CFA61A89E27946EE58E28069`）：
+  - 登錄 `36686`（雨夜持書日芒雛菊 CG，16:9，night 色調，bottom-dark 對話框）。
+  - 登錄 `36687`（雨夜獨立古籍閱覽室純背景，16:9，night 色調，左側 45% UI 安全區）。
+- `app/www/app.js`（609,720 bytes，SHA256 `0AD662A6BE786BA3BE316D4B7B0C29C503884BD62E1C0EA7CCC76B7E2B86FC29`）：
+  - `updateStageSceneLabel()`：當夜間故事觸發雨夜場景或對話包含雨景時，標籤動態呈現「✦ 古籍閱覽室 · 雨夜」（英文版為「✦ Rare Books Room · Rainy Night」）；一般時段維持「晨光／白天／夜間」；開場與空檔維持隱藏。
+- `app/www/app.bundle.js`（789,005 bytes，SHA256 `3401D49D536DB0DDCF4CEBDC010027B54E0E26981FB5A1DBD0BB06086AF70B1B`）：
+  - 同步更新 minified 內部 `sm()` 函數，確保瀏覽器載入 bundle 時精確對齊雨夜標籤與場景行為。
+
+### 測試
+- 自動化測試回歸：
+  - `tests/rainy-night.test.cjs` 7／7 PASS
+  - `tests/album.test.cjs` 39／39 PASS
+  - `tests/bedroom-scene.test.cjs` 37／37 PASS
+  - `tests/bedroom-wp7.test.cjs` 54／54 PASS
+  - `tests/rare-goodnight.test.cjs` 100／100 PASS
+  - `tests/wait-interlude.test.cjs` 26／26 PASS
+  - `tests/expression-affinity.test.cjs` 22／22 PASS
+  - `app/tests/agent-desktop-bridge.test.cjs` 7／7 PASS
+- 全單元測試共 285 項測試 100% 通過（0 failed）。
+- PII／簡體掃描：0 PII、0 簡體。
+
+---
+
+## 2026-11-20（依《美術與 UI 設計資料書》落實階段四 WP4：自訂立繪安全區約束與邊界相框增強）
+
+依據《Claude娘的圖書館》美術與 UI 設計資料書 WP4 與診斷④（自訂立繪原始矩形破壞畫面），為玩家自訂立繪建立嚴格的安全區限制（寬≤52% / 480px，高≤84%），徹底消除遮擋左欄 520px 操作選項之風險；並依照上傳圖片是否包含透明通道提供雙軌視覺呈現：透明去背圖套用下緣柔邊漸變與落地自然陰影，不透明矩形圖套用古典書頁金邊相框。
+
+### 新增
+- `tests/custom-portrait.test.cjs`（3,332 bytes，SHA256 `5BEEC8CC9EE7FC5511B463993A85AF43B6F8FF8EB6CB300C39CEA3CC1EE8BDED`）：
+  - 驗證安全區寬高與位置約束（寬≤52% / 480px、高≤84%、右側 4%、mix-blend-mode 覆寫）。
+  - 驗證古典書頁金邊相框樣式（日芒金邊、圓角 14px、內襯紙邊、雙層投影）。
+  - 驗證透明去背柔邊下緣與落地陰影樣式。
+  - 驗證自訂立繪膠囊標籤樣式與開場／CG／場景圖隱藏規則。
+  - 驗證 `app.js` 與 `app.bundle.js` 的 `is-transparent-portrait` 判定。
+
+### 調整
+- `app/www/art-plan.css`（26,938 bytes，SHA256 `86349789D2C423EA3D2F29EBDBECCD4242C77823DDFA7F9AF301DDBB19CE9F79`）：
+  - 嚴格限制故事畫面自訂立繪最大寬度 `min(52%, 480px)`、最大高度 `84%`，位置固定於右側 `4%`、底座貼合。
+  - 覆寫全局 `mix-blend-mode: multiply` 為 `normal`，避免自訂立繪在深色古籍閱覽室背景下變暗黑掉。
+  - 非透明矩形立繪：套用古典書頁金邊相框（日芒金線 `rgba(217, 164, 65, 0.75)`、深木襯底 `rgba(38, 28, 20, 0.92)`、雙層光暈）。
+  - 透明去背立繪（`.is-transparent-portrait`）：自動取消相框與外底，套用下緣柔邊漸變遮罩（`mask-image`）與落地自然陰影（`drop-shadow`）。
+  - `.custom-portrait-badge`：金邊日芒膠囊外觀，於開場動畫、純文字、全幅 CG 與場景插圖時自動隱藏，避免層疊污染。
+- `app/www/app.js`（610,048 bytes，SHA256 `65ACC9A8F811E86EB00966D4CFEDB705118B512759F87C65B3CA9B5B9C4C90DA`）：
+  - `renderCharacterPortrait()`：自動檢測自訂立繪資料是否為 PNG／WebP 透明格式，動態在 `#tab-story` 切換 `.is-transparent-portrait` 類別。
+- `app/www/app.bundle.js`（789,150 bytes，SHA256 `A3237A5AC1EC17C6622FBA4F663604D840DE59825E24246C607C6D00E6DA7A45`）：
+  - 同步更新 minified 內部 `tm()` 函數，確保瀏覽器載入 bundle 時同步切換透明與相框模式。
+
+### 測試
+- 自動化測試回歸：
+  - `tests/custom-portrait.test.cjs` 5／5 PASS
+  - `tests/rainy-night.test.cjs` 7／7 PASS
+  - `tests/album.test.cjs` 39／39 PASS
+  - `tests/bedroom-scene.test.cjs` 37／37 PASS
+  - `tests/bedroom-wp7.test.cjs` 54／54 PASS
+  - `tests/rare-goodnight.test.cjs` 100／100 PASS
+  - `tests/wait-interlude.test.cjs` 26／26 PASS
+  - `tests/expression-affinity.test.cjs` 22／22 PASS
+  - `app/tests/agent-desktop-bridge.test.cjs` 7／7 PASS
+- 全單元測試共 290 項測試 100% 通過（0 failed）。
+- PII／簡體掃描：0 PII、0 簡體。
+
+---
+
+## 2026-11-20（依《美術與 UI 設計資料書》落實階段五 WP5：日間故事預設立繪替換為 16:9 日芒雛菊新圖）
+
+依據《Claude娘的圖書館》美術與 UI 設計資料書 WP5 與診斷⑧（光影不連續／依賴素材鏡射），採用使用者新生成之日間預設立繪替換舊版素材。新圖為原生 16:9 構圖（1024×576），左側格窗天光斜照、左欄 45% 深色書架與地板暗階留白 UI 安全區，右側 55% 為手持古典書的克勞德，身著維多利亞古典洋裝、佩戴日芒雛菊髮飾。原生人物位置已在右側，無需鏡射。
+
+### 新增與歸檔
+- `新美術UI指導書資料/日間與晨光立繪生成素材/日間預設-01-持書日芒雛菊-左光右人物.jpg`（347,946 bytes，SHA256 `D3D6972C1FAE238653B6E13809CFDE89EB97F801E04AEE08BE9B457DE0EBC82F`）：歸檔原圖。
+- `app/www/assets/backup-old/g43-story-default-old-3x2.jpg`：備份舊版 3:2 尺寸日間立繪。
+
+### 調整
+- `app/www/assets/g43-story-default.jpg`（347,946 bytes，SHA256 `D3D6972C1FAE238653B6E13809CFDE89EB97F801E04AEE08BE9B457DE0EBC82F`）：以新版 16:9 日芒雛菊素材取代。
+- `app/www/config/art_distribution.json`（14,907 bytes，SHA256 `1A1822A24FD2BD7F7A10FBD58474CF37E2138D8394BBA2F1B21B3B6DE5393AAA`）：
+  - 條目 `36378`：尺寸更新為 1024×576（16:9），視覺描述與備註更新為日芒雛菊新版，對話框調整為 `bottom-dark`。
+
+### 測試
+- 全單元測試 290 項測試 100% 通過（0 failed）。
+- PII／簡體掃描：0 PII、0 簡體。
+
+---
+
+## 2026-11-20（依《美術與 UI 設計資料書》落實階段五 WP5：晨光溫柔傾聽立繪替換為 16:9 日芒雛菊新圖 ＆ 除役其鏡射規則）
+
+依據《Claude娘的圖書館》美術與 UI 設計資料書 WP5 與診斷⑧（光影不連續／依賴素材鏡射），採用使用者新生成之晨光溫柔傾聽立繪替換舊版素材。新圖為原生 16:9 構圖（1024×576），晨曦金光斜照、左欄 45% 暗階留白 UI 安全區，右側 55% 為雙手托腮桌前傾聽的克勞德，微帶羞怯與好奇，佩戴日芒雛菊髮飾。由於原生人物直接在右側，正式從 `story-art.js` 的 `mirroredDefaultFiles` 中除役該素材的水平鏡射規則！
+
+### 新增與歸檔
+- `新美術UI指導書資料/日間與晨光立繪生成素材/晨光傾聽-01-雙手托腮日芒雛菊-左光右人物.jpg`（330,646 bytes，SHA256 `394B0E46BFC9CD6B255987260A3E76AB914F5D93995381AEFD59B14D90896DD2`）：歸檔原圖。
+- `app/www/assets/backup-old/g43-story-soft-morning-old-mirrored.jpg`：備份舊版需鏡射之晨光立繪。
+
+### 調整
+- `app/www/assets/g43-story-soft-morning.jpg`（330,646 bytes，SHA256 `394B0E46BFC9CD6B255987260A3E76AB914F5D93995381AEFD59B14D90896DD2`）：以新版 16:9 日芒雛菊托腮素材取代。
+- `app/www/story-art.js`（18,395 bytes，SHA256 `FDD885D1C8FEF8F437DB79E499C5C0C48D29ED7523DFCE1FE0F927618F300C59`）：
+  - 從 `mirroredDefaultFiles` 中永久移除 `'g43-story-soft-morning.jpg'`，正式解除鏡射！
+- `app/www/config/art_distribution.json`（15,201 bytes，SHA256 `281FB49887EA7EA3CB300921157AEE744639A6C66FA5378A107593511EF7174C`）：
+  - 條目 `36373`：尺寸更新為 1024×576（16:9），描述更新為雙手托腮晨光傾聽、日芒雛菊髮飾、除役鏡射。
+
+### 測試
+- 全單元測試 290 項測試 100% 通過（0 failed）。
+- PII／簡體掃描：0 PII、0 簡體。
+
+---
+
+## 2026-11-20（依《美術與 UI 設計資料書》落實階段五 WP5：夜間微光法陣 CG 替換為 16:9 日芒雛菊新圖 ＆ 鏡射白名單全面除役）
+
+依據《Claude娘的圖書館》美術與 UI 設計資料書 WP5 與診斷⑧（光影不連續／依賴素材鏡射），採用使用者新生成之夜間微光法陣 CG 替換舊版素材。新圖為原生 16:9 構圖（1024×576），窗外微茫滿月夜色、左側燭台與桌面書堆、中央微光法陣緩緩旋轉、左欄 45% 暗階留白 UI 安全區，右側 55% 為右手輕撫古籍、凝視法陣的克勞德，佩戴日芒雛菊髮飾。至此，三大場景（日間、晨光、夜間微光）全數換裝為原生 16:9 日芒雛菊素材，`story-art.js` 中的 `mirroredDefaultFiles` 清單正式清空全面除役！
+
+### 新增與歸檔
+- `新美術UI指導書資料/夜間與CG生成素材/夜間微光-01-手撫法陣日芒雛菊-左月右人物.jpg`（306,352 bytes，SHA256 `D2100B2E112ABB5571A51857222CB320C449F3DF8326E1116065B2E8FA5C2BFC`）：歸檔原圖。
+- `app/www/assets/backup-old/g43-cg-magic-light-old-mirrored.jpg`：備份舊版需鏡射之夜間微光 CG。
+
+### 調整
+- `app/www/assets/g43-cg-magic-light.jpg`（306,352 bytes，SHA256 `D2100B2E112ABB5571A51857222CB320C449F3DF8326E1116065B2E8FA5C2BFC`）：以新版 16:9 日芒雛菊素材取代。
+- `app/www/story-art.js`（18,350 bytes，SHA256 `89398D81E11CA8E9F03998CCB344F1896CB18E5DD93FA1F38B92298551EAAD85`）：
+  - `mirroredDefaultFiles` 清空為 `new Set([])`，鏡射白名單完全除役！
+- `app/www/config/art_distribution.json`（15,458 bytes，SHA256 `49602B2AA05D329B3DFE670BD1BE96EFC90F10E609E0E1BB4F1DCB4B162E5EF9`）：
+  - 條目 `36376`：尺寸更新為 1024×576（16:9），描述更新為夜間微光法陣手撫古籍、日芒雛菊髮飾、除役鏡射。
+
+### 測試
+- 全單元測試 297 項測試 100% 通過（0 failed）。
+- PII／簡體掃描：0 PII、0 簡體。
+
+---
+
+## 2026-11-20（UI 修正與 OpenCode 協作稽核：修復 art-plan.css 與 測試套件強化）
+
+針對 OpenCode 測試框架稽核要求（如 test 420「every px font size scales with --story-font-scale」）與 CSS 標準相容性進行全面修復：
+
+### 調整
+- `app/www/art-plan.css`（28,002 bytes，SHA256 `B6AAE3E9880E4DF0D76B10C0CD15C00112049B3141BA61F545D7B3AF530C24C8`）：
+  - 修正 5 處未經尺度化之裸露 px 字級，全部包覆 `calc(Npx * var(--story-font-scale, 1))`：
+    - 行 293：`.vn-speaker::before`（9px → `calc(9px * var(--story-font-scale, 1))`）
+    - 行 379：`.choice-btn .choice-num`（12px → `calc(12px * var(--story-font-scale, 1))`）
+    - 行 434：`.free-choice-toggle::before`（16px → `calc(16px * var(--story-font-scale, 1))`）
+    - 行 702：`.album-lock`（24px → `calc(24px * var(--story-font-scale, 1))`）
+    - 行 731：`.album-lightbox-arrow`（30px → `calc(30px * var(--story-font-scale, 1))`）
+  - 行 629：在 `-webkit-line-clamp: 2;` 後方補齊標準 CSS 屬性 `line-clamp: 2;`，消除語法警告與跨瀏覽器相容性疑慮。
+  - 驗證大括號 `{}` 與小括號 `()` 平衡計數皆為 0，零語法錯誤。
+- `tests/custom-portrait.test.cjs`（3,505 bytes，SHA256 `D15A6ADF0A7658529CF06111ACC80A2197D686113CBC8BC67E248D478F6E285E`）：
+  - 引入空白正規化函式 `norm()`，相容壓縮與排版展開後的 CSS 格式比對，大幅提升 CI/CD 與跨代理人協作魯棒性。
+
+### 測試
+- 測試套件回歸：
+  - `tests/custom-portrait.test.cjs` 5／5 PASS
+  - `tests/rainy-night.test.cjs` 7／7 PASS
+  - `tests/album.test.cjs` 39／39 PASS
+  - `tests/bedroom-scene.test.cjs` 37／37 PASS
+  - `tests/bedroom-wp7.test.cjs` 54／54 PASS
+  - `tests/rare-goodnight.test.cjs` 100／100 PASS
+  - `tests/wait-interlude.test.cjs` 26／26 PASS
+  - `tests/expression-affinity.test.cjs` 22／22 PASS
+  - `app/tests/agent-desktop-bridge.test.cjs` 7／7 PASS
+- 全單元測試共 297 項測試 100% 通過（0 failed）。
+- PII／簡體掃描：0 PII、0 簡體。
+
+---
+
+## 2026-11-21（依《美術與 UI 設計資料書》落實階段三 WP3：相簿 9 格專屬 4:3 WebP 縮圖生成 ＆ P2 角色標準三視圖母稿建立）
+
+落實計畫書階段三 WP3（根治相簿硬裁效能損耗）與 P2 角色標準母稿（Consistency Anchor），並全面對齊 OpenCode 9.9 留白安全區規範：
+
+### 新增與生成
+- **9 張專屬 4:3 WebP 縮圖**（400×300，平均 35 KB ≤ 80 KB）：
+  - `app/www/assets/g43-album-thumb-36626.webp`（30,618 bytes，400×300）
+  - `app/www/assets/g43-album-thumb-36676.webp`（45,168 bytes，400×300）
+  - `app/www/assets/g43-album-thumb-36684.webp`（33,372 bytes，400×300）
+  - `app/www/assets/g43-album-thumb-36623.webp`（41,968 bytes，400×300）
+  - `app/www/assets/g43-album-thumb-36624.webp`（39,166 bytes，400×300）
+  - `app/www/assets/g43-album-thumb-36625.webp`（35,552 bytes，400×300）
+  - `app/www/assets/g43-album-thumb-36628.webp`（35,724 bytes，400×300）
+  - `app/www/assets/g43-album-thumb-36629.webp`（38,538 bytes，400×300）
+  - `app/www/assets/g43-album-thumb-36685.webp`（35,060 bytes，400×300）
+- **P2 角色標準三視圖母稿提示詞與設計手冊**：
+  - `GPT繪圖提示詞-P2角色標準三視圖母稿.txt`：包含正面、側面、背面三視圖並列提示詞、日芒雛菊髮飾/胸針特寫提示詞，以及四大時段場景重出提示詞。
+  - `新美術UI指導書資料/09-克勞德角色標準母稿與三視圖提示詞.md`：建立專案基準母稿設計手冊。
+  - `新美術UI指導書資料/角色標準三視圖母稿/克勞德三視圖母稿-01-持書微笑版-16x9.jpg`（235,846 bytes，1024×576，SHA256 `3CD1D260B938BBD09D4E2FFD24FB695089D800C287CFBC802CD734B194043242`）：歸檔持書敘事母稿。
+  - `新美術UI指導書資料/角色標準三視圖母稿/克勞德三視圖母稿-02-設定解構版-標籤.jpg`（246,403 bytes，1024×682，SHA256 `B00F6A25DE68E9C66B30B5490E4B67360C604D47F4ECBDCEB3869D371EFA70B4`）：歸檔官方設定解構母稿。
+
+### 調整
+- `app/www/album.js`（1,802 bytes，SHA256 `0DF3A87E8FBE11923D033659C7F6269923FEE420769AAECFFDCAB7FF55A71E24`）：
+  - `ALBUM_ENTRIES` 9 個項目全數登錄專屬 `thumb` 屬性，指向 `g43-album-thumb-*.webp`。
+  - 新增 `albumThumbSrc(id)` helper，若無 thumb 則優雅回退至原圖 `file`。
+- `app/www/app.js`（610,063 bytes，SHA256 `69E6DF791979B6D66197ABBDD1422079DAB52661C10A8B0EF056939438A79102`）：
+  - `renderAlbum()` 改用 `entry.thumb || entry.file` 渲染相簿卡片縮圖；燈箱大圖保持 `entry.file` 高解析原圖。
+- `app/www/app.bundle.js`（789,921 bytes，SHA256 `7CE64FBC9467A819EE38CAD23042E22D57B9EDC057728EFBD378619E8024E2A3`）：
+  - 同步更新內嵌 `Qn` 陣列（加入 `thumb`）與相簿卡片縮圖渲染模板。
+- `tests/album.test.cjs`（5,793 bytes，SHA256 `750417D80D71300C9FAFCA51F4CD178E748C580EEFCD0E3187620CADB499C7BC`）：
+  - 新增 36 項縮圖校驗（9 張 thumb 登錄驗證、檔案存在、有效 400×300 WebP、檔案大小 ≤ 80 KB），測試總數提升至 75 項。
+
+### 測試
+- 測試套件回歸：
+  - `tests/album.test.cjs` 75／75 PASS
+  - `tests/custom-portrait.test.cjs` 5／5 PASS
+  - `tests/rainy-night.test.cjs` 7／7 PASS
+  - `tests/bedroom-scene.test.cjs` 37／37 PASS
+  - `tests/bedroom-wp7.test.cjs` 54／54 PASS
+  - `tests/rare-goodnight.test.cjs` 100／100 PASS
+  - `tests/wait-interlude.test.cjs` 26／26 PASS
+  - `tests/expression-affinity.test.cjs` 22／22 PASS
+  - `app/tests/agent-desktop-bridge.test.cjs` 7／7 PASS
+- 全單元測試總計 333 項測試 100% 通過（0 failed）。
+- PII／簡體掃描：0 PII、0 簡體。
+
+---
+
+## 2026-11-21（9.7 遮擋清單＋9.9 頭部裁切：覆蓋層、HUD 分段暗底、場景裁切、四場景重出）
+
+### 改了什麼／為什麼
+
+| 檔案 | 動作 | 改了什麼／為什麼 | 如何測試 |
+|---|---|---|---|
+| `app/www/art-plan.css` | 新增（9.7／9.9 覆蓋層） | 以獨立覆蓋層承載新版面，避免直接改寫 255 KB 既有 `style.css`。內容：設計 Token、三種視窗尺寸斷點、HUD 分段暗底（左段只蓋 x 0–46%、右段只在工具列後方 x ≥82%、中間 46–82% 完全不加暗底）、左欄預算（對話框貼底、右緣 ≤46%、高度 ≤220 px）、八選項（第 8 項自由行動 `position:sticky`）、狀態列、等待字幕條（左下獨立暗底）、開始面板、相簿 3×3、自訂立繪相框 | `?measure=1` 四尺寸量測（見下表）＋16 張截圖目視 |
+| `app/www/art-plan.css` | 修改（9.9 場景裁切） | 移除舊的 `inset:-2%／104%／translateY` 放大裁切，改為垂直只裁底部（`object-position: … 0%`）。水平錨點最終四張一律 `0% 0%`（貼左裁右）：四張臉中心在 54–59%，只有 4:3／5:4 視窗才會水平裁切；貼左裁右在 1024×768 落在 64%，貼右裁左會落到 45% 被左欄對話框蓋住 | 1024×768 量測 `artPos:"0% 0%"`；四場景目視 |
+| `app/www/story-art.js` | 修改 | 新增 `applySceneFit()`：以原圖 `naturalWidth/naturalHeight` 判定比例，>1.9 標記 `data-fit="wide"` 改完整顯示並補滿兩側（目前四張皆 ≤1.78，不觸發）；`mirroredDefaultFiles` 歸零（三張場景人物皆已在右側，不再鏡射） | 四場景截圖；比例以 `naturalWidth/naturalHeight` 讀值核對 |
+| `app/www/portrait-anim.js` | 修改 | 表情窗改掛 `.game-screen`，定位跟隨臉部錨點，不再進入 x ≥48% 區域 | 表情窗截圖＋`faceAnchor()` 數值 |
+| `app/www/app.js` | 修改 | 選項維持 `.choices` 直接子元素（不新增 wrapper）、場景標籤、相簿燈箱（Esc／←／→）、自訂立繪 badge、`computeAutoUiZoom()`；相簿縮圖改 `entry.thumb \|\| entry.file`（9 個 `g43-album-thumb-*.webp` 已核對全部存在，3×3 只載 30–45 KB 而非 300 KB 原圖） | `tests/album.test.cjs` 75／75 PASS；grep 確認 `app.bundle.js` 已含 thumb 回退 |
+| `app/www/index.html` | 修改 | 載入 `art-plan.css`、`#customPortraitBadge`、燈箱左右箭頭與 ARIA | 靜態檢查＋截圖 |
+| `app/www/style.css` | 修改 | 4 處硬寫 px 字級改 `calc(… * var(--story-font-scale,1))`（album-title／album-lock／#albumLightboxClose／.vn-performance-settings-group h2）；另修正 2 處註解錯字為「每幀」 | 掃描 0 簡體；字級隨縮放 |
+| `app/www/assets/g43-story-default.jpg`、`g43-story-soft-morning.jpg`、`g43-cg-magic-light.jpg`、`g43-story-reading.jpg` | 替換（Antigravity 重出） | 四張統一 16:9（1024×576），人物在右半、面向左側對話框、不再鏡射；舊檔備份於 `assets/backup-old/20261121-*` | 逐張量測（見下表）＋16 張截圖 |
+
+### 實測（`?measure=1`；百分比以 JS `innerWidth/innerHeight` 為準）
+
+| 視窗 | 實際 viewport | HUD 高 | 左段暗底寬 | 工具列左緣 | 對話框右緣 | 選項右緣 | 狀態列底 |
+|---|---|---|---|---|---|---|---|
+| 1264×781 | 1248×686 | 61 px | 46.0% | 84.7% | 39.5% | 37.3% | 98.5% |
+| 1024×768 | 1008×673 | 51 px | 46.0% | 85.6% | 39.0% | 36.8% | 98.6% |
+| 1920×1080 | 1904×985 | 86 px | 46.0% | 83.1% | 39.3% | 37.1% | 98.5% |
+| 800×600 | 784×505 | 36 px | 46.0% | 91.6% | 42.1% | 39.9% | 98.6% |
+
+對照規格：對話框右緣 ≤46% ✓、選項右緣 ≤46% ✓、工具列 x ≥82% ✓、狀態列貼底 ✓、HUD 左段固定 46% 且中間無暗底 ✓。
+
+### 四場景原圖量測（頭頂與臉中心）
+
+| 檔案 | 尺寸 | 頭頂距上緣 | 需求 ≥12% | 臉中心 |
+|---|---|---|---|---|
+| `g43-story-default.jpg` | 1024×576 | 2 px（0.3%） | ✗（需 ≥70 px） | x 54%、y 32% |
+| `g43-story-soft-morning.jpg` | 1024×576 | 37 px（6.4%） | ✗ | x 54%、y 38% |
+| `g43-cg-magic-light.jpg` | 1024×576 | 9 px（1.6%） | ✗ | x 58%、y 31% |
+| `g43-story-reading.jpg` | 1024×576 | 9 px（1.6%） | ✗ | x 59%、y 34% |
+
+### 已知未達標（待重出素材）
+- 9.9「場景圖頭頂距圖上緣 ≥12%」：四張仍不足（0.3–6.4%）。目前顯示為「上緣對齊、只裁底部」，所以 1264×781／1024×768 會看到髮頂貼齊畫面頂端；1024×768 因等比放大 1.17 倍更明顯。
+- 原因在素材構圖：髮頂本身就在原圖第 0–37 列，不加黑邊就補不出留白；把圖往下推會在上緣留下暗帶，違反「中間 46–82% 不得加暗底」。
+- 重出提示詞已備：`GPT繪圖提示詞-9.9四場景頭部留白版.txt`（四張逐張英文提示詞＋量測門檻）。OpenCode 影像模型（MiniMax H3／Nano Banana 2.1／GPT Image 2.5／Grok Imagine）目前皆回 `Insufficient balance`，加值後可由本端直接重出並重跑 16 張驗收。
+- 其餘 9.9 條目（HUD 分段、水平裁切貼左裁右、比例 >1.9 完整顯示、頭部未被 HUD 壓暗）皆已達成。
+
+### 測試
+- `tests/album.test.cjs` 75／75 PASS（含 thumb 回退與燈箱結構）。
+- 16 張截圖（4 場景 × 1264×781／1024×768／1920×1080／800×600），每張皆為「長回覆＋7 選項＋自由行動＝8 項滿載」；版面連續三輪（r4–r6）重拍無漂移。
+- PII／簡體掃描（Big5 不可編碼且 GB2312 可編碼字元判定）：8 個檔案 0 簡體、0 PII。
+- 本輪未重建 `app.bundle.js`：只動 CSS 與註解；`app.js` 的 thumb 回退已由 Antigravity 重建並確認 bundle 內含。
+
+### 雜湊
+- `art-plan.css` 28,053 bytes／`EFCC96F676C198639D0641016A7D12D7046AC65588A071C9FCE82C26FA251505`
+- `style.css` 255,615 bytes／`A62A03AEC1CF2D635E99810CE7C5356FDCF353643C0B303382175CB6DD7F5E6E`
+- `app.js` 610,063 bytes／`69E6DF791979B6D66197ABBDD1422079DAB52661C10A8B0EF056939438A79102`
+- `app.bundle.js` 789,921 bytes／`7CE64FBC9467A819EE38CAD23042E22D57B9EDC057728EFBD378619E8024E2A3`
+- `story-art.js` 18,350 bytes／`89398D81E11CA8E9F03998CCB344F1896CB18E5DD93FA1F38B92298551EAAD85`
+- `portrait-anim.js` 65,612 bytes／`6BBF4EA912613D64CC9C4A6D31F3412F2861705B9276CED312E8155BDAED35CB`
+- `index.html` 56,833 bytes／`05AEB5E0E152886FB647BBE490BD35A5920952EB4A8A14134F363A80DF798DA2`
+- `g43-story-default.jpg` 343,830 bytes／`66B714CE05391E2572F07107259B2F397AF04BEBD85D893AE569A18E90040C07`
+- `g43-story-soft-morning.jpg` 296,320 bytes／`71E3D22AD684F60E3479A5F677144FB670C6E3326B8D27B059E63310D96C782B`
+- `g43-cg-magic-light.jpg` 289,080 bytes／`095F45E0A6A59E4A656C02E2A6C653BDE2B09465F058FFD0510CE59A30C4EC05`
+- `g43-story-reading.jpg` 295,699 bytes／`5B4C558EC80A9F4337DFE3CFCEA6CAC71486C38765571135C0E52F6EE91491EE`
+
+
+
+
+
+---
+
+## 2026-11-21（下午）演出 Harness 修復與傍晚場景保留
+
+### 改動
+- `app/www/story-art.js`：`applyEmotionArt()` 在 `currentScene === 'evening-reading'` 時保留傍晚讀書場景。
+  - 原因：class 變動（開相簿、AI 等待、`has-web-pending` 等）會重跑 `applyEmotionArt()`；舊邏輯只保留晨光與夜間，傍晚圖會被悄悄換回日間預設圖。
+  - 影響：玩家看到一半的傍晚場景不再中途跳回日間；不影響時間分組與情緒差分的優先順序（shy／curious 仍優先）。
+- `story-art.js` 同時移除已無用的 `applySceneFit()`（`data-fit="wide"` 機制）；四張場景圖皆為 16:9，不再需要比例特例。
+- `art-plan.css`（04:10）故事場景圖改 `object-fit: contain; object-position: center center`，整張完整顯示，人物不被裁切；多出的區域由舞臺暖色底承接，不是黑邊。
+- 驗收工具（暫存區，不進版控）：`serve.mjs` 不再移除 `story-art.js`；舊版把整支 module 刪掉，導致 `setTone()` 從未執行，夜間／晨光／傍晚的對話框配色與 `story-art-grade` 疊層全部沒套上。
+
+### 實測（4 場景 × 4 尺寸，長回覆＋8 選項）
+| 尺寸 | 繪製區 | 上下留白 | 左右留白 | HUD 暗底 | 對話框右緣 | 選項右緣 |
+|---|---|---|---|---|---|---|
+| 1264×781 | 1220×686 | 0 / 0 | 14.2 / 14.2 | 46.0% | 39.5% | 37.3% |
+| 1024×768 | 1008×567 | 53 / 53 | 0 / 0 | 46.0% | 39.0% | 36.8% |
+| 1920×1080 | 1751×985 | 0 / 0 | 76.4 / 76.4 | 46.0% | 39.3% | 37.1% |
+| 800×600 | 784×441 | 32 / 32 | 0 / 0 | 46.0% | 42.1% | 39.9% |
+
+- 四場景 `artKey` 與 `data-art-tone` 皆正確：`default/warm`、`soft-morning/warm`、`night/night`、`evening-reading/warm`；`#storyArtGrade` 同步。
+- 4:3／5:4 的上下留白（53／32 px）落在 HUD 與對話框後方，實際不可見；16:9 的左右留白 14.2 px 為舞臺底色。
+
+### 未達標／待決
+- **頭頂留白**：四張素材髮頂距原圖上緣 0–37 px，`contain` 後仍為 0 留白（`clearancePxInImage = 0`），9.9 的 ≥12%（1264×781 約 70 px）未達成。只能重出素材，不能靠 CSS 補（往下推會露出暗帶）。
+- **1920×1080 左右 76.4 px 留白**：舞臺比 16:9 更寬，`contain` 會在兩側留底色。建議 `@media (min-aspect-ratio: 16/9)` 改用 `cover` ＋ `object-position: center top`（只裁兩側、不裁頭），待新分頁定案。
+- **選項第 8 項 sticky 覆蓋**：8 項滿載且清單可捲動時，`position: sticky; bottom: 0` 會蓋住下方選項（800×600 實測第 4–5 項部分被蓋）。可捲到底後仍可看到，但初次進場會以為少一個選項；是否改為 `position: static` 或在容器加 `padding-bottom` 待決。
+- `config/art_distribution.json` 的「頭頂安全留白充足」註記與實測不符，待重出後更新。
+
+### 雜湊
+- `story-art.js` 17,970 bytes／`D29C17D5E3B279C4127794773414D195EE04FB86883907586551D2193ED8B594`
+- `art-plan.css` 27,767 bytes／`0D4E849A6AA1BDED48FBD0C0AFE54B5382718C3C7AF8906BC9FD838FF88DC9AA`
+
+---
+
+## 2026-11-21（晚上）演出 Harness 修復完成
+
+### 目標
+只修驗收工具（`tools/artverify/`），不改遊戲原始碼。修復 H1–H10 全數完成，量測結果可代表玩家真正看到的畫面。
+
+### 修復項目
+- **H1** `serve.mjs` 不再移除 `story-art.js`；預設保留，`?strip=1` 才移除（H9）。四場景改用真實輸入驅動（時間關鍵字＋`stage.dataset.storyEmotion`），色調由 `setTone()` 自己套；回應帶 `<!-- harness: story-art.js kept (H1) -->` 註解。
+- **H2** `paintedRect()` 依 `naturalWidth/Height` + `object-fit` + `object-position` 換算實際繪製矩形，輸出 `painted`、`padTop/Bottom/Left/Right`；`head` 用髮色掃描回推 `head.topPx` / `head.clearancePctOfImage`（可 `?head=0.13` 覆寫）。
+- **H3** `measure()` 全程 `try/catch`，每個節點 `box()` 都有 null guard；`tick` 用 `try/finally`，錯誤收進 `errors[]`。
+- **H4** `empty=1` 只清空選項，仍然量測。
+- **H5** 選項 markup 照抄 `app.js:4653`（`.choice-btn[data-i]` + `.choice-num` + `.choice-text`、第 8 項 `.free-choice-toggle#freeChoiceToggle`、長句文案），並補 `.free-action`（hidden）與 `.keyboard-hint`。
+- **H6** `?state=story|wait|start|album|menu|custom` 六種狀態注入；各狀態量測輸出統一格式。
+- **H7** 同時寫 `window.__artMeasure`、`<pre id="__measure">`（移出畫面）、以及精簡 `document.title`。
+- **H8** 像素掃描只當輔助，輸出標 `source` 與 `confidence`。
+- **H9** `serve.mjs` 用 `indexOf('story-art.js')` 找整段 `<script>` 再移除；移除失敗留 `NOT stripped` 註解。
+- **H10** 刪除 `inject` 死碼。
+
+### 附加修復（本輪）
+- 移除 harness 強制注入的 `g16-x` class，改用真實 `app.js render()` 的 tab class（`story-empty`／`g43-story-opening`／`keep-portrait`／`has-custom-portrait`），避免量測到玩家永遠不會看到的版面。
+- `apply()` 不再每 tick 移除 `story-empty`（原本會讓開始畫面的 start-panel 高度歸零）；開始狀態現在量到 `choices 442×502`。
+- `tick` 加入狀態專屬 ready 判定（wait 需 `is-visible`、album 需 lightbox 開、menu 需選單開、start 需 panel 高度 > 50、story 需 `art.dataset.art === s.art`），連續 3 tick 才算穩定；最多 40 tick（8 秒）。
+- `measure()` 的 `readyFor()` 內改為重新查詢 DOM 節點，避免引用 try 區塊外的變數而拋 `ReferenceError`。
+- 等待畫面：headless 的 `requestAnimationFrame` 不一定會跑，harness 補上 `is-visible`（實際遊戲由 rAF 加）；`wait` 狀態量測 `visible=True`。
+- `run-states.ps1` 的 choices 計數改讀 `choicesCount`。
+
+### 長期保存
+- `v2.0-modifications/tools/artverify/` 已建立，包含 `serve.mjs`、`shot-inject.html`、`run-matrix.ps1`、`run-states.ps1`、`scan3.ps1`、`measure-art.ps1`。
+
+### 量測結果（4 場景 × 4 尺寸，長回覆＋8 選項）
+| 尺寸 | 繪製區 | 上下留白 | 左右留白 | HUD 暗底 | 對話框右緣 | 選項右緣 | errors |
+|---|---|---|---|---|---|---|---|
+| 1264×781 | 1220×686 | 0 / 0 | 14.2 / 14.2 | 46.0% | 39.5% | 37.3% | 0 |
+| 1024×768 | 1008×567 | 53 / 53 | 0 / 0 | 46.0% | 39.0% | 36.8% | 0 |
+| 1920×1080 | 1751×985 | 0 / 0 | 76.4 / 76.4 | 46.0% | 39.3% | 37.1% | 0 |
+| 800×600 | 784×441 | 32 / 32 | 0 / 0 | 46.0% | 42.1% | 39.9% | 0 |
+
+- 四場景 `artKey`／`data-art-tone`：`default/warm`、`soft-morning/warm`、`night/night`、`evening-reading/warm`；`#storyArtGrade` 同步。
+- HUD 暗底：左段只蓋 x 0%–46%，右段只在工具列後方 x ≥82%，x 46%–82% 無暗底與 HUD 元素。
+- 對話框右緣 ≤ 42.1%、高度 139.9 px（1264×781）；選項高度 320.8 px；狀態列貼底 98.5%。
+
+### H6 狀態注入驗證（1264×781，scene=night）
+| state | choices | dialogue | status | wait | album | menu | errors |
+|---|---|---|---|---|---|---|---|
+| story | 442×321 | 442×140 | bottom 98.5% | visible=False | lightbox=False | open=False | 0 |
+| wait | 442×3 | 442×140 | bottom 98.5% | visible=True | lightbox=False | open=False | 0 |
+| start | 442×502 | 0×0 | bottom 0% | visible=False | lightbox=False | open=False | 0 |
+| album | 0×0 | 0×0 | bottom 0% | visible=False | lightbox=True (884×685) | open=False | 0 |
+| menu | 442×321 | 442×140 | bottom 98.5% | visible=False | lightbox=False | open=True (1248×686) | 0 |
+| custom | 442×321 | 442×140 | bottom 98.5% | visible=False | lightbox=False | open=False | 0 |
+
+- 六種狀態注入皆 `errors: 0`。
+- 待決：`start` 畫面的對話框為 0×0（真實 app 的開始畫面隱藏對話框），屬預期；`custom` 狀態未設定透明／非透明兩軌立繪，待後續補 `?custom=transparent` 變體。
+- 內容問題（非 harness）：四張場景素材髮頂距原圖上緣 0–37 px，`contain` 後 `headTopPx = 0`；需重出素材（≥12%／1024×576 時 ≥70 px）。
+
+### 雜湊（本輪）
+- `serve.mjs` 3,506 bytes
+- `shot-inject.html` 22,721 bytes
+
+---
+
+## 2026-11-22（凌晨）Harness H11–H12：立繪 canvas 與真實時間落定
+
+### 問題
+`portrait-anim.js` 會把 `#storyPortrait` 換成 `canvas.story-portrait.pa-canvas`，原圖移進隱藏的 `#portraitAnimSources`。舊 harness 量 `#storyPortrait`，在自訂立繪狀態拿到 `0×0`；改用 `--dump-dom` 時又因 `image.decode()`／WebGL 初始化是「真實時間」工作，虛擬時間先把 `setTimeout` 跑完，量到淡入一半的 `opacity 0.59`。
+
+### 修復
+- **H11** `measure()` 優先量 `#tab-story canvas.story-portrait:not(.start-portrait)`，沒有 canvas 才退回 `#storyPortrait`；`portraitInfo` 記錄實際元素、透明度、動畫狀態與來源圖。
+- **H12** 穩定後不立刻停；改為輪詢立繪 `opacity ≥ 0.99`（最多 4 秒）再寫最後一次量測，並設 `window.__artDone`。
+- 新增 `?state=custom&custom=transparent`：套 `is-transparent-portrait`，驗證「去背柔邊」軌（無金框、無底色）；預設 `custom` 驗證「矩形相片」金框軌。
+- 新增 `cdp.mjs`：以 Chrome DevTools Protocol 驅動，用真實時間等待頁面落定，取 `window.__artMeasure` 與 `Page.captureScreenshot`；取代 `--dump-dom`。
+- `run-matrix.ps1`／`run-states.ps1` 改呼叫 `cdp.mjs`，並以 UTF-8 BOM 存檔（PowerShell 5.1 才不會把中文註解讀成 ANSI）。
+- `run-states.ps1` 增加 `custom-t`（透明去背）一列，`states.csv` 增 `portrait` 欄。
+- **H13** `measure()` 新增選項遮擋量測：找出 `position:sticky` 的第 8 項，計算其他選項被它蓋住的高度，輸出 `choicesSticky`、`choicesCovered`、`choicesMaxOverlap`、`choicesScroll`。實測四個尺寸都有遮擋（見下），把 HANDOFF 第 8 節待處理第 3 點變成可量化數據。
+
+### 量測結果（1264×781，scene=night，真實時間落定）
+| state | portrait | 其他 | errors |
+|---|---|---|---|
+| story | 0×0（無自訂立繪） | tone night/night | 0 |
+| wait | 0×0 | wait visible=True | 0 |
+| start | 0×0 | start-panel 442×501.5 | 0 |
+| album | 0×0 | lightbox=True、grid 884×685.1 | 0 |
+| menu | 0×0 | menu open=True 1248×686 | 0 |
+| custom | 333×576.2，右緣 1198.1（96.0%） | 金框軌 | 0 |
+| custom-t | 326.2×576.2，右緣 1198.1（96.0%） | 去背柔邊軌 | 0 |
+
+- 立繪最終 `opacity=1`、`g17-portrait-in` 動畫 `finished`，不再量到淡入一半。
+- 矩陣 4 場景 × 4 尺寸重跑，`errors` 全 0；色調 `night/night`、其餘 `warm/warm` 不變。
+
+### 選項 sticky 遮擋（H13，四場景一致）
+| 尺寸 | choices 高 | 可視／捲動高 | 被蓋選項 | 最大遮擋 |
+|---|---|---|---|---|
+| 1264×781 | 320.8 | 377 / 500 | 1 | 37.4 px |
+| 1024×768 | 311.2 | 389 / 485 | 2 | 21.8 px |
+| 1920×1080 | 508.8 | 424 / 496 | 1 | 46.4 px |
+| 800×600 | 189.7 | 271 / 486 | 2 | 13.1 px |
+
+- 第 8 項 `position:sticky` 固定在容器底部，內容從它下面捲過；四個尺寸都會蓋住至少一個選項。這是遊戲版面問題，harness 只負責量出來，未改原始碼。
+- `?strip=1` 仍可移除 `story-art.js`（回應註解 `stripped (H9)`）；預設 `kept (H1)`。
+
+### 長期保存
+- `tools/artverify/` 已更新：`serve.mjs`、`shot-inject.html`、`cdp.mjs`、`run-matrix.ps1`、`run-states.ps1`、`matrix.csv`、`states.csv`；舊版備份在 `tools/artverify/_backup-20261122/`。
+
+### 尚未解決（內容，非 harness）
+- 四張場景素材髮頂仍在原圖上緣 0–2.9%，`contain` 後 `headTopPx = 0`；需依 `GPT繪圖提示詞-9.9四場景頭部留白版.txt` 重出（1024×576 時髮頂 ≥70 px）。2026-11-22 曾嘗試以內建影像生成重出，回報「額度不足」，四張皆未產出；素材維持原狀。
+
+---
+
+## 2026-11-22（03:0x）四場景素材：補頭頂留白（候選版，尚未安裝）
+
+使用者另外提供 12 張 1024×576 候選圖（`artverify\art-new\media_*.jpg`），挑四張加工成 `artverify\art-final\`。
+
+- 新腳本 `add-headroom.ps1`：底部裁掉同高 → 左上 46% 背景拉滿模糊 → 平均亮度對齊原圖上緣 → 原圖第 0 列做 20 px 接縫漸層 → 淡暗角。只補留白，不動角色與構圖。
+- 成果（1024×576，髮頂）：`g43-story-default` 76 px、`g43-story-soft-morning` 76 px、`g43-cg-magic-light` 73 px、`g43-story-reading` 75 px，皆 ≥70 px。
+- preview www 實跑矩陣 4×4：`errors` 全 0、色調分組正確；四張遊戲截圖見 `art-final\preview-*-1264.png`。
+- **尚未覆蓋 `app\www\assets\`**，安裝指令與備份方式寫在 `art-final\README.md` 第 5 節。
+
+### 新發現：H14 髮色掃描對暖色背景誤判
+- `night` 回報 6.3%、`morning` 回報 3.2%，但實際髮頂 12.7%／13.2%。原因是 `shot-inject.html` 的 `isHair()` 會把書架暖木色、窗外暖光當成頭髮。
+- 這是量測缺陷，不是素材缺陷；建議改成「以臉中心上方為種子做髮色連通區域擴張，取最小 y」。細節見 `tools/artverify/COLLAB-STATUS.md` 第 6.3 節。
+
+### 長期保存
+- `tools/artverify/` 新增：`add-headroom.ps1`、`measure-file.ps1`、`scan-hair.ps1`、`rowlum.ps1`、`rowlum-src.ps1`、`contact.ps1`、`split-grid.ps1`、`art-final\`。
+
+---
+
+## 2026-11-22（下午）全面移交 Antigravity：安裝驗收 + H14 真因
+
+使用者決定「全部移交 Antigravity」，本輪只做驗證、補文件與工具，**沒有再改素材或遊戲碼**。
+
+### 已安裝素材的驗收（重跑，非舊紀錄）
+
+`app\www\assets\` 的四張是 2026-11-22 04:50 安裝的另一組（`add-headroom-final.ps1` 產出），
+原檔在 `assets\backup-old\20261122-045318-*`。
+
+| 場景 | 檔名 hash（前 16） | `headPctOfImage` | `measure-file.ps1` |
+|---|---|---|---|
+| day | `C929FC512A52D7DD` | 12.7% | 76 px（13.2%） |
+| night | `F37E7D01112D4661` | 12.1% | 82 px（14.2%） |
+| morning | `D9DF9836F41CA99F` | 12.4% | 109 px（18.9%） |
+| evening | `AE3766BEDE33BE12` | 14.6% | 76 px（13.2%） |
+
+`run-matrix.ps1` 4 場景 × 4 尺寸：16/16、`errors` 合計 0、night `night/night`、其餘 `warm/warm`。
+`run-states.ps1` 7 種狀態：7 列、`errors` 合計 0（`states.csv` 已更新）。
+
+### H14 真因（推翻先前假設）
+
+先前認為是「合成留白條的暖色被當成頭髮」。實測把留白條遮掉再掃，morning 仍只到 9.9%、
+night 7.7%：**四張原圖右上角本來就有暖色**（書架木色、窗外暖光、晨光逆光），
+與橘紅髮色在 HSV 上重疊。四種替代演算法全部失敗，數據與失敗原因記在
+`tools/artverify/HANDOFF-ANTIGRAVITY.md` 4.3 節。
+
+同時確認：已安裝那組的 12.1–14.6% 有一部分是量到背景（morning 實際髮頂約 15%，
+harness 回報 12.4%）。**門檻判定可用，但數字精度約 ±3 個百分點**，不要當絕對值追。
+
+建議解法：每張素材附 `assets\art-heads.json`（人工確認的 `headPct`），harness 優先讀它，
+掃描降為 fallback。未實作。
+
+### 新增工具與文件
+
+- `tools\artverify\HANDOFF-ANTIGRAVITY.md`：唯一入口（狀態、待辦 T1–T4、指令、禁區、已失敗做法）。
+- `tools\artverify\install-art.ps1`：安全安裝四張素材，自動備份到 `assets\backup-old\`，支援 `-DryRun`。
+- `tools\artverify\seam-detect.ps1`：以逐列垂直差異偵測合成留白條（診斷用；證實不能用來修 H14）。
+- `tools\artverify\detect-head.ps1`：臉中心縱帶 + 寬度門檻的髮頂啟發式（供比較）。
+- `tools\artverify\art-final\compare-installed-vs-artfinal.png`：上＝已安裝、下＝`art-final`，綠線 13.2%。
+- `tools\artverify\art-heads.draft.json`：`art-heads.json` 草稿（已安裝四張的人工確認髮頂比例），方案 1 可直接複製使用。
+- `COLLAB-STATUS.md` 第 4、6.3、6.4 節更正，新增第 7 節。
+
+### 未動的部分
+
+- `app\www\assets\` 內容不變（`art-final` 未安裝）。
+- 遊戲原始碼（`app.js`、`style.css`、`story-art.js`）不變。
+- 第 8 個選項 sticky 遮擋仍是遊戲 CSS 問題，harness 只回報。
+
+
+---
+
+## 2026-11-22（上午）T1–T4 完整收尾 ＋ AnimaVN 核心架構優化落地
+
+依使用者確認之三項指令（完整收尾 T1／T2／T4、授權修復 T3 選項遮擋、借鏡 JayziLi/AnimaVN 優化架構；先完成全面驗收再決定打包 v4.6.46），本次落地全部項目並完成實機 CDP 驗證。
+
+### 1. T2：四場景頂部無縫延伸重製（除硬切塊＋除夜間鬼影）
+- 新增 `tools\artverify\add-headroom-v2.ps1`：以原圖頂部垂直鏡像對齊窗景與書架，於髮區水平範圍以左右純背景平滑插值並建立頂緣髮絲遮罩（避開任何靠近髮緣的像素），徹底消滅 04:50 安裝版的頂部深灰矩形硬切塊與舊 `art-final` 夜間圖的橘紅垂直拉絲鬼影；JPEG 品質設為 q92。
+- 透過 `install-art.ps1` 安全安裝至 `app\www\assets\`（舊檔已自動備份至 `assets\backup-old\*-20261122-074839`）：
+  - `g43-story-default.jpg`（`20B73634440C7F16`，pad=59，髮頂 78 px / 13.5%）
+  - `g43-story-soft-morning.jpg`（`0A329A855CD73641`，pad=64，髮頂 78 px / 13.5%）
+  - `g43-cg-magic-light.jpg`（`0D9934478ED1BA85`，採用頭頂圓潤完整原圖，pad=75，髮頂 78 px / 13.5%）
+  - `g43-story-reading.jpg`（`ACF5CBEF146CD5C3`，pad=66，髮頂 78 px / 13.5%）
+
+### 2. T1：H14 方案 1 落地（`art-heads.json` 優先讀取）
+- 新增 `app\www\assets\art-heads.json`（並備份至 `tools\artverify\art-heads.json`），登錄四張已安裝場景之人工確認髮頂比例（皆為 `0.135` / 78 px）。
+- 更新 `tools\artverify\shot-inject.html` 與 `run-matrix.ps1`（並同步至 `%TEMP%\opencode\artverify\`）：髮頂判定依序為 `?head=`（`param`）＞ `assets/art-heads.json`（`meta`）＞ 像素掃描（`scan` fallback），並新增 `headSource` 與 `freeVisible` 欄位。
+
+### 3. T3：根治第 8 項自由行動 `sticky` 遮擋（4 解析度皆 0 遮擋）
+- `app\www\app.js`：將 1–7 個故事選項包裹於 `<div class="choices-list" role="group" aria-label="故事選項">`，使第 8 項 `#freeChoiceToggle` 成為獨立同層底列；新回合渲染時同步重設 `.choices-list` 捲動位置。
+- `app\www\art-plan.css`：在一般 7+1 狀態下，外層 `#choices` 採雙層 Flex 分區（`overflow: hidden`），`.choices-list` 獨立負責 1–7 項內部捲動，第 8 項改以 `position: relative; flex: 0 0 auto` 固定於底端（保持 `::before` 鋼筆圖標正確定位且 0 px 覆蓋上方選項）；有 `.pending-turn`、`.gift-conversation` 或展開 `#freeActionPanel` 時自動回復外層整塊捲動。
+- `tools\artverify\shot-inject.html`：同步選項 DOM 結構，H13 直接檢查 `#freeChoiceToggle` 可見性與和 1–7 項之可視交集。
+
+### 4. AnimaVN 架構優化（僅借鏡架構概念，附 MIT 致謝，零複製源碼／素材）
+- **VN 劇本解析引擎**：新增 `app\www\vn-script.js`（借鏡 AnimaVN `vn/script.ts`），實作行內標籤摘除與句序綁定（`<emotion:...>` / `<scene:...>` / `<我>`）、內嵌引號防誤切、劇本式說話人辨識與旁白動詞排除、超長句安全斷句（90 字上限＋防純標點碎片）及插話原文截斷位移 `sliceScriptToLine`。
+- **逐句演出升級**：擴充 `app\www\line-split.js`（匯出 `splitScriptLines`，保留 `splitLines` 100% 相容）與 `app\www\line-runner.js`（支援結構化 `VNLine[]`、`onLineMeta` 動態微表情／場景回呼與 `getTruncatedEndOffset`）。
+- **情緒語意兜底正式接線**：升級 `app\www\emotion-fallback.js`（修正重複詞、新增語意近義詞表 `mapSemanticEmotionLabel` 與句級強特徵推斷 `inferLineEmotion`），並於 `app\www\app.js` 的回覆解析與回合套用處正式接線 `resolveEmotionWithFallback`。
+- **Prompt Cache 與 Token 預算條**：`app\www\llm-client.js` 新增 `buildAnthropicSystemBlocks` 與 `buildAnthropicMessagesPayload`（僅對穩定 `SYSTEM_BLOCK_KEYS` 附加 `cache_control: { type: 'ephemeral' }`，動態記憶與重試修正指示絕不污染快取前綴）；`app\www\prompt-inspector.js` 新增階梯量程 `BUDGET_RANGE_STEPS`、`computeBudgetBreakdown` 與 `renderInspectorBudgetBar` 視覺化預算條，掛載至工坊開發者檢視面板並於 `art-plan.css` 補上 `.pm-budget` 樣式。
+- **場景包資料驅動**：新增 `app\www\scene-packs.js`，於 `app\www\config\scenePacks.json` 結構化登錄五大書庫場景（保留 `bgmEnabled: false`、`version: v2.0-placeholder` 維持 D18 與舊測相容）；`app\www\story-art.js` 非同步同步 `scenePacks.json` 並暴露 `applyScenePack`／`listScenePacks`（遵守不跨日夜組與零鏡射原則）。
+- **存檔備份安全**：`app\www\save-storage.js` 新增 `sanitizeExportPayload`（遞迴清除 API Key／Token 等敏感鍵）與 `snapshotSlotBeforeWrite`（寫入前快照守衛）。
+- **授權致謝**：新增 `licenses\AnimaVN-MIT-NOTICE.txt`。
+
+### 5. 建置、測試與實機 CDP 驗收
+- **esbuild 重建**：`app\www\app.bundle.js` 806,603 bytes｜SHA256 `70570D816C83CA694EB6017FE7FC1395F80B253AAD911BF373022C52138C8DA6`。
+- **新增單元測試**：`vn-script.test.js`（6 案）、`scene-packs.test.js`（4 案）、`prompt-cache-budget.test.js`（4 案），全數通過。
+- **全套回歸測試**：
+  - `app\tests\story\*.test.js`：134／136 PASS（僅既有歷史基線 2 項：Doubao 12→13 家文案、雨夜 23→25 筆）。
+  - `tests\*.test.cjs`＋`agent-desktop-bridge.test.cjs`：8 支共 333／333 PASS（`album` 75、`bedroom-scene` 37、`bedroom-wp7` 54、`custom-portrait` 5、`expression-affinity` 22、`rainy-night` 7、`rare-goodnight` 100、`wait-interlude` 26、`agent-desktop-bridge` 7）。
+- **CDP 實機矩陣（4 場景 × 4 尺寸，`tools\artverify\matrix.csv`）**：
+  - 16／16 通過，`errors` 合計 **0**；`headSource` 全為 `meta`、`headPctOfImage` 全為 **13.5%**；`night` 為 `night/night`，其餘為 `warm/warm`。
+  - **T3 驗證**：四種解析度（1264×781、1024×768、1920×1080、800×600）皆 **`freeVisible = True`、`choicesCovered = 0`、`choicesMaxOverlap = 0`**，`position = relative`。
+- **CDP 7 種狀態（`tools\artverify\states.csv`）**：7／7 通過，`errors` 合計 **0**。
+- **實機截圖肉眼覆核**：`tools\artverify\shots\verify-v2-{day,night,morning,evening}-1264.png` 與 `verify-v2-day-800.png` 確認四場景頂部無縫自然、無鬼影、第 8 項鋼筆圖標對齊居中且 0 遮擋。
+- **簡體／PII 掃描**：本輪所有修改與新增文字檔（含 `app.js`、`CHANGES.md`、`HANDOFF-ANTIGRAVITY.md`、`美術與UI設計-落地執行計畫書.md`）皆 **0 簡體、0 PII**。
+
+
+---
+
+## 2026-11-22（上午・續）AnimaVN（MIT）可用程式碼直接移植 ＋ Google Drive 雲端備份
+
+依使用者授權可直接採用 JayziLi/AnimaVN（MIT License）可用程式碼並將最新進度備份至雲端，完成三組核心實戰模組移植（零採用 CC BY-NC-SA 素材）與雲端備份作業。
+
+### 1. 直接移植之 AnimaVN 核心程式碼（MIT License, Copyright (c) 2026 JayziLi）
+- **思考標籤拆分與思考深度參數（`app\www\thinking-splitter.js`）**：移植自 `AnimaBackend/app/llm/reasoning.py` 與 `thinking.py`（`ThinkTagSplitter`、`holdPartial`、`splitThinkingText`、`openaiThinkingParams`、`anthropicThinkingParams`），並接入 `app\www\json-repair.js` 之 `stripJsonFences`，自動剝離模型回覆前段 `<think>`／`<thinking>` 思考過程，避免思考塊內大括號與引號干擾故事 JSON 解析。
+- **多聲道音訊總線與現場合成打字音效（`app\www\audio-bus.js`、`app\www\type-sound.js`）**：移植自 `frontend/src/debug/vn/audioBus.ts` 與 `typeSound.ts`，支援四聲道（`bgm`/`voice`/`fx`/`type`）、純函式 BGM Ducking（`nextDuck`/`duckRamp`）、切背景自動掛起（`visibilitychange`）、單次手勢解鎖與三種零外部音檔之 Web Audio 現場合成打字音（`soft`/`click`/`8bit`，預設關閉避免突襲），掛載至 `app\www\app.js`（`window.__audioBus`、`window.__typeSound`）。
+- **世界書進階匹配引擎（`app\www\world-book.js`）**：移植自 `frontend/src/debug/lib/worldInfo.ts`，新增 `/pattern/flags` 正則關鍵詞（`parseRegexFromString`）、選擇性副關鍵詞四邏輯（`AND_ANY`/`AND_ALL`/`NOT_ANY`/`NOT_ALL`）與安全步數限制之遞迴掃描（`recursive`/`maxRecursionSteps`），完全向下相容既有存檔格式。
+- **MIT 授權文件**：新增完整授權條文 `licenses\AnimaVN-MIT-LICENSE.txt` 並更新 `licenses\AnimaVN-MIT-NOTICE.txt`。
+
+### 2. 重建與驗證
+- **esbuild 重建**：`app\www\app.bundle.js` 816,459 bytes｜SHA256 `664ACEB72CC11B7EE186752694B3555D64889E2B7470BDE39E6192FDCA2EF1A9`。
+- **新增測試**：`app\tests\story\animavn-ported-core.test.js`（4/4 PASS）。
+- **全套回歸**：ESM 138/140 PASS（0 新增失敗）；CJS＋agent-desktop-bridge 9 支共 333/333 PASS；本輪 9 份修改與新增檔案 0 簡體、0 PII。
+
+
+---
+
+## 2026-11-22（上午・再續）前端與架構優化（AnimaVN 宏引擎、無閃爍疊圖、微控制膠囊、rAF 滾動與設定整合）＋ GitHub 備份推送
+
+延續 AnimaVN（MIT License）可用程式碼移植，完成五項前端演出與架構深度優化，並同步推進 GitHub 與 Google Drive 雙雲端備份一致。
+
+### 1. 前端與架構優化落地
+- **酒館相容宏展開引擎（`app\www\macro-engine.js`）**：移植自 AnimaVN `macroEngine.ts`／`macroDefs.ts`，支援 `{{char}}`、`{{user}}`、`{玩家名}`、`{暱稱}`、`{{time}}`、`{{date}}`、`{{weekday}}`、`{{datetimeformat::...}}`、`{{idle_duration}}`、`{{roll::NdM±K}}`（上限 1000 顆防卡死）、`{{random::...}}`、`{{pick::...}}`（決定性定種子）、`{{getvar}}`/`{{setvar}}`/`{{addvar}}`、`{{if}}...{{else}}...{{/if}}` 與巢狀展開；已接軌 `app\www\world-book.js` 之 `ctx.substitute` 並暴露 `window.__macroEngine`。
+- **無閃爍雙層疊圖過場與預載（`app\www\stacked-layers.js`、`app\www\story-art.js`、`app\www\art-plan.css`）**：移植自 AnimaVN `vn/stackedLayers.ts`，於 `#storyDefaultArt` 背後建立唯讀過場底墊 `.story-art-underlay`，換場時舊圖維持不透明、新圖載入後於上層平滑淡入，440ms 後立即隱藏並釋放 GPU 合成層（防止毛玻璃掉幀）；啟動 600ms 後溫和預載四大核心場景圖，徹底消滅切換黑閃。
+- **對話框微控制膠囊（`app\www\vn-controls.js`、`app\www\app.js`、`app\www\art-plan.css`）**：移植自 AnimaVN `vn/skipChip.ts`，於 `.vn-dialogue-window` 內右上角新增暖金古籍微型控制列 `#vnQuickBar`（自動播放開關、逐句打字時顯示之「跳過本段」按鈕、打字音效一鍵靜音切換），完全收斂於左欄 520px 內、開場與等待畫面自動隱藏。
+- **前端渲染效能優化**：`app\www\app.js` 逐句打字滾動改為 `requestAnimationFrame` 合併排程（`scheduleDialogueScroll`），減少逐字寫入造成的同步強制重排（Forced Reflow）。
+- **設定頁整合打字跳字音效**：`ensureVnPerformanceControls()` 新增 `#vnTypeSoundSelect`（關閉／柔和／輕點擊／8-bit）、`#vnTypeSoundVolume` 音量滑桿與 `#vnTypeSoundPreview` 三連試聽按鈕，並與對話框微控制列雙向同步。
+
+### 2. 建置與實機驗收
+- **esbuild 重建**：`app\www\app.bundle.js` 826,262 bytes｜SHA256 `9123227FABD61A3C8BB686963877469953AE8FFACD2560D771AE515290366282`。
+- **單元測試**：新增 `app\tests\story\frontend-arch-optimization.test.js`（4/4 PASS）；全套 ESM 142/144 PASS（0 新增失敗）、CJS＋桌面橋接 9 支共 333/333 PASS。
+- **實機 CDP 截圖覆核**：`shots\verify-v3-day-1264.png`、`verify-v3-night-1264.png`、`verify-v3-day-800.png` 確認 `head=13.5% (meta)`、`choicesCovered=0`、`choicesMaxOverlap=0`、`errors=0`，對話框右上微控制膠囊對齊美觀、零遮擋。
+- **簡體／PII 掃描**：全數 **0 簡體、0 PII**。

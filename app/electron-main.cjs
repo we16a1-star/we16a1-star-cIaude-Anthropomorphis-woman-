@@ -1,7 +1,7 @@
 const { app, BrowserWindow, shell, dialog, ipcMain, safeStorage, clipboard, screen, session, Menu, nativeImage } = require('electron');
 const fs = require('fs');
 const path = require('path');
-const { spawn, execFileSync } = require('child_process');
+const { spawn, execFileSync, execFile } = require('child_process');
 const crypto = require('crypto');
 const net = require('net');
 const { pathToFileURL } = require('url');
@@ -10,6 +10,7 @@ const workshopApply = require('./workshop-apply.cjs');
 const sceneDownload = require('./scene-download.cjs');
 const aiWebFlow = require('./ai-web-flow.cjs');
 const aiConnect = require('./ai-connect-check.cjs');
+const agentDesktopBridge = require('./agent-desktop-bridge.cjs');
 
 // 官網視窗與外部自動化瀏覽器共用的 Chrome 身分。版本要與實際安裝的 Chrome 一致，
 // UA、UA-CH 與 preload 三處必須同步，否則 Google 會把登入頁判成不相容的內嵌瀏覽器。
@@ -488,6 +489,7 @@ function automationProviderPortBase(provider = '') {
 const AUTOMATION_POLL_MS = 1000;
 const AUTOMATION_MAX_MS = 15 * 60 * 1000;
 let webAutoWatch = null;
+let desktopHelperEnabled = false;
 // 外部模式可能同時開著多個同網址分頁（例如舊故事、新臨時對話）。只靠網址每次重找
 // 會在分頁被帶到前景、順序改變時換到另一個分頁，造成模型切在 A 分頁、驗證卻讀 B 分頁。
 // 這裡記住每個 provider 目前使用中的 target id，後續操作優先沿用同一個分頁。
@@ -557,17 +559,10 @@ function automationPortFromRunningChrome(profileDir) {
 }
 // 只找「命令列明確使用這個自動化設定檔」的 Chrome／Edge 程序。重新啟動時只終止這些
 // 程序，絕不會動到使用者平常的瀏覽器。回傳 pid 供 taskkill 使用。
-function automationProcessesForProfile(profileDir) {
+function parseAutomationProcesses(output, profileDir) {
   const wanted = path.resolve(profileDir).toLowerCase().replace(/[\\/]+$/, '');
-  const script = `Get-CimInstance Win32_Process -Filter "Name='chrome.exe' OR Name='msedge.exe'" | ForEach-Object { "$($_.ProcessId)|$($_.CommandLine)" }`;
-  let output = '';
-  try {
-    output = String(execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
-      encoding: 'utf8', timeout: 6000, windowsHide: true, stdio: ['ignore', 'pipe', 'ignore']
-    }));
-  } catch { return []; }
   const processes = [];
-  for (const rawLine of output.split(/\r?\n/)) {
+  for (const rawLine of String(output || '').split(/\r?\n/)) {
     const line = rawLine.replace(/^\uFEFF/, '').trim();
     const divider = line.indexOf('|');
     if (divider < 1) continue;
@@ -580,6 +575,78 @@ function automationProcessesForProfile(profileDir) {
     if (runningDir === wanted) processes.push({pid, commandLine});
   }
   return processes;
+}
+// 只找「命令列明確使用這個自動化設定檔」的 Chrome／Edge 程序。重新啟動時只終止這些
+// 程序，絕不會動到使用者平常的瀏覽器。回傳 pid 供 taskkill 使用。
+function parseAutomationProcesses(output, profileDir) {
+  const wanted = path.resolve(profileDir).toLowerCase().replace(/[\\/]+$/, '');
+  const processes = [];
+  for (const rawLine of String(output || '').split(/\r?\n/)) {
+    const line = rawLine.replace(/^\uFEFF/, '').trim();
+    const divider = line.indexOf('|');
+    if (divider < 1) continue;
+    const pid = Number(line.slice(0, divider));
+    const commandLine = line.slice(divider + 1);
+    if (!Number.isInteger(pid) || pid <= 0) continue;
+    const dirMatch = commandLine.match(/--user-data-dir=(?:"([^"]+)"|(\S+))/i);
+    if (!dirMatch) continue;
+    const runningDir = path.resolve(String(dirMatch[1] || dirMatch[2] || '').replace(/^"+|"+$/g, '')).toLowerCase().replace(/[\\/]+$/, '');
+    if (runningDir === wanted) processes.push({pid, commandLine});
+  }
+  return processes;
+}
+// 只找「命令列明確使用這個自動化設定檔」的 Chrome／Edge 程序。重新啟動時只終止這些
+// 程序，絕不會動到使用者平常的瀏覽器。回傳 pid 供 taskkill 使用。
+function automationProcessesForProfile(profileDir) {
+  const script = `Get-CimInstance Win32_Process -Filter "Name='chrome.exe' OR Name='msedge.exe'" | ForEach-Object { "$($_.ProcessId)|$($_.CommandLine)" }`;
+  try {
+    const output = String(execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
+      encoding: 'utf8', timeout: 6000, windowsHide: true, stdio: ['ignore', 'pipe', 'ignore']
+    }));
+    return parseAutomationProcesses(output, profileDir);
+  } catch { return []; }
+}
+// 非阻塞版本：供「聚焦 AI 登入瀏覽器」使用，避免卡住主程序。
+function automationProcessesForProfileAsync(profileDir) {
+  return new Promise(resolve => {
+    const script = `Get-CimInstance Win32_Process -Filter "Name='chrome.exe' OR Name='msedge.exe'" | ForEach-Object { "$($_.ProcessId)|$($_.CommandLine)" }`;
+    execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
+      encoding: 'utf8', timeout: 6000, windowsHide: true, maxBuffer: 1024 * 1024
+    }, (error, stdout) => {
+      if (error) { resolve([]); return; }
+      resolve(parseAutomationProcesses(stdout, profileDir));
+    });
+  });
+}
+async function focusAutomationBrowser(payload = {}) {
+  if (!desktopHelperEnabled) return {ok: false, error: '桌面輔助尚未開啟。'};
+  const provider = String(payload.provider || 'gemini').toLowerCase();
+  if (!AI_WEBSITE_URLS[provider]) return {ok: false, error: '不支援的 AI 網頁。'};
+  const profileDir = automationBrowserProfileDir(provider);
+  const processes = await automationProcessesForProfileAsync(profileDir);
+  if (!processes.length) return {ok: false, error: '找不到本 App 啟動的 Chrome／Edge；請先按「開啟官網並登入」。'};
+  return agentDesktopBridge.focusFirstWindow(processes.map(item => item.pid));
+}
+// 非阻塞版本：供「聚焦 AI 登入瀏覽器」使用，避免卡住主程序。
+function automationProcessesForProfileAsync(profileDir) {
+  return new Promise(resolve => {
+    const script = `Get-CimInstance Win32_Process -Filter "Name='chrome.exe' OR Name='msedge.exe'" | ForEach-Object { "$($_.ProcessId)|$($_.CommandLine)" }`;
+    execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
+      encoding: 'utf8', timeout: 6000, windowsHide: true, maxBuffer: 1024 * 1024
+    }, (error, stdout) => {
+      if (error) { resolve([]); return; }
+      resolve(parseAutomationProcesses(stdout, profileDir));
+    });
+  });
+}
+async function focusAutomationBrowser(payload = {}) {
+  if (!desktopHelperEnabled) return {ok: false, error: '桌面輔助尚未開啟。'};
+  const provider = String(payload.provider || 'gemini').toLowerCase();
+  if (!AI_WEBSITE_URLS[provider]) return {ok: false, error: '不支援的 AI 網頁。'};
+  const profileDir = automationBrowserProfileDir(provider);
+  const processes = await automationProcessesForProfileAsync(profileDir);
+  if (!processes.length) return {ok: false, error: '找不到本 App 啟動的 Chrome／Edge；請先按「開啟官網並登入」。'};
+  return agentDesktopBridge.focusFirstWindow(processes.map(item => item.pid));
 }
 function canListenOnLocalPort(port) {
   return new Promise(resolve => {
@@ -1908,6 +1975,16 @@ function registerVaultIpc() {
   ipcMain.handle('ai-web:automation-restart', async (event, payload) => {
     assertTrustedRenderer(event);
     return restartAutomationBrowser(payload || {});
+  });
+  // 桌面輔助（玩家版）：只允許聚焦本 App 啟動的 Chrome／Edge，預設關閉。
+  ipcMain.handle('ai-web:desktop-helper', async (event, enabled) => {
+    assertTrustedRenderer(event);
+    desktopHelperEnabled = enabled === true;
+    return {ok: true, enabled: desktopHelperEnabled};
+  });
+  ipcMain.handle('ai-web:focus-browser', async (event, payload) => {
+    assertTrustedRenderer(event);
+    return focusAutomationBrowser(payload || {});
   });
   // 工坊檔案清單：整個專案（排除相依、建置產物、備份與秘密檔）。
   ipcMain.handle('workshop-code:info', async event => {

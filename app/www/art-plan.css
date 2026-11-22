@@ -1,0 +1,1078 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Claude娘的圖書館｜art-plan.css
+   依《美術與 UI 設計資料書》6.1–6.5 的第一階段覆蓋層：
+     A. 設計 Token（暖色古籍 × 橙金舞會）
+     B. 故事畫面左欄 520 px 版面骨架（HUD 72、八選項 394、對話框 150–220、狀態列 28）
+     C. 八選項：1–7 可捲動、第 8 項自由行動釘在底部
+     D. 等待字幕條、開始面板、相簿 3×3、自訂立繪相框
+   只新增本檔，不改 style.css；載入順序在 style.css 與 wait-interlude.css 之後。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* A. 設計 Token */
+  --ap-ink: #F3EADB;
+  --ap-ink-soft: #CDBFA6;
+  --ap-gold: #D9A441;
+  --ap-gold-bright: #E6C77F;
+  --ap-gold-line: rgba(212, 185, 117, .45);
+  --ap-wood: #2A1F16;
+  --ap-wood-deep: #1F1710;
+  --ap-paper: #FBF3E2;
+  --ap-ink-dark: #2B2118;
+
+  /* 1264×781 基準：左欄 520、HUD 72、八項 394、對話框 150–220、狀態列 28。 */
+  --ap-col: clamp(520px, 41vw, 560px);
+  --ap-gutter: clamp(16px, 2.2vw, 28px);
+  --ap-hud-h: 72px;
+  --ap-gap: 12px;
+  --ap-choice-h: 44px;
+  --ap-choice-gap: 6px;
+  --ap-dialog-h: clamp(150px, 24dvh, 220px);
+  --ap-status-h: 28px;
+  --ap-face-size: 68px;
+  --ap-radius: 12px;
+  --ap-radius-panel: 18px;
+  --ap-serif: var(--serif, "Noto Serif TC", serif);
+}
+
+/* 1024×768：左欄 min(46vw − gutter, 480px)、HUD 64、選項 42/4、對話框 150–190。
+   扣掉 gutter 後對話框右緣剛好落在 x 46%，不侵入臉部保護矩形。 */
+@media (min-width:1000px) and (max-width:1199px) {
+  :root {
+    --ap-col: min(calc(46vw - var(--ap-gutter)), 480px);
+    --ap-hud-h: 64px;
+    --ap-choice-h: 42px;
+    --ap-choice-gap: 4px;
+    --ap-dialog-h: clamp(150px, 22dvh, 190px);
+    --ap-status-h: 26px;
+    --ap-face-size: 64px;
+  }
+}
+
+/* 800×600：左欄 min(55vw,440px)、HUD 52 單列、選項 40/4、對話框 120–140。 */
+@media (min-width:760px) and (max-width:999px) {
+  :root {
+    --ap-col: min(55vw, 440px);
+    --ap-gutter: 16px;
+    --ap-hud-h: 52px;
+    --ap-gap: 10px;
+    --ap-choice-h: 40px;
+    --ap-choice-gap: 4px;
+    --ap-dialog-h: clamp(120px, 20dvh, 140px);
+    --ap-status-h: 24px;
+    --ap-face-size: 58px;
+  }
+}
+
+@media (min-width:760px) {
+
+  /* ── B. 版面骨架 ─────────────────────────────────────────────────────── */
+  #app #tab-story .game-screen {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  #app #tab-story .game-hud {
+    height: var(--ap-hud-h);
+    min-height: var(--ap-hud-h);
+    max-height: var(--ap-hud-h);
+    box-sizing: border-box;
+    align-items: flex-start;
+    padding: 8px var(--ap-gutter) 0;
+    background: transparent;
+    border-bottom: 0;
+    box-shadow: none;
+    pointer-events: none;
+  }
+
+  /* 9.9：暗底只留左段 x 0–46%（品牌與標籤）。中間 46–82% 完全透明，
+     不壓暗角色頭頂；右段由 .account-bar 自己的小圓角底提供。 */
+  #app #tab-story .game-hud::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 46%;
+    border-radius: 0 0 16px 0;
+    border-bottom: 1px solid rgba(212, 185, 117, .16);
+    background: linear-gradient(180deg, rgba(18, 12, 8, .94) 0%, rgba(18, 12, 8, .88) 54%, rgba(18, 12, 8, .78) 100%);
+    box-shadow: 0 10px 24px -20px rgba(0, 0, 0, .85);
+    pointer-events: none;
+  }
+
+  #app #tab-story .game-hud-main {
+    position: relative;
+    z-index: 1;
+    gap: 4px;
+    max-width: 46%;
+    overflow: hidden;
+  }
+
+  #app #tab-story .game-hud .account-bar {
+    position: relative;
+    z-index: 1;
+    /* 扣掉右側留白後，左緣剛好落在 x 82%。 */
+    max-width: calc(18vw - var(--ap-gutter));
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-content: flex-start;
+    gap: 4px;
+    padding: 3px 5px;
+    border: 1px solid rgba(212, 185, 117, .20);
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(22, 15, 10, .72), rgba(18, 12, 8, .58));
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .28);
+    backdrop-filter: blur(8px) saturate(1.1);
+    overflow: hidden;
+  }
+
+  /* 9.9：工具列整組收在 x ≥ 82%，不進入中央 46%–82% 的頭部安全帶。
+     AI 選擇鈕獨佔第一列，其餘圖示在第二列；A−／A＋ 在選單內有同一組控制。 */
+  #app #tab-story .game-hud .hud-story-text-size {
+    display: none
+  }
+
+  #app #tab-story .game-hud .account-bar .ai-picker-btn {
+    flex: 0 0 100%;
+    max-width: none;
+    min-width: 0;
+    padding: 5px 8px;
+    font-size: calc(11px * var(--story-font-scale, 1));
+  }
+
+  #app #tab-story .game-hud .brand {
+    font-size: calc(15px * var(--story-font-scale, 1));
+    line-height: 1.35;
+    color: var(--ap-ink);
+  }
+
+  #app #tab-story .game-hud .story-head {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    min-height: 22px;
+    font-size: calc(11.5px * var(--story-font-scale, 1));
+    color: var(--ap-ink-soft);
+  }
+
+  #app #tab-story .game-hud .story-head .scene-heading {
+    flex-wrap: nowrap;
+    align-items: baseline;
+    gap: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  #app #tab-story .game-hud .story-head .scene-heading small,
+  #app #tab-story .game-hud .story-head .scene-heading b {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #app #tab-story .game-hud .story-head .story-clock {
+    font-size: calc(11px * var(--story-font-scale, 1));
+    padding: 2px 8px;
+    white-space: nowrap;
+  }
+
+  /* 好感度預設隱藏；開啟時是第二列右側的 28 px 膠囊，不撐高 HUD。 */
+  #app #tab-story .game-hud .affection-box {
+    position: absolute;
+    top: 44px;
+    right: var(--ap-gutter);
+    height: 28px;
+    padding: 0 10px;
+    font-size: calc(11px * var(--story-font-scale, 1));
+    background: rgba(22, 15, 10, .72);
+    border-color: rgba(212, 185, 117, .32);
+  }
+
+  #app #tab-story .game-hud .affection-box progress {
+    width: 72px;
+    height: 6px
+  }
+
+  #app #tab-story .game-hud .story-local-label {
+    display: none
+  }
+
+  /* 場景標籤移到 HUD 之下、左欄右側的緩衝帶；開始畫面由 JS/CSS 隱藏。 */
+  #app #tab-story .stage-scene-label {
+    top: calc(var(--ap-hud-h) + 10px);
+    left: calc(var(--ap-gutter) + var(--ap-col) + 24px);
+    transform: none;
+    z-index: 3;
+    padding: 6px 12px;
+    border: 1px solid rgba(212, 185, 117, .32);
+    border-radius: 999px;
+    background: rgba(24, 17, 12, .72);
+    color: #E8D9BD;
+    font-size: calc(11px * var(--story-font-scale, 1));
+    letter-spacing: .12em;
+    backdrop-filter: blur(8px) saturate(1.15);
+  }
+
+  #app #tab-story.story-empty .stage-scene-label,
+  #app #tab-story.g43-story-opening .stage-scene-label {
+    display: none
+  }
+
+  /* 左欄：選項在上、對話框在中、狀態列在下，全部對齊 520 px 欄寬。 */
+  #app #tab-story #choices {
+    width: var(--ap-col);
+    margin: calc(var(--ap-hud-h) + var(--ap-gap)) auto var(--ap-gap) var(--ap-gutter);
+    padding: 0;
+    gap: var(--ap-choice-gap);
+    max-height: min(424px, calc(100dvh - var(--ap-hud-h) - var(--ap-gap) - var(--ap-gap) - var(--ap-dialog-h) - 8px - var(--ap-status-h) - var(--ap-gap)));
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(212, 185, 117, .5) transparent;
+  }
+
+  /* T3：一般 7+1 選項狀態採雙層 Flex 分區，1–7 項在 .choices-list 內獨立捲動，
+     第 8 項獨立釘在底部，徹底消除 position:sticky 遮擋上方選項的問題。 */
+  #app #tab-story #choices:has(> .choices-list):not(:has(> .pending-turn)):not(:has(> .gift-conversation)):not(:has(#freeActionPanel:not([hidden]))) {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #app #tab-story #choices>.choices-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ap-choice-gap);
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 2px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(212, 185, 117, .5) transparent;
+  }
+
+  #app #tab-story #choices:has(> .pending-turn)>.choices-list,
+  #app #tab-story #choices:has(> .gift-conversation)>.choices-list,
+  #app #tab-story #choices:has(#freeActionPanel:not([hidden]))>.choices-list {
+    flex: 0 0 auto;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  #app #tab-story #choices::-webkit-scrollbar,
+  #app #tab-story #choices>.choices-list::-webkit-scrollbar {
+    width: 6px
+  }
+
+  #app #tab-story #choices::-webkit-scrollbar-thumb,
+  #app #tab-story #choices>.choices-list::-webkit-scrollbar-thumb {
+    background: rgba(212, 185, 117, .5);
+    border-radius: 6px
+  }
+
+  #app #tab-story #choices::-webkit-scrollbar-track,
+  #app #tab-story #choices>.choices-list::-webkit-scrollbar-track {
+    background: transparent
+  }
+
+  /* 9.7：對話框貼底，選項留在 HUD 之下；中間留白由場景圖承接。 */
+  #app #tab-story:not(.text-only) .vn-dialogue-window {
+    width: var(--ap-col);
+    height: var(--ap-dialog-h);
+    min-height: 120px;
+    max-height: 220px;
+    margin: auto 0 8px var(--ap-gutter);
+    padding: 20px 20px 14px calc(var(--ap-face-size) + 32px);
+    border: 1px solid rgba(212, 185, 117, .5);
+    border-radius: var(--ap-radius-panel);
+    background:
+      radial-gradient(circle at calc(12px + var(--ap-face-size) / 2) calc(12px + var(--ap-face-size) / 2), rgba(217, 164, 65, .16), transparent 68%),
+      linear-gradient(180deg, rgba(42, 31, 22, .95), rgba(30, 21, 14, .97));
+    box-shadow: 0 12px 34px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 236, 200, .08);
+    color: var(--ap-ink);
+  }
+
+  /* 表情窗固定在對話框左上，佔用左側留白；文字起點固定，表情出現時不重排。 */
+  #app #tab-story .pa-face {
+    z-index: 7;
+  }
+
+  #app #tab-story:not(.text-only) .vn-speaker {
+    position: absolute;
+    top: -12px;
+    left: calc(var(--ap-face-size) + 32px);
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 12px 5px;
+    border: 1px solid rgba(212, 185, 117, .55);
+    border-bottom-color: rgba(42, 31, 22, .9);
+    border-radius: 8px 8px 0 0;
+    background: linear-gradient(180deg, #4A3422, #2A1F16);
+    color: var(--ap-gold-bright);
+    font-family: var(--ap-serif);
+    font-size: calc(16px * var(--story-font-scale, 1));
+    font-weight: 600;
+    letter-spacing: .06em;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, .25);
+  }
+
+  #app #tab-story:not(.text-only) .vn-speaker::before {
+    content: "◆";
+    font-size: calc(9px * var(--story-font-scale, 1));
+    color: var(--ap-gold);
+  }
+
+  #app #tab-story:not(.text-only) .speaker-ornament {
+    display: none
+  }
+
+  #app #tab-story:not(.text-only) .vn-dialogue-text {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    padding-right: 4px;
+    font-family: var(--ap-serif);
+    font-size: calc(15px * var(--story-font-scale, 1));
+    line-height: 1.85;
+    color: var(--ap-ink);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(212, 185, 117, .5) transparent;
+  }
+
+  #app #tab-story:not(.text-only) .story-tool-status {
+    width: var(--ap-col);
+    min-height: var(--ap-status-h);
+    max-height: var(--ap-status-h);
+    margin: 0 0 var(--ap-gap) var(--ap-gutter);
+    padding: 0;
+    gap: 0 12px;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    align-items: center;
+    overflow: hidden;
+    color: var(--ap-ink-soft);
+    font-size: calc(11.5px * var(--story-font-scale, 1));
+    text-shadow: 0 1px 4px rgba(0, 0, 0, .55);
+  }
+
+  #app #tab-story .story-tool-status>span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #app #tab-story .story-tool-status:has(.story-notice:not([hidden])) {
+    max-height: none;
+    flex-wrap: wrap;
+    padding: 2px 0;
+    white-space: normal;
+  }
+
+  /* ── C. 八個選項 ─────────────────────────────────────────────────────── */
+  #app #tab-story #choices>.choice-btn,
+  #app #tab-story #choices .choices-list>.choice-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+    width: 100%;
+    min-height: var(--ap-choice-h);
+    height: auto;
+    overflow: visible;
+    padding: 8px 14px 8px 10px;
+    text-align: left;
+    border: 1px solid var(--ap-gold-line);
+    border-radius: var(--ap-radius);
+    background: linear-gradient(180deg, rgba(42, 31, 22, .94), rgba(34, 24, 17, .96));
+    color: var(--ap-ink);
+    font-size: calc(14px * var(--story-font-scale, 1));
+    font-weight: 500;
+    line-height: 1.45;
+    letter-spacing: .01em;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, .28);
+    transition: transform .12s ease, border-color .12s ease, background-color .12s ease;
+  }
+
+  #app #tab-story #choices>.choice-btn[data-i] .choice-num,
+  #app #tab-story #choices .choices-list>.choice-btn[data-i] .choice-num {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, var(--ap-gold-bright), var(--ap-gold));
+    color: #2A1A0E;
+    font-family: var(--sans);
+    font-size: calc(12px * var(--story-font-scale, 1));
+    font-weight: 600;
+    line-height: 1;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35);
+  }
+
+  #app #tab-story #choices>.choice-btn[data-i] .choice-text,
+  #app #tab-story #choices .choices-list>.choice-btn[data-i] .choice-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  #app #tab-story #choices>.choice-btn[data-i]:hover:not(:disabled),
+  #app #tab-story #choices .choices-list>.choice-btn[data-i]:hover:not(:disabled) {
+    transform: translateX(2px);
+    border-color: var(--ap-gold-bright);
+    background: linear-gradient(180deg, rgba(54, 40, 27, .96), rgba(40, 28, 19, .98));
+  }
+
+  #app #tab-story #choices>.choice-btn[data-i]:active:not(:disabled),
+  #app #tab-story #choices .choices-list>.choice-btn[data-i]:active:not(:disabled) {
+    transform: scale(.985);
+    background: linear-gradient(180deg, rgba(30, 22, 15, .98), rgba(24, 17, 12, .99));
+  }
+
+  #app #tab-story #choices>.choice-btn:disabled,
+  #app #tab-story #choices>.choice-btn:disabled:hover,
+  #app #tab-story #choices .choices-list>.choice-btn:disabled,
+  #app #tab-story #choices .choices-list>.choice-btn:disabled:hover {
+    opacity: .5;
+    transform: none;
+    cursor: not-allowed;
+  }
+
+  /* 第 8 項自由行動：搭配 .choices-list 時以獨立 Flex 底列固定，不再以 sticky 覆蓋上方選項。 */
+  #app #tab-story #choices>.free-choice-toggle {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    flex: 0 0 auto;
+    margin-top: 2px;
+    min-height: var(--ap-choice-h);
+    padding: 8px 14px 8px 42px;
+    text-align: left;
+    border: 1px dashed rgba(212, 185, 117, .55);
+    border-radius: var(--ap-radius);
+    background: linear-gradient(180deg, rgba(31, 23, 16, .99), rgba(25, 18, 12, .99));
+    color: var(--ap-gold-bright);
+    font-weight: 600;
+    box-shadow: 0 -16px 18px -16px rgba(0, 0, 0, .95);
+  }
+
+  #app #tab-story #choices:has(> .choices-list)>.free-choice-toggle {
+    position: relative;
+    box-shadow: 0 -8px 14px -10px rgba(0, 0, 0, .75);
+  }
+
+  #app #tab-story #choices>.free-choice-toggle::before {
+    content: "✒";
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ap-gold-bright);
+    font-size: calc(16px * var(--story-font-scale, 1));
+    line-height: 1;
+  }
+
+  #app #tab-story #choices>.free-choice-toggle:hover:not(:disabled) {
+    transform: none;
+    border-color: var(--ap-gold-bright);
+    background: linear-gradient(180deg, rgba(42, 31, 22, .99), rgba(31, 23, 16, .99));
+  }
+
+  #app #tab-story #choices:has(#freeActionPanel:not([hidden]))>.free-choice-toggle {
+    position: relative;
+    box-shadow: none;
+  }
+
+  #app #tab-story .free-action {
+    border: 1px solid var(--ap-gold-line);
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(31, 23, 16, .97), rgba(25, 18, 12, .99));
+    padding: 12px 14px;
+  }
+
+  #app #tab-story .free-action .free-title {
+    color: var(--ap-gold-bright);
+    font-family: var(--ap-serif);
+    font-size: calc(14px * var(--story-font-scale, 1));
+  }
+
+  #app #tab-story .free-action .free-help,
+  #app #tab-story .free-action .input-guide-hint {
+    color: var(--ap-ink-soft);
+    font-size: calc(12px * var(--story-font-scale, 1));
+    line-height: 1.65;
+  }
+
+  #app #tab-story .free-action .input-template {
+    min-height: 32px;
+    padding: 5px 11px;
+    border: 1px solid rgba(212, 185, 117, .42);
+    border-radius: 999px;
+    background: rgba(20, 14, 9, .72);
+    color: var(--ap-ink);
+  }
+
+  #app #tab-story #choices>.keyboard-hint {
+    display: none
+  }
+
+  /* ── D. 開始面板：單一舞臺、左欄全高、開始鈕固定在底部 ──────────────── */
+  #app #tab-story #choices:has(> .start-panel) {
+    width: min(520px, calc(100vw - var(--ap-gutter) * 2));
+    height: calc(100dvh - var(--ap-hud-h) - 24px);
+    max-height: calc(100dvh - var(--ap-hud-h) - 24px);
+    margin: calc(var(--ap-hud-h) + var(--ap-gap)) auto var(--ap-gap) var(--ap-gutter);
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  #app #tab-story.story-empty:has(.start-panel) .vn-dialogue-window,
+  #app #tab-story.story-empty:has(.start-panel) .story-tool-status {
+    display: none
+  }
+
+  #app #tab-story .start-panel {
+    border: 1px solid rgba(212, 185, 117, .34);
+    border-radius: var(--ap-radius-panel);
+    background:
+      radial-gradient(ellipse at 8% 0, rgba(230, 199, 127, .10), transparent 68%),
+      linear-gradient(148deg, rgba(48, 35, 24, .97), rgba(30, 21, 14, .99));
+    box-shadow: 0 22px 56px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 236, 200, .12);
+  }
+
+  #app #tab-story .start-panel .start-panel-scroll {
+    padding: 20px 20px 14px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(212, 185, 117, .5) transparent;
+  }
+
+  #app #tab-story .start-panel .start-panel-footer {
+    padding: 10px 20px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid rgba(212, 185, 117, .28);
+    background: linear-gradient(180deg, rgba(32, 22, 15, .96), rgba(22, 15, 10, .99));
+    box-shadow: 0 -12px 24px rgba(0, 0, 0, .3);
+  }
+
+  #app #tab-story .start-panel #startStoryBtn {
+    min-height: 52px;
+    border-radius: var(--ap-radius);
+    font-size: calc(15px * var(--story-font-scale, 1));
+  }
+
+  /* ── D1. 場景圖：整張完整顯示，人物不被裁切 ───────────────────────────── */
+  /* 四張場景圖都是 16:9。用 cover 時：
+       - 16:9 視窗（1264×781、1920×1080）會裁掉底部 16–86 px（裙襬）；
+       - 4:3／5:4 視窗（1024×768、800×600）會水平裁掉約 16%，
+         把人物右側的長髮直接切掉。
+     改用 contain：整張圖一定完整，多出來的地方由舞臺原本的暖色底補滿，
+     不是黑邊。不做比例判斷、不對個別檔案開特例。 */
+  #app #tab-story .story-default-art {
+    inset: 0 !important;
+    height: 100% !important;
+    transform: none !important;
+    animation: none !important;
+    object-fit: contain !important;
+    object-position: center center !important;
+  }
+
+  /* AI 生成的場景插圖與開場圖維持滿版；只有故事場景圖改成完整顯示。 */
+  #app #tab-story .scene-generated-image,
+  #app #tab-story .start-scene-art {
+    inset: 0 !important;
+    height: 100% !important;
+    transform: none !important;
+    animation: none !important;
+  }
+}
+
+/* ── D2. 等待畫面：只留 HUD 與左下字幕條 ────────────────────────────────── */
+#app #tab-story .vn-dialogue-window,
+#app #tab-story .story-tool-status {
+  transition: opacity .2s ease, visibility .2s ease
+}
+
+#app #tab-story:has(.wait-interlude.is-visible) .vn-dialogue-window,
+#app #tab-story:has(.wait-interlude.is-visible) .story-tool-status {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#app #tab-story:has(.wait-interlude.is-visible) #choices {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#app #tab-story .wait-interlude {
+  align-items: flex-end
+}
+
+#app #tab-story .wait-caption {
+  position: relative;
+  width: var(--ap-col);
+  max-width: calc(100% - var(--ap-gutter) * 2);
+  margin: 0 0 24px var(--ap-gutter);
+  padding: 14px 18px 16px;
+  border: 1px solid rgba(212, 185, 117, .28);
+  border-radius: 16px;
+  background: rgba(42, 31, 22, .88);
+  color: var(--ap-ink);
+  text-shadow: none;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .35);
+  overflow: hidden;
+}
+
+#app #tab-story .wait-caption::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--ap-gold), rgba(217, 164, 65, 0));
+  transform-origin: left;
+  animation: ap-wait-write 2800ms linear infinite;
+}
+
+#app #tab-story .wait-title {
+  margin: 0 0 6px;
+  font-family: var(--ap-serif);
+  font-size: calc(17px * var(--story-font-scale, 1));
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--ap-ink);
+}
+
+#app #tab-story .wait-line {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  margin: 0;
+  font-family: var(--sans);
+  font-size: calc(13.5px * var(--story-font-scale, 1));
+  line-height: 1.7;
+  color: var(--ap-ink-soft);
+}
+
+#app #tab-story .wait-hint {
+  font-size: calc(12px * var(--story-font-scale, 1));
+  color: var(--ap-ink-soft)
+}
+
+@keyframes ap-wait-write {
+  from {
+    transform: scaleX(0)
+  }
+
+  to {
+    transform: scaleX(1)
+  }
+}
+
+/* ── D3. 相簿：固定 3×3、4:3 縮圖、燈箱箭頭 ─────────────────────────────── */
+#app .album-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 10px 0;
+}
+
+#app .album-item {
+  position: relative;
+  aspect-ratio: 4/3;
+  border: 1px solid rgba(212, 185, 117, .35);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(43, 26, 18, .35);
+}
+
+#app .album-item img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+}
+
+#app .album-item .album-title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 20px 8px 7px;
+  background: linear-gradient(0deg, rgba(16, 11, 7, .94), rgba(16, 11, 7, 0));
+  color: var(--ap-ink);
+  font-size: calc(11.5px * var(--story-font-scale, 1));
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#app .album-item.album-locked {
+  opacity: .7;
+  border-style: dashed;
+  background: linear-gradient(160deg, rgba(42, 31, 22, .9), rgba(25, 18, 12, .95));
+}
+
+#app .album-item.album-locked .album-lock {
+  inset: 0 0 28px 0;
+  background: transparent;
+  font-size: calc(24px * var(--story-font-scale, 1));
+  opacity: .55;
+}
+
+#app .album-item.album-locked .album-title {
+  color: var(--ap-ink-soft)
+}
+
+#app .album-lightbox img {
+  max-width: min(86vw, 1100px);
+  max-height: 82vh;
+  border: 1px solid rgba(212, 185, 117, .5);
+  border-radius: 10px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .65);
+}
+
+#app .album-lightbox-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(212, 185, 117, .5);
+  border-radius: 50%;
+  background: rgba(20, 14, 9, .72);
+  color: var(--ap-ink);
+  font-size: calc(30px * var(--story-font-scale, 1));
+  line-height: 1;
+  cursor: pointer;
+  transform: translateY(-50%);
+  backdrop-filter: blur(6px);
+}
+
+#app .album-lightbox-arrow.prev {
+  left: 16px
+}
+
+#app .album-lightbox-arrow.next {
+  right: 16px
+}
+
+#app .album-lightbox-arrow:hover:not(:disabled) {
+  border-color: var(--ap-gold-bright);
+  background: rgba(42, 31, 22, .86)
+}
+
+#app .album-lightbox-arrow:disabled {
+  opacity: .25;
+  cursor: default
+}
+
+#app #albumLightboxClose:hover {
+  border-color: var(--ap-gold-bright);
+  background: rgba(42, 31, 22, .86)
+}
+
+/* ── D4. 自訂立繪：安全區約束（寬≤52%／高≤84%）、書頁金邊相框 vs 去背柔邊 ── */
+#app #tab-story.has-custom-portrait:not(.story-empty):not(.g43-story-opening) .story-portrait {
+  right: 4%;
+  bottom: 0;
+  max-width: min(52%, 480px);
+  max-height: 84%;
+  height: auto;
+  width: auto;
+  object-fit: contain;
+  object-position: bottom center;
+  mix-blend-mode: normal !important;
+  z-index: 2;
+  transition: transform .28s ease, box-shadow .28s ease;
+}
+
+/* 預設（無透明通道／矩形相片）：古典書頁金邊相框 */
+#app #tab-story.has-custom-portrait:not(.story-empty):not(.g43-story-opening):not(.is-transparent-portrait) .story-portrait {
+  -webkit-mask-image: none;
+  mask-image: none;
+  border: 1px solid rgba(217, 164, 65, .75);
+  border-radius: 14px;
+  padding: 8px;
+  background: linear-gradient(160deg, rgba(38, 28, 20, .92), rgba(20, 15, 11, .96));
+  box-shadow: 0 20px 48px rgba(0, 0, 0, .65), 0 0 0 1px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(217, 164, 65, .22);
+}
+
+/* 具備透明通道（去背立繪）：下緣柔邊遮罩＋落地自然陰影 */
+#app #tab-story.has-custom-portrait:not(.story-empty):not(.g43-story-opening).is-transparent-portrait .story-portrait {
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 80%, transparent 98%);
+  mask-image: linear-gradient(to bottom, #000 80%, transparent 98%);
+  filter: drop-shadow(0 14px 28px rgba(0, 0, 0, .58));
+}
+
+#app #tab-story .custom-portrait-badge {
+  position: absolute;
+  right: 4%;
+  bottom: 12px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border: 1px solid rgba(217, 164, 65, .6);
+  border-radius: 999px;
+  background: rgba(26, 19, 14, .88);
+  color: var(--ap-gold-bright);
+  font-size: calc(11px * var(--story-font-scale, 1));
+  letter-spacing: .08em;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .45);
+}
+
+#app #tab-story .custom-portrait-badge[hidden] {
+  display: none
+}
+
+#app #tab-story.story-empty .custom-portrait-badge,
+#app #tab-story.g43-story-opening .custom-portrait-badge,
+#app #tab-story.text-only .custom-portrait-badge,
+#app #tab-story.has-scene-image:not(.keep-portrait) .custom-portrait-badge,
+#app #tab-story.has-bundled-cg .custom-portrait-badge {
+  display: none !important
+}
+
+/* 1200–1239：左欄變寬後場景標籤會碰到臉部保護矩形，直接隱藏。 */
+@media (min-width:760px) and (max-width:1239px) {
+  #app #tab-story .stage-scene-label {
+    display: none
+  }
+}
+
+/* ── E. 800×600／矮視窗：HUD 單列、場景標籤隱藏、開始面板 92vw ─────────── */
+@media (min-width:760px) and (max-width:980px),
+(min-width:760px) and (max-height:650px) {
+  #app #tab-story {
+    --ap-hud-h: 52px;
+    --ap-gutter: 16px;
+    --ap-col: min(55vw, 440px);
+  }
+
+  #app #tab-story .game-hud {
+    height: 52px;
+    min-height: 52px;
+    max-height: 52px;
+    padding: 6px 16px 0;
+  }
+
+  #app #tab-story .game-hud .story-head,
+  #app #tab-story .game-hud .story-local-label,
+  #app #tab-story .game-hud .hud-story-text-size,
+  #app #tab-story .game-hud .affection-box,
+  #app #tab-story .stage-scene-label {
+    display: none
+  }
+
+  #app #tab-story .game-hud .brand {
+    font-size: calc(14px * var(--story-font-scale, 1))
+  }
+
+  /* 9.9：800×600 的工具列也只留 ☰ 與全視窗，整組維持在 x ≥ 82%；
+     AI 選擇、存檔、暫停都在選單內，不在 HUD 佔寬。 */
+  #app #tab-story .game-hud .account-bar {
+    max-width: calc(18vw - var(--ap-gutter));
+    flex-wrap: nowrap;
+    gap: 3px;
+    padding: 2px 4px;
+  }
+
+  #app #tab-story .game-hud .account-bar .ai-picker-btn {
+    display: none
+  }
+
+  #app #tab-story .game-hud .account-bar button {
+    padding: 5px 7px
+  }
+
+  #app #tab-story #choices:has(> .start-panel) {
+    width: min(92vw, 520px);
+    height: calc(100dvh - var(--ap-hud-h) - 24px);
+    max-height: calc(100dvh - var(--ap-hud-h) - 24px);
+    margin: calc(var(--ap-hud-h) + var(--ap-gap)) auto var(--ap-gap);
+  }
+
+  #app #tab-story.story-empty:has(.start-panel) .vn-dialogue-window,
+  #app #tab-story.story-empty:has(.start-panel) .story-tool-status {
+    display: none
+  }
+
+  #app #tab-story.story-empty .start-character-art {
+    right: -4%;
+    left: auto;
+    height: 76%;
+    max-width: 58%;
+    opacity: .4;
+    z-index: 0;
+  }
+
+  #app #tab-story.story-empty .vn-stage::after {
+    opacity: .35
+  }
+}
+
+/* ── F. 減少動態 ────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion:reduce) {
+
+  #app #tab-story #choices>.choice-btn,
+  #app #tab-story #choices .choices-list>.choice-btn,
+  #app #tab-story .vn-dialogue-window,
+  #app #tab-story .story-tool-status {
+    transition: none
+  }
+
+  #app #tab-story .wait-caption::before {
+    animation: none
+  }
+}
+
+/* ── G. 開發者提示詞檢視：AnimaVN 風格 Token 預算比例條 ────────────────── */
+.pm-budget {
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(212, 185, 117, .35);
+  border-radius: 10px;
+  background: rgba(31, 23, 16, .65);
+}
+
+.pm-budget-track {
+  display: flex;
+  height: 10px;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 240, 210, .12);
+}
+
+.pm-budget-seg.is-static {
+  background: linear-gradient(90deg, #D9A441, #E9C168);
+}
+
+.pm-budget-seg.is-dynamic {
+  background: linear-gradient(90deg, #6EA8D6, #90C3EB);
+}
+
+.pm-budget-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ap-ink-soft, #D8CBB8);
+}
+
+/* ── H. AnimaVN 雙層無閃爍疊圖底墊與對話框微控制膠囊 ────────────────────── */
+#app #tab-story .story-art-underlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center center;
+  pointer-events: none;
+  z-index: 0;
+}
+
+#app #tab-story .vn-quick-bar {
+  position: absolute;
+  top: -12px;
+  right: 14px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+#app #tab-story .vn-quick-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 23px;
+  padding: 0 9px;
+  border: 1px solid rgba(212, 185, 117, .42);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(46, 33, 23, .95), rgba(28, 20, 14, .97));
+  color: var(--ap-ink-soft, #D8CBB8);
+  font-size: calc(11px * var(--story-font-scale, 1));
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: .02em;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+  transition: border-color .14s ease, color .14s ease, background-color .14s ease;
+}
+
+#app #tab-story .vn-quick-btn:hover {
+  border-color: var(--ap-gold-bright, #E9C168);
+  color: var(--ap-ink, #F3EADB);
+}
+
+#app #tab-story .vn-quick-btn.is-active {
+  border-color: rgba(233, 193, 104, .75);
+  color: var(--ap-gold-bright, #E9C168);
+  background: linear-gradient(180deg, rgba(64, 46, 28, .96), rgba(38, 27, 17, .98));
+}
+
+#app #tab-story .vn-quick-btn.is-skip {
+  border-color: rgba(233, 193, 104, .85);
+  color: #2A1A0E;
+  background: linear-gradient(180deg, #E9C168, #D9A441);
+  font-weight: 600;
+}
+
+#app #tab-story .vn-quick-btn[hidden] {
+  display: none !important;
+}
+
+#app #tab-story.story-empty .vn-quick-bar,
+#app #tab-story.g43-story-opening .vn-quick-bar,
+#app #tab-story:has(.wait-interlude.is-visible) .vn-quick-bar {
+  display: none;
+}
+
+.vn-typesound-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-top: 8px;
+}
+
+.vn-typesound-preview {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(212, 185, 117, .5);
+  background: rgba(46, 33, 23, .9);
+  color: var(--ap-gold-bright, #E9C168);
+  font-size: 12px;
+  cursor: pointer;
+}
+

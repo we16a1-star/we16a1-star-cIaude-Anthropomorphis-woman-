@@ -1,0 +1,121 @@
+{
+  "name": "claude-novel-windows11",
+  "version": "4.6.45",
+  "author": "Claude 娘 Project Contributors",
+  "private": false,
+  "type": "module",
+  "scripts": {
+    "build:web": "esbuild www/app.js --bundle --minify --format=esm --target=es2022 --outfile=www/app.bundle.js",
+    "audit:buttons": "node scripts/audit-buttons.cjs",
+    "audit:server": "node scripts/audit-server.cjs",
+    "audit": "npm run audit:buttons && npm run audit:server",
+    "prestart": "npm run build:web",
+    "start": "electron .",
+    "test": "node --test tests/**/*.test.js",
+    "web-ai-roundtrip-test": "node scripts/web-ai-roundtrip-test.mjs",
+    "gemini:web-roundtrip-test": "node scripts/web-ai-roundtrip-test.mjs gemini",
+    "api:smoke-test": "node scripts/api-smoke-test.mjs",
+    "api:measure-tokens": "node scripts/measure-api-tokens.mjs",
+    "web:smoke-test": "node scripts/web-smoke-test.mjs",
+    "dist": "npm run build:web && electron-builder --win nsis",
+    "dist:safe": "npm run build:web && node scripts/build-installer.cjs",
+    "android:sync": "npm run build:web && cap sync android && capacitor-assets generate --android --iconBackgroundColor '#F5EFE3' --splashBackgroundColor '#F5EFE3'",
+    "android:debug": "node scripts/ensure-android-platform.mjs && npm run android:sync && node scripts/build-android-debug.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.60.0",
+    "@capacitor/browser": "^8.0.0",
+    "@capacitor/clipboard": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@google/genai": "^1.52.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  },
+  "license": "MIT",
+  "description": "Claude娘的圖書館 - Windows 11 電腦版",
+  "devDependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.0.0",
+    "electron": "^44.5.1",
+    "electron-builder": "^26.17.0",
+    "esbuild": "^0.25.12"
+  },
+  "main": "electron-main.cjs",
+  "build": {
+    "appId": "com.claude.novel.windows11",
+    "productName": "Claude娘 - Windows 11 電腦版",
+    "compression": "maximum",
+    "electronLanguages": [
+      "zh-TW",
+      "en-US"
+    ],
+    "artifactName": "Claude娘 - Windows 11 電腦版-Setup-${version}-${arch}.${ext}",
+    "files": [
+      "www/**/*",
+      "!www/www/**",
+      "!www/**/*.map",
+      "server/**/*",
+      "!server/server/**",
+      "!server/.env",
+      "!server/node_modules/**",
+      "electron-main.cjs",
+      "electron-preload.cjs",
+      "agent-desktop-bridge.cjs",
+      "ai-web-preload.cjs",
+      "ai-web-flow.cjs",
+      "ai-connect-check.cjs",
+      "source-patch-zip.cjs",
+      "workshop-apply.cjs",
+      "scene-download.cjs",
+      "assets/icon.ico",
+      "source-root.json",
+      "LICENSE",
+      "licenses/claude-desktop-splash-MIT.txt",
+      "licenses/claude-desktop-splash-asset-notice.txt",
+      "licenses/agent-desktop-Apache-2.0.txt",
+      "licenses/agent-desktop-NOTICE.txt",
+      "package.json",
+      "!node_modules/**/*.map",
+      "!node_modules/**/*.d.ts",
+      "!node_modules/**/*.d.mts",
+      "!node_modules/**/*.d.cts",
+      "!node_modules/**/*.ts",
+      "!node_modules/**/*.md",
+      "!node_modules/**/*.markdown"
+    ],
+    "afterPack": "scripts/prune-pack.cjs",
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        "nsis"
+      ]
+    },
+    "extraResources": [
+      {
+        "from": "assets/icon.ico",
+        "to": "icon.ico"
+      },
+      {
+        "from": "vendor/agent-desktop",
+        "to": "agent-desktop"
+      }
+    ],
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Claude娘 - Windows 11 電腦版",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "directories": {
+      "output": "dist-out"
+    }
+  }
+}

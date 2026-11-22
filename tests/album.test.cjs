@@ -63,6 +63,22 @@ for (const f of ['g43-cg-goodnight-reading.jpg', 'g43-cg-goodnight-nightgown.jpg
   ok(fs.existsSync(path.join(assetsDir, f)), `${f} 存在（既有 CG）`);
 }
 
+// WP3: 驗證 9 張專屬 400×300 4:3 WebP 縮圖
+for (const entry of albumMod.ALBUM_ENTRIES) {
+  const thumbFile = entry.thumb;
+  ok(!!thumbFile, `ID ${entry.id} 有登錄 thumb`);
+  if (thumbFile) {
+    const thumbPath = path.join(assetsDir, thumbFile);
+    ok(fs.existsSync(thumbPath), `${thumbFile} 縮圖存在`);
+    if (fs.existsSync(thumbPath)) {
+      const buf = fs.readFileSync(thumbPath);
+      const size = webpSize(buf);
+      ok(!!size && size.width === 400 && size.height === 300, `${thumbFile} 為有效 400×300 WebP`);
+      ok(buf.length <= 80 * 1024, `${thumbFile} 大小 ${buf.length} bytes ≤ 80 KB`);
+    }
+  }
+}
+
 const appSource = fs.readFileSync(appPath, 'utf8');
 ok(appSource.includes("import { ALBUM_ENTRIES, ALBUM_FREE_IDS, albumEntry, isAlbumUnlocked, albumImageSrc } from './album.js';"), 'app.js 匯入 album');
 ok(appSource.includes("albumUnlocked: ['36626', '36676', '36684', '36623', '36624', '36625']"), 'fresh() 預設解鎖免費圖');

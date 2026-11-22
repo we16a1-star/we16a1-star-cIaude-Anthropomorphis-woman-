@@ -1,0 +1,646 @@
+<script>
+// 驗收注入：把畫面強制切到指定狀態（state），可指定場景（scene）並輸出量測。
+// 只存在於暫存伺服器回傳的頁面，不會寫入專案。
+//
+// 2026-11-21 修復（HANDOFF-演出Harness修復.md）：
+//  H1  保留 story-art.js，四場景用「真實輸入」驅動（時間關鍵字＋stage.dataset.storyEmotion），
+//      色調由 setTone() 自己套；只有 story-art.js 不在時才退回直接換圖。
+//  H2  object-fit: contain 時元素盒 ≠ 畫出來的圖：用自然比例換算 painted 矩形與四邊留白，
+//      再用髮色掃描回推「頭頂離畫面頂端幾 px」。
+//  H3  measure() 全程 try/catch，每個節點都有 null guard，tick 用 try/finally。
+//  H4  empty=1 只清空選項，仍然量測。
+//  H5  選項 markup 照抄 app.js 真實輸出（choice-btn／choice-num／choice-text／free-choice-toggle）。
+//  H6  ?state=story|wait|start|album|menu|custom。
+//  H7  同時寫 window.__artMeasure、#__measure 節點、document.title。
+//  H8  像素掃描只當輔助（標明 source 與 confidence）。
+(() => {
+  const q = new URLSearchParams(location.search);
+
+  const sceneKey = q.get('scene') || (q.get('state') === 'wait' ? 'night' : 'day');
+  const stateKey = q.get('state') || 'story';
+  const empty = q.get('empty') === '1';
+  const wantMeasure = q.get('measure') === '1';
+  const wantDebug = q.get('debug') === '1';
+  const headOverride = q.has('head') ? Number(q.get('head')) : null;
+  let artHeadsMap = null;
+  let artHeadsLoaded = false;
+  fetch('assets/art-heads.json', { cache: 'no-store' })
+    .then(r => (r.ok ? r.json() : null))
+    .then(data => { if (data && typeof data === 'object') artHeadsMap = data; })
+    .catch(() => {})
+    .finally(() => { artHeadsLoaded = true; });
+
+  // 文字刻意寫長（3 句），用來壓對話框高度；關鍵字則決定 story-art.js 的時間分組。
+  const SCENES = {
+    day: {
+      file: 'g43-story-default.jpg', art: 'default', tone: 'warm', emotion: 'neutral',
+      text: '午後的陽光穿過高窗，落在她翻開的書頁上。她把書籤夾進那一頁，抬起眼，像是在等你先把剛才沒說完的話說完。'
+    },
+    night: {
+      file: 'g43-cg-magic-light.jpg', art: 'night', tone: 'night', emotion: 'neutral',
+      text: '夜晚的燭光在書庫深處搖曳，月光沿著彩窗的縫隙滑下來。她托著一團微光，安靜地看著你，等你的下一句話。'
+    },
+    morning: {
+      file: 'g43-story-soft-morning.jpg', art: 'soft-morning', tone: 'warm', emotion: 'shy',
+      text: '清晨的光沿著書脊慢慢滑下來，把她的側臉照得很淡。她微微側過頭，像是被你發現了什麼，又把目光收回書頁。'
+    },
+    evening: {
+      file: 'g43-story-reading.jpg', art: 'evening-reading', tone: 'warm', emotion: 'neutral',
+      text: '傍晚的暮色漫進閱覽室，一隻白鴿停在窗台。她合上書，順著你的視線望向窗外，指尖還停在燙金的書脊上。'
+    }
+  };
+  const s = SCENES[sceneKey] || SCENES.day;
+
+  const errors = [];
+  const note = e => { if (errors.length < 12) errors.push(String((e && e.stack) || (e && e.message) || e)); };
+  const r1 = n => Math.round(n * 10) / 10;
+  const pct = (v, base) => (base ? Math.round((v / base) * 1000) / 10 : null);
+  const zoom = () => { try { return parseFloat(getComputedStyle(document.body).zoom) || 1; } catch (_) { return 1; } };
+
+  const CHOICE_TEXT = n =>
+    `走過去翻開第 ${n} 本書，問她這一頁為什麼被反覆讀過，又為什麼總是停在同一個句子`;
+
+  function applyTabClasses(tab) {
+    // 模擬真實 app.js render() 的 tab class（不引入玩家永遠不會看到的 g16-x）。
+    tab.classList.toggle('story-empty', stateKey === 'start');
+    tab.classList.toggle('g43-story-opening', stateKey === 'start');
+    tab.classList.toggle('keep-portrait', true);
+    tab.classList.toggle('has-custom-portrait', stateKey === 'custom');
+    tab.classList.toggle('is-transparent-portrait', stateKey === 'custom' && q.get('custom') === 'transparent');
+    ['text-only', 'has-scene-image', 'has-bundled-cg', 'has-portrait-cg',
+      'has-web-pending', 'story-ending', 'g16-x'].forEach(c => tab.classList.remove(c));
+  }
+  function cleanupClasses(tab) { applyTabClasses(tab); }
+
+  // 走真實路徑：時間關鍵字讓 story-art.js 的 updateTimeGroup() 生效；
+  // shy 讓 applyEmotionArt() 選晨光差分。story-art.js 不在時才退回直接換圖。
+  function setSceneInputs(tab, stage) {
+    if (stage) {
+      const emotion = s.emotion || 'neutral';
+      if (stage.dataset.storyEmotion !== emotion) stage.dataset.storyEmotion = emotion;
+    }
+    const d = document.getElementById('dialogueText');
+    if (d && d.textContent !== s.text) d.textContent = s.text;
+    const n = document.getElementById('dialogueName');
+    if (n && n.textContent !== 'Claude娘') n.textContent = 'Claude娘';
+  }
+
+  function fallbackArt(tab) {
+    if (window.__storyArt) return;
+    const art = document.getElementById('storyDefaultArt');
+    if (!art) return;
+    const src = 'assets/' + s.file;
+    if (art.getAttribute('src') !== src) art.setAttribute('src', src);
+    art.dataset.art = s.art;
+    art.style.opacity = '1';
+    tab.dataset.artTone = s.tone;
+    const grade = document.getElementById('storyArtGrade');
+    if (grade) grade.dataset.tone = s.tone;
+  }
+
+  // 與 app.js 真實輸出同構：7 個 .choice-btn[data-i] + 第 8 個 .free-choice-toggle。
+  function ensureChoices() {
+    const c = document.getElementById('choices');
+    if (!c) return;
+    if (stateKey === 'wait') {
+      if (!c.querySelector('.loading-dot')) {
+        c.innerHTML = '<div class="loading-dot" role="status" aria-label="正在生成回覆"></div>';
+      }
+      return;
+    }
+    if (stateKey === 'start') {
+      // 保留 app.js 真實的 start-panel（不覆寫），只確保 tab class 已設。
+      return;
+    }
+    if (empty) {
+      if (c.children.length) c.innerHTML = '';
+      return;
+    }
+    const have = c.querySelectorAll('.choice-btn[data-i]').length;
+    if (have === 7 && c.querySelector('.choices-list') && c.querySelector('#freeChoiceToggle')) return;
+    c.innerHTML =
+      '<div class="choices-list" role="group" aria-label="故事選項">' +
+      Array.from({ length: 7 }, (_, i) =>
+        `<button class="choice-btn" data-i="${i}"><span class="choice-num">${i + 1}</span>` +
+        `<span class="choice-text">${CHOICE_TEXT(i + 1)}</span></button>`
+      ).join('') +
+      '</div>' +
+      '<button class="choice-btn free-choice-toggle" id="freeChoiceToggle">8. 自訂行動／台詞</button>' +
+      '<div class="free-action" id="freeActionPanel" hidden></div>' +
+      '<p class="keyboard-hint">遊戲鍵盤提醒：先讓遊戲視窗在前景，且不要把游標留在文字輸入框。按 1–7 選對應故事選項；按 8 開啟自訂行動並在文字框輸入；游標在自訂行動輸入框內時按 Ctrl+Enter 送出。 遊戲鍵盤提醒：Q 快速存檔，L 快速讀檔。</p>';
+  }
+
+  // H6：其他狀態。只套一次，避免每 tick 重複點擊。
+  let stateDone = '';
+  function applyStateOnce(tab) {
+    if (stateDone === stateKey) return;
+    if (stateKey === 'start') {
+      tab.classList.add('story-empty');
+      tab.classList.remove('g16-x');
+      const c = document.getElementById('choices');
+      if (c) {
+        c.innerHTML =
+          '<section class="start-panel" aria-labelledby="openingSetupTitle">' +
+          '<div class="start-panel-scroll">' +
+          '<h2 id="openingSetupTitle">開始新故事</h2>' +
+          '<p>先選 AI，再挑一種序章；不同序章會從不同事件、地點與故事氣氛展開。按下開始後，故事會停在第一回合，等你回應。</p>' +
+          '<div class="start-styles"></div>' +
+          '</div></section>';
+      }
+      stateDone = stateKey;
+      return;
+    }
+    if (stateKey === 'album') {
+      const btn = document.querySelector('.tab-btn[data-tab="settings"]');
+      if (btn) btn.click();
+      const grid = document.getElementById('albumGrid');
+      if (grid && !grid.children.length) {
+        grid.innerHTML = ['36626', '36676', '36684', '36623', '36624', '36625', '36628', '36629', '36685']
+          .map(id => `<div class="album-item" data-album="${id}">` +
+            `<img src="assets/g43-album-thumb-${id}.webp" alt="插畫 ${id}" loading="lazy">` +
+            `<div class="album-title">插畫 ${id}</div></div>`).join('');
+      }
+      const first = grid && grid.querySelector('.album-item');
+      if (first) first.click();
+      stateDone = stateKey;
+      return;
+    }
+    if (stateKey === 'menu') {
+      const btn = document.getElementById('gameMenuBtn');
+      if (btn && btn.getAttribute('aria-expanded') !== 'true') btn.click();
+      stateDone = stateKey;
+      return;
+    }
+    if (stateKey === 'custom') {
+      tab.classList.add('has-custom-portrait');
+      const badge = document.getElementById('customPortraitBadge');
+      if (badge) badge.hidden = false;
+      stateDone = stateKey;
+      return;
+    }
+    stateDone = stateKey;
+  }
+
+  function box(el) {
+    if (!el) return null;
+    try {
+      const b = el.getBoundingClientRect();
+      return { x: r1(b.x), y: r1(b.y), w: r1(b.width), h: r1(b.height), right: r1(b.right), bottom: r1(b.bottom) };
+    } catch (e) { note(e); return null; }
+  }
+
+  function parsePosition(value, freeX, freeY) {
+    const parts = String(value || '50% 50%').trim().split(/\s+/);
+    const conv = (p, free) => {
+      if (!p) return free / 2;
+      if (p === 'center') return free / 2;
+      if (p === 'left' || p === 'top') return 0;
+      if (p === 'right' || p === 'bottom') return free;
+      if (p.endsWith('%')) return (free * parseFloat(p)) / 100;
+      const n = parseFloat(p);
+      return Number.isFinite(n) ? n : free / 2;
+    };
+    return [conv(parts[0], freeX), conv(parts[1] || 'center', freeY)];
+  }
+
+  // H2：object-fit: contain 時，元素盒比圖大；實際畫面只佔中間一塊。
+  // 回傳畫出來的矩形與四邊留白，頭頂／臉部換算才有意義。
+  function paintedRect(art) {
+    if (!art) return null;
+    try {
+      const b = art.getBoundingClientRect();
+      const nw = art.naturalWidth;
+      const nh = art.naturalHeight;
+      if (!nw || !nh || !b.width || !b.height) return { note: !nw ? 'not-loaded' : 'zero-box' };
+      const cs = getComputedStyle(art);
+      const ar = nw / nh;
+      let pw;
+      let ph;
+      if (cs.objectFit === 'contain') {
+        pw = Math.min(b.width, b.height * ar);
+        ph = pw / ar;
+      } else if (cs.objectFit === 'cover') {
+        pw = Math.max(b.width, b.height * ar);
+        ph = pw / ar;
+      } else if (cs.objectFit === 'none') {
+        pw = nw; ph = nh;
+      } else {
+        pw = b.width; ph = b.height;
+      }
+      const [ox, oy] = parsePosition(cs.objectPosition, b.width - pw, b.height - ph);
+      const x = b.left + ox;
+      const y = b.top + oy;
+      return {
+        fit: cs.objectFit,
+        position: cs.objectPosition,
+        ar: Math.round(ar * 10000) / 10000,
+        x: r1(x), y: r1(y), w: r1(pw), h: r1(ph),
+        padTop: r1(y - b.top),
+        padBottom: r1(b.bottom - (y + ph)),
+        padLeft: r1(x - b.left),
+        padRight: r1(b.right - (x + pw))
+      };
+    } catch (e) { note(e); return null; }
+  }
+
+  // H8：像素掃描只當輔助。掃右半部的橘紅髮色，找最上面「連續三列有兩列」的髮色列。
+  function scanHair(art) {
+    if (!art || !art.naturalWidth || !art.naturalHeight) return null;
+    try {
+      const scale = Math.min(1, 560 / art.naturalWidth);
+      const w = Math.max(1, Math.round(art.naturalWidth * scale));
+      const h = Math.max(1, Math.round(art.naturalHeight * scale));
+      const cv = document.createElement('canvas');
+      cv.width = w;
+      cv.height = h;
+      const ctx = cv.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return null;
+      ctx.drawImage(art, 0, 0, w, h);
+      const data = ctx.getImageData(0, 0, w, h).data;
+      const x0 = Math.floor(w * 0.52);
+      const isHair = (r, g, b) => {
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        if (max < 90 || max - min < 40) return false;
+        if (!(r > g && g >= b)) return false;
+        if (r - g < 22) return false;
+        const l = (max + min) / 510;
+        const sat = (max - min) / (255 - Math.abs(max + min - 255) || 1);
+        return l > 0.22 && l < 0.80 && sat > 0.42;
+      };
+      const rowHit = new Array(h).fill(0);
+      for (let y = 0; y < h; y += 1) {
+        let count = 0;
+        for (let x = x0; x < w; x += 1) {
+          const i = (y * w + x) * 4;
+          if (isHair(data[i], data[i + 1], data[i + 2])) count += 1;
+        }
+        rowHit[y] = count / (w - x0);
+      }
+      const threshold = 0.012;
+      let top = -1;
+      for (let y = 0; y + 2 < h; y += 1) {
+        const hits = (rowHit[y] > threshold ? 1 : 0) +
+          (rowHit[y + 1] > threshold ? 1 : 0) +
+          (rowHit[y + 2] > threshold ? 1 : 0);
+        if (hits >= 2) { top = y; break; }
+      }
+      if (top < 0) return { topPct: null, confidence: 0, note: 'no-hair-row' };
+      let sumX = 0;
+      let n = 0;
+      const bandEnd = Math.min(h, top + Math.round(h * 0.25));
+      for (let y = top; y < bandEnd; y += 1) {
+        for (let x = x0; x < w; x += 1) {
+          const i = (y * w + x) * 4;
+          if (isHair(data[i], data[i + 1], data[i + 2])) { sumX += x; n += 1; }
+        }
+      }
+      return {
+        topPct: r1((top / h) * 100),
+        confidence: r1(rowHit[top] * 100),
+        centerXPct: n ? r1((sumX / n / w) * 100) : null,
+        samples: n,
+        note: 'heuristic-orange'
+      };
+    } catch (e) { note(e); return null; }
+  }
+
+  function measure() {
+    const out = {
+      state: stateKey,
+      scene: sceneKey,
+      view: [innerWidth, innerHeight],
+      zoom: zoom(),
+      empty,
+      artTone: null,
+      gradeTone: null,
+      artKey: null,
+      tabClass: null,
+      artComplete: null,
+      artDatasetArt: null,
+      choicesCount: null,
+      startPanel: null,
+      waitVisible: null,
+      ready: null,
+      hud: null,
+      hudBandLayout: null,
+      hudBandPx: null,
+      hudBandPct: null,
+      accountLeft: null,
+      dialogue: null,
+      dialogueRight: null,
+      choices: null,
+      choicesRight: null,
+      choicesSticky: null,
+      choicesCovered: null,
+      choicesMaxOverlap: null,
+      choicesScroll: null,
+      status: null,
+      statusBottom: null,
+      art: null,
+      painted: null,
+      natural: null,
+      portrait: null,
+      portraitInfo: null,
+      head: null,
+      wait: null,
+      album: null,
+      menu: null,
+      errors: []
+    };
+    try {
+      const W = innerWidth;
+      const H = innerHeight;
+      const z = zoom();
+      const tab = document.getElementById('tab-story');
+      const hud = document.querySelector('.game-hud');
+      const ab = document.querySelector('.account-bar');
+      const dg = document.querySelector('.vn-dialogue-window');
+      const st = document.querySelector('.story-tool-status');
+      const ch = document.getElementById('choices');
+      const art = document.getElementById('storyDefaultArt');
+      const grade = document.getElementById('storyArtGrade');
+
+      out.artTone = tab ? (tab.dataset.artTone || null) : null;
+      out.gradeTone = grade ? (grade.dataset.tone || null) : null;
+      out.artKey = art ? (art.dataset.art || null) : null;
+      out.tabClass = tab ? tab.className : null;
+      out.artComplete = art ? (art.complete && art.naturalWidth > 0) : null;
+      out.artDatasetArt = art ? (art.dataset.art || null) : null;
+      out.choicesCount = ch ? ch.querySelectorAll('.choice-btn').length : null;
+      out.startPanel = box(document.querySelector('.start-panel'));
+      const waitEl = document.getElementById('waitInterlude');
+      out.waitVisible = waitEl ? (!waitEl.hidden && waitEl.classList.contains('is-visible')) : null;
+
+      let bandLayout = 0;
+      if (hud) {
+        try { bandLayout = parseFloat(getComputedStyle(hud, '::before').width) || 0; } catch (e) { note(e); }
+      }
+      out.hud = box(hud);
+      out.hudBandLayout = r1(bandLayout);
+      out.hudBandPx = r1(bandLayout * z);
+      out.hudBandPct = pct(bandLayout * z, W);
+      out.accountLeft = ab ? pct(ab.getBoundingClientRect().left, W) : null;
+
+      out.dialogue = box(dg);
+      out.dialogueRight = dg ? pct(dg.getBoundingClientRect().right, W) : null;
+      out.choices = box(ch);
+      out.choicesRight = ch ? pct(ch.getBoundingClientRect().right, W) : null;
+      if (ch) {
+        // H13：檢查第 8 項（#freeChoiceToggle 或 sticky 鈕）是否遮擋 1–7 項，並確認其位於可視範圍內。
+        try {
+          const btns = [...ch.querySelectorAll('.choice-btn')];
+          const anchor = ch.querySelector('#freeChoiceToggle') || btns.find(b => getComputedStyle(b).position === 'sticky') || null;
+          const sb = anchor ? anchor.getBoundingClientRect() : null;
+          const listEl = ch.querySelector('.choices-list') || ch;
+          const chRect = ch.getBoundingClientRect();
+          out.choicesSticky = anchor ? {
+            text: (anchor.textContent || '').trim().slice(0, 12),
+            position: getComputedStyle(anchor).position,
+            visible: !!(sb && sb.height > 10 && sb.top >= chRect.top - 1 && sb.bottom <= Math.min(chRect.bottom, H) + 1),
+            ...box(anchor)
+          } : null;
+          let maxOverlap = 0;
+          let covered = 0;
+          if (sb) {
+            for (const b of btns) {
+              if (b === anchor) continue;
+              const r = b.getBoundingClientRect();
+              // 若按鈕被上層 .choices-list 捲動裁切，先以容器可視區截斷其可見矩形
+              const listRect = listEl.getBoundingClientRect();
+              const visTop = Math.max(r.top, listRect.top);
+              const visBottom = Math.min(r.bottom, listRect.bottom);
+              if (visBottom <= visTop) continue;
+              const ox = Math.min(r.right, sb.right) - Math.max(r.left, sb.left);
+              const oy = Math.min(visBottom, sb.bottom) - Math.max(visTop, sb.top);
+              if (ox > 1 && oy > 1) {
+                maxOverlap = Math.max(maxOverlap, oy);
+                if (oy > 4) covered += 1;
+              }
+            }
+          }
+          out.choicesCovered = covered;
+          out.choicesMaxOverlap = r1(maxOverlap);
+          out.choicesScroll = { scrollHeight: listEl.scrollHeight, clientHeight: listEl.clientHeight };
+        } catch (e) { note(e); }
+      }
+      out.status = box(st);
+      out.statusBottom = st ? pct(st.getBoundingClientRect().bottom, H) : null;
+
+      out.art = box(art);
+      out.painted = art ? paintedRect(art) : null;
+      out.natural = art ? [art.naturalWidth, art.naturalHeight] : null;
+      const pt = document.getElementById('storyPortrait');
+      // H11：portrait-anim.js 會把 #storyPortrait 換成 canvas.story-portrait.pa-canvas，
+      // 原圖移到隱藏的 #portraitAnimSources。玩家看到的是 canvas，量測必須跟著換。
+      const ptCanvas = document.querySelector('#tab-story canvas.story-portrait:not(.start-portrait)');
+      const ptCanvasBox = ptCanvas ? box(ptCanvas) : null;
+      const ptPainted = (ptCanvasBox && ptCanvasBox.w > 0 && ptCanvasBox.h > 0) ? ptCanvas : pt;
+      out.portrait = box(ptPainted);
+      out.portraitInfo = ptPainted ? {
+        el: ptPainted === pt ? 'img#storyPortrait' : 'canvas.pa-canvas',
+        natural: [ptPainted.naturalWidth || ptPainted.width, ptPainted.naturalHeight || ptPainted.height],
+        display: getComputedStyle(ptPainted).display,
+        fit: getComputedStyle(ptPainted).objectFit,
+        css: ['width', 'height', 'maxWidth', 'maxHeight', 'right', 'bottom', 'position', 'visibility', 'opacity', 'transform'].reduce((o, k) => (o[k] = getComputedStyle(ptPainted)[k], o), {}),
+        sourceImg: pt ? { natural: [pt.naturalWidth, pt.naturalHeight], src: (pt.getAttribute('src') || '').slice(0, 60) } : null,
+        animations: (ptPainted.getAnimations ? ptPainted.getAnimations().map(a => ({ name: a.animationName, state: a.playState, t: Math.round(a.currentTime || 0) })) : [])
+      } : null;
+
+      const scan = scanHair(art);
+      const artFile = art ? String(art.getAttribute('src') || '').split('/').pop().split('?')[0] : '';
+      const metaEntry = (artHeadsMap && artFile && artHeadsMap[artFile] && Number.isFinite(Number(artHeadsMap[artFile].headPct)))
+        ? artHeadsMap[artFile]
+        : null;
+      let topPct = null;
+      let headSource = 'none';
+      if (headOverride != null && Number.isFinite(headOverride)) {
+        topPct = headOverride * 100;
+        headSource = 'param';
+      } else if (metaEntry) {
+        topPct = Number(metaEntry.headPct) * 100;
+        headSource = 'meta';
+      } else if (scan && scan.topPct != null) {
+        topPct = scan.topPct;
+        headSource = 'scan';
+      }
+      if (out.painted && out.painted.w && topPct != null) {
+        const headTopPx = out.painted.y + (topPct / 100) * out.painted.h;
+        out.head = {
+          topPx: r1(headTopPx),
+          topPctOfView: pct(headTopPx, H),
+          clearancePctOfImage: r1(topPct),
+          clearancePxInImage: Math.round((topPct / 100) * out.natural[1]),
+          source: headSource,
+          confidence: headSource === 'meta' ? 100 : (scan ? scan.confidence : null),
+          hairCenterXPct: scan ? scan.centerXPct : null,
+          scanFallbackPct: scan ? scan.topPct : null,
+          note: metaEntry ? (metaEntry.note || 'art-heads.json') : (scan ? scan.note : null)
+        };
+      } else {
+        out.head = { topPx: null, topPctOfView: null, source: 'none', note: 'no-painted-rect' };
+      }
+
+      const wait = document.getElementById('waitInterlude');
+      out.wait = wait ? {
+        shown: !wait.hidden,
+        visible: wait.classList.contains('is-visible') && !wait.hidden,
+        caption: box(wait.querySelector('.wait-caption'))
+      } : null;
+
+      const lb = document.getElementById('albumLightbox');
+      out.album = lb ? {
+        lightbox: !lb.hidden,
+        img: box(document.getElementById('albumLightboxImg')),
+        grid: box(document.getElementById('albumGrid'))
+      } : null;
+
+      const menu = document.getElementById('gameMenu');
+      out.menu = menu ? {
+        open: menu.getAttribute('aria-hidden') !== 'true' && getComputedStyle(menu).display !== 'none',
+        rect: box(menu)
+      } : null;
+    } catch (e) {
+      note(e);
+    }
+
+    const readyFor = () => {
+      if (stateKey === 'wait') { const w = document.getElementById('waitInterlude'); return !!(w && !w.hidden && w.classList.contains('is-visible')); }
+      if (stateKey === 'album') { const lb = document.getElementById('albumLightbox'); return !!lb && !lb.hidden; }
+      if (stateKey === 'menu') { const m = document.getElementById('gameMenu'); return !!m && !m.hidden; }
+      if (stateKey === 'start') { const p = document.querySelector('.start-panel'); return !!p && p.getBoundingClientRect().height > 50; }
+      const a = document.getElementById('storyDefaultArt');
+      return !!(artHeadsLoaded && a && a.complete && a.naturalWidth > 0 && a.dataset.art === s.art);
+    };
+    out.ready = readyFor();
+    out.errors = errors.slice();
+    window.__artMeasure = out;
+    if (wantMeasure) {
+      try {
+        let pre = document.getElementById('__measure');
+        if (!pre) {
+          pre = document.createElement('pre');
+          pre.id = '__measure';
+          // 移出畫面，避免污染截圖；--dump-dom 仍可讀到文字。
+          pre.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden';
+          document.body.appendChild(pre);
+        }
+        pre.textContent = JSON.stringify(out, null, 1);
+        // H7：title 只放關鍵欄位，避免長度上限；完整資料在 #__measure。
+        document.title = 'M' + JSON.stringify({
+          state: out.state,
+          scene: out.scene,
+          view: out.view.join('x'),
+          headTopPx: out.head && out.head.topPx,
+          headPct: out.head && out.head.clearancePctOfImage,
+          tone: [out.artTone, out.gradeTone],
+          errors: out.errors.length
+        });
+      } catch (e) { note(e); }
+    }
+    return out;
+  }
+
+  function debug() {
+    let dbg = document.getElementById('__debug');
+    if (!dbg) {
+      dbg = document.createElement('div');
+      dbg.id = '__debug';
+      dbg.style.cssText = 'position:fixed;left:0;bottom:0;z-index:99999;font:10px monospace;color:#0f0;background:#000a;padding:2px 4px;max-width:100%';
+      document.body.appendChild(dbg);
+    }
+    const art = document.getElementById('storyDefaultArt');
+    const tab = document.getElementById('tab-story');
+    dbg.textContent = [
+      'storyArt=' + (window.__storyArt ? 'on' : 'off'),
+      'artKey=' + (art ? art.dataset.art : 'none'),
+      'tone=' + (tab ? tab.dataset.artTone : 'none'),
+      'src=' + (art ? (art.getAttribute('src') || '').split('/').pop() : ''),
+      'choices=' + (document.getElementById('choices') || {}).children?.length,
+      'errors=' + errors.length
+    ].join(' | ');
+  }
+
+  function apply() {
+    try {
+      const tab = document.getElementById('tab-story');
+      if (!tab) return;
+      cleanupClasses(tab);
+      setSceneInputs(tab, document.querySelector('.vn-stage'));
+      fallbackArt(tab);
+      ensureChoices();
+      applyStateOnce(tab);
+      // 等待畫面：headless 的 rAF 不一定會跑，is-visible 由我們補上（實際遊戲由 rAF 加）。
+      if (stateKey === 'wait') {
+        const w = document.getElementById('waitInterlude');
+        if (w && !w.hidden && !w.classList.contains('is-visible')) w.classList.add('is-visible');
+      }
+      if (wantDebug) debug();
+    } catch (e) {
+      note(e);
+      if (wantMeasure) measure();
+    }
+  }
+
+  let ticks = 0;
+  let settled = 0;
+  let finalDone = false;
+  const readyFor = () => {
+    if (stateKey === 'wait') {
+      const w = document.getElementById('waitInterlude');
+      return !!(w && !w.hidden && w.classList.contains('is-visible'));
+    }
+    if (stateKey === 'album') {
+      const lb = document.getElementById('albumLightbox');
+      return !!(lb && !lb.hidden);
+    }
+    if (stateKey === 'menu') {
+      const m = document.getElementById('gameMenu');
+      return !!(m && !m.hidden);
+    }
+    if (stateKey === 'start') {
+      const p = document.querySelector('.start-panel');
+      return !!(p && p.getBoundingClientRect().height > 50);
+    }
+    const art = document.getElementById('storyDefaultArt');
+    return !!(artHeadsLoaded && art && art.complete && art.naturalWidth > 0 && art.dataset.art === s.art);
+  };
+  const tick = () => {
+    try {
+      apply();
+    } catch (e) {
+      note(e);
+    } finally {
+      if (wantMeasure) { try { measure(); } catch (e) { note(e); } }
+      ticks += 1;
+      const ready = readyFor();
+      settled = ready ? settled + 1 : 0;
+
+      // 連續 3 個 tick 都達到 ready 才算穩定；最多 40 tick（8 秒）避免無限等待。
+      // H12：穩定後再等立繪進場動畫跑完（透明度回到 1）才做最後一次量測，
+      //      否則會量到淡入到一半的畫面（實測 opacity 0.59）。最多再等 4 秒。
+      if (ticks < 40 && settled < 3) setTimeout(tick, 200);
+      else if (settled >= 3 && !finalDone) {
+        finalDone = true;
+        let tries = 0;
+        const settle = () => {
+          tries += 1;
+          const p = document.querySelector('#tab-story canvas.story-portrait:not(.start-portrait)') ||
+            document.getElementById('storyPortrait');
+          const op = p ? (parseFloat(getComputedStyle(p).opacity) || 1) : 1;
+          if (wantMeasure) { try { measure(); } catch (e) { note(e); } }
+          if (op < 0.99 && tries < 20) setTimeout(settle, 200);
+          else window.__artDone = true;
+        };
+        setTimeout(settle, 600);
+      }
+    }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(tick, 200));
+  } else {
+    setTimeout(tick, 200);
+  }
+})();
+</script>

@@ -1,6 +1,6 @@
 /**
  * prompt-inspector.js
- * 《克勞德》v2.0 - P1-02 開發者檢視（S2 提示詞組裝）
+ * 《克勞德》v2.0 - P1-02 開發者檢視（S2 提示詞組裝 ＋ AnimaVN 風格 Token 預算可視化）
  * 六區塊：人設／階段／好感帶／生活層／記憶／狀態。
  * 本模組為純資料＋字串渲染（不直接操作 DOM，掛載由 app.js 負責）；
  * 區塊開關僅影響「檢視預覽」，不會改變遊戲實際送出的提示詞。
@@ -11,6 +11,9 @@ import { ALL_CONFIGS } from './config-loader.js';
 
 export const INSPECTOR_STORAGE_KEY = 'claude_v20_inspector_blocks_v1';
 export const BLOCK_KEYS = ['character', 'stage', 'band', 'living', 'memory', 'status'];
+export const CACHEABLE_BLOCK_KEYS = Object.freeze(['character', 'stage', 'band', 'status']);
+/** 借鏡 AnimaVN lib/budget.ts 階梯量程（用於線性比例預算條） */
+export const BUDGET_RANGE_STEPS = Object.freeze([4096, 8192, 16384, 32768, 65536, 131072]);
 
 /**
  * token 估算（沿用 token-budget.js 註解「中文約 1 字 ≈ 1～1.5 token」→ 取 1.15；
@@ -27,6 +30,44 @@ export function estimateTokens(text) {
     else other++;
   }
   return Math.ceil(cjk * 1.15 + other * 0.3);
+}
+
+/** 依使用量自動挑選最小可容納的量程檔位（借鏡 AnimaVN autoRange） */
+export function autoBudgetRange(tokens) {
+  const safe = Math.max(0, Number(tokens) || 0);
+  return BUDGET_RANGE_STEPS.find(step => step >= safe) ?? BUDGET_RANGE_STEPS[BUDGET_RANGE_STEPS.length - 1];
+}
+
+/**
+ * 計算靜態可快取前綴 vs 動態區塊的 Token 預算分布
+ * @param {{blocks:Array,totalTokens:number}} data
+ * @param {number} [budgetLimit]
+ */
+export function computeBudgetBreakdown(data, budgetLimit = null) {
+  const blocks = Array.isArray(data?.blocks) ? data.blocks : [];
+  let staticTokens = 0;
+  let dynamicTokens = 0;
+  for (const block of blocks) {
+    if (!block || !block.enabled || !block.text) continue;
+    const t = Number(block.tokens) || 0;
+    if (CACHEABLE_BLOCK_KEYS.includes(block.key)) staticTokens += t;
+    else dynamicTokens += t;
+  }
+  const totalTokens = staticTokens + dynamicTokens;
+  const range = (Number.isFinite(Number(budgetLimit)) && Number(budgetLimit) > 0)
+    ? Math.floor(Number(budgetLimit))
+    : autoBudgetRange(totalTokens);
+  const clampPct = value => Math.max(0, Math.min(100, Math.round(value * 10) / 10));
+  return {
+    staticTokens,
+    dynamicTokens,
+    totalTokens,
+    range,
+    remainingTokens: Math.max(0, range - totalTokens),
+    staticPct: clampPct(range ? (staticTokens / range) * 100 : 0),
+    dynamicPct: clampPct(range ? (dynamicTokens / range) * 100 : 0),
+    cacheableRatioPct: clampPct(totalTokens ? (staticTokens / totalTokens) * 100 : 0)
+  };
 }
 
 /** 好感度 → 好感帶 key（甜 80–100／平穩 50–79／小彆扭 30–49／待和好 0–29；非法值取平穩） */
@@ -79,7 +120,7 @@ export function saveBlockPrefs(storage, prefs) {
  * @param {string} params.memorySection 記憶摘要（呼叫層注入）
  * @param {object} params.styleTweaks 相處風格參數
  * @param {object} params.storage 偏好儲存（可注入；null＝全開）
- * @returns {{blocks:Array,totalChars:number,totalTokens:number,preview:string}}
+ * @returns {{blocks:Array,totalChars:number,totalTokens:number,preview:string,budget:object}}
  */
 export function buildInspectorData({
   state = {},
@@ -99,16 +140,21 @@ export function buildInspectorData({
       text,
       chars: [...text].length,
       tokens: estimateTokens(text),
+      cacheable: CACHEABLE_BLOCK_KEYS.includes(block.key),
       enabled: prefs[block.key] !== false
     };
   });
   const active = blocks.filter(block => block.enabled && block.text);
-  return {
+  const totalChars = active.reduce((n, block) => n + block.chars, 0);
+  const totalTokens = active.reduce((n, block) => n + block.tokens, 0);
+  const data = {
     blocks,
-    totalChars: active.reduce((n, block) => n + block.chars, 0),
-    totalTokens: active.reduce((n, block) => n + block.tokens, 0),
+    totalChars,
+    totalTokens,
     preview: active.map(block => block.text).join('\n')
   };
+  data.budget = computeBudgetBreakdown(data);
+  return data;
 }
 
 function escHtml(value) {
@@ -119,19 +165,40 @@ function escHtml(value) {
     .replace(/"/g, '&quot;');
 }
 
-/** 渲染六區塊 HTML（每塊：標題＋開關／來源／字數／估算 token／可折疊全文） */
+/** 渲染六區塊 HTML（每塊：標題＋開關／來源／快取屬性／字數／估算 token／可折疊全文） */
 export function renderInspectorBlocks(blocks) {
-  return blocks.map(block => `<section class="pm-block${block.enabled ? '' : ' is-off'}" data-block-section="${escHtml(block.key)}">
+  return blocks.map(block => {
+    const isCacheable = block.cacheable !== undefined ? block.cacheable : CACHEABLE_BLOCK_KEYS.includes(block.key);
+    const cacheTag = isCacheable ? '靜態可快取' : '動態區塊';
+    return `<section class="pm-block${block.enabled ? '' : ' is-off'}" data-block-section="${escHtml(block.key)}" data-cacheable="${isCacheable ? '1' : '0'}">
   <header class="pm-block-head">
     <label class="pm-block-toggle"><input type="checkbox" data-block="${escHtml(block.key)}"${block.enabled ? ' checked' : ''}> <b>${escHtml(block.label)}</b></label>
-    <span class="pm-block-meta">${escHtml(block.source)}｜${block.chars} 字｜約 ${block.tokens} tokens</span>
+    <span class="pm-block-meta">${escHtml(block.source)}｜${cacheTag}｜${block.chars} 字｜約 ${block.tokens} tokens</span>
   </header>
   ${block.text ? `<pre class="pm-block-text">${escHtml(block.text)}</pre>` : '<p class="pm-block-empty">（此區塊目前為空：由呼叫層注入後顯示，見來源）</p>'}
-</section>`).join('\n');
+</section>`;
+  }).join('\n');
 }
 
-/** 渲染摘要列（啟用區塊數／總字數／估算總 token） */
+/** 渲染 Token 預算比例條 HTML（借鏡 AnimaVN BudgetBar） */
+export function renderInspectorBudgetBar(data, budgetLimit = null) {
+  const b = computeBudgetBreakdown(data, budgetLimit);
+  return `<div class="pm-budget" role="region" aria-label="提示詞 Token 預算估算">
+  <div class="pm-budget-track" title="靜態可快取 ${b.staticTokens} / 動態 ${b.dynamicTokens} / 量程 ${b.range} tokens">
+    <span class="pm-budget-seg is-static" style="width:${b.staticPct}%"></span>
+    <span class="pm-budget-seg is-dynamic" style="width:${b.dynamicPct}%"></span>
+  </div>
+  <div class="pm-budget-legend">
+    <span>靜態快取前綴：約 ${b.staticTokens} tokens（${b.cacheableRatioPct}%）</span>
+    <span>動態區塊：約 ${b.dynamicTokens} tokens</span>
+    <span>量程上限：${b.range} tokens（剩餘約 ${b.remainingTokens}）</span>
+  </div>
+</div>`;
+}
+
+/** 渲染摘要列（啟用區塊數／總字數／估算總 token／可快取比例） */
 export function renderInspectorSummary(data) {
   const active = data.blocks.filter(block => block.enabled && block.text).length;
-  return '啟用 ' + active + '／' + data.blocks.length + ' 區塊｜共 ' + data.totalChars + ' 字｜約 ' + data.totalTokens + ' tokens（估算：中文 1 字≈1.15 token）';
+  const b = data.budget || computeBudgetBreakdown(data);
+  return '啟用 ' + active + '／' + data.blocks.length + ' 區塊｜共 ' + data.totalChars + ' 字｜約 ' + data.totalTokens + ' tokens（靜態快取前綴 ' + b.cacheableRatioPct + '%；估算：中文 1 字≈1.15 token）';
 }

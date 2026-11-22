@@ -18,6 +18,8 @@
  *   5. Markdown code fence 與 JSON 前後的說明文字
  */
 
+import { splitThinkingText } from './thinking-splitter.js';
+
 const QUOTE_CHARS = new Set(['"', '＂', '“', '”', '〝', '‟']);
 
 function isWhitespace(ch) {
@@ -59,8 +61,9 @@ function structuralAt(source, quoteIndex) {
 }
 
 export function stripJsonFences(value) {
-  return String(value || '')
-    .replace(/^\uFEFF/, '')
+  const withoutBom = String(value || '').replace(/^\uFEFF/, '');
+  const withoutThink = splitThinkingText(withoutBom).body;
+  return withoutThink
     .replace(/```(?:json|JSON)?\s*/g, '')
     .replace(/```/g, '')
     .trim();

@@ -32,21 +32,68 @@ function normalizeRetries(value) {
 }
 
 /**
- * 依六區塊切出「快取友善」的 system／user，同時保留完整 prompt。
+ * 依固定區塊建立 Anthropic Prompt Cache 友善的 system 陣列（借鏡 AnimaVN anthropic_provider）。
+ * 僅針對穩定前綴（SYSTEM_BLOCK_KEYS）附加 ephemeral cache_control，絕不包含動態記憶或重試指示。
+ * @param {string|object} systemOrPayload
+ * @returns {Array<{type:'text',text:string,cache_control:{type:'ephemeral'}}>}
+ */
+export function buildAnthropicSystemBlocks(systemOrPayload) {
+  const systemText = typeof systemOrPayload === 'string'
+    ? systemOrPayload
+    : String(systemOrPayload?.system || '');
+  const trimmed = systemText.trim();
+  if (!trimmed) return [];
+  return [{
+    type: 'text',
+    text: trimmed,
+    cache_control: { type: 'ephemeral' }
+  }];
+}
+
+/**
+ * 依六區塊切出「快取友善」的 system／user，同時保留完整 prompt 與 Anthropic cache systemBlocks。
  * @param {object} params 同 PromptAssembler.assemblePrompt
- * @returns {{system:string,user:string,prompt:string,blocks:Array}}
+ * @returns {{system:string,user:string,prompt:string,blocks:Array,systemBlocks:Array}}
  */
 export function buildPromptPayload({ state, livingSection = '', memorySection = '', styleTweaks = {} } = {}) {
   const safeState = state || {};
   const blocks = PromptAssembler.assemblePromptBlocks({ state: safeState, livingSection, memorySection, styleTweaks });
   const byKey = new Map(blocks.map(block => [block.key, block.text || '']));
   const joinKeys = keys => keys.map(key => byKey.get(key) || '').filter(Boolean).join('\n');
+  const system = joinKeys(SYSTEM_BLOCK_KEYS);
   return {
-    system: joinKeys(SYSTEM_BLOCK_KEYS),
+    system,
     user: joinKeys(USER_BLOCK_KEYS),
     // 與 PromptAssembler.assemblePrompt() 相同的順序與換行（測試釘死逐字等價）
     prompt: blocks.map(block => block.text).filter(Boolean).join('\n'),
-    blocks
+    blocks,
+    systemBlocks: buildAnthropicSystemBlocks(system)
+  };
+}
+
+/**
+ * 組裝 Anthropic Messages API 請求本體（system 含 cache_control；動態 user 與 repair 不加 cache_control）。
+ * @param {object} options
+ * @returns {{system:Array,messages:Array,max_tokens:number}}
+ */
+export function buildAnthropicMessagesPayload({
+  state,
+  livingSection = '',
+  memorySection = '',
+  styleTweaks = {},
+  userMessage = '',
+  repair = '',
+  maxTokens = 2048
+} = {}) {
+  const payload = buildPromptPayload({ state, livingSection, memorySection, styleTweaks });
+  const userParts = [payload.user, String(userMessage || '').trim(), String(repair || '').trim()].filter(Boolean);
+  return {
+    system: payload.systemBlocks,
+    messages: [{
+      role: 'user',
+      content: userParts.join('\n\n')
+    }],
+    max_tokens: Math.max(256, Math.min(16384, Math.round(Number(maxTokens) || 2048)))
   };
 }
 

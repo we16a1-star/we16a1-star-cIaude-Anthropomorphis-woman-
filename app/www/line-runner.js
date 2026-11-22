@@ -1,11 +1,12 @@
 /**
  * line-runner.js — 逐句演出控制器（借鏡 AnimaVN Galgame 逐句播放器架構）
- * 
+ *
  * 支援特性：
- * 1. 逐句推進（Sentence-by-sentence queue）
- * 2. 點擊插話 / 快進（點擊時：若當句未播完則瞬間顯示全句，若已播完則推進到下一句）
- * 3. 播放狀態鎖定（播放中標記，供 UI 禁用選項，播放完畢回呼解鎖）
- * 4. 偏好持久化（可開關逐句演出，若關閉則一次性顯示全部）
+ * 1. 逐句推進（Sentence-by-sentence queue），同時相容純字串陣列 string[] 與結構化 VNLine[]
+ * 2. 句級演出元資料回呼（onLineMeta）：支援逐句動態情緒、場景與說話人提示
+ * 3. 點擊插話 / 快進（點擊時：若當句未播完則瞬間顯示全句，若已播完則推進到下一句）
+ * 4. 插話截斷點查詢（getTruncatedEndOffset / getVisibleLines）
+ * 5. 播放狀態鎖定與偏好持久化（逐句模式、打字速度、自動播放、句間停留時間）
  */
 
 const STORAGE_KEY_LINE_MODE = 'claude_novel_line_mode_v1';
@@ -14,6 +15,25 @@ const STORAGE_KEY_LINE_AUTOPLAY = 'claude_novel_line_autoplay_v1';
 const STORAGE_KEY_LINE_AUTO_DELAY = 'claude_novel_line_autodelay_v1';
 
 export { STORAGE_KEY_LINE_MODE, STORAGE_KEY_LINE_SPEED, STORAGE_KEY_LINE_AUTOPLAY, STORAGE_KEY_LINE_AUTO_DELAY };
+
+function normalizeEntry(entry) {
+  if (typeof entry === 'string') {
+    return { text: entry, speaker: null, kind: 'narration', emotion: null, scene: null, player: false, endOffset: null };
+  }
+  if (entry && typeof entry === 'object') {
+    return {
+      text: String(entry.text || ''),
+      speaker: entry.speaker ?? null,
+      kind: entry.kind || 'narration',
+      emotion: entry.emotion || null,
+      emotionSource: entry.emotionSource || null,
+      scene: entry.scene || null,
+      player: Boolean(entry.player),
+      endOffset: Number.isFinite(Number(entry.endOffset)) ? Number(entry.endOffset) : null
+    };
+  }
+  return { text: '', speaker: null, kind: 'narration', emotion: null, scene: null, player: false, endOffset: null };
+}
 
 export class LineRunner {
   constructor(options = {}) {
@@ -27,6 +47,7 @@ export class LineRunner {
       ? Math.max(0, Math.round(Number(options.autoDelay)))
       : this.loadAutoDelayPreference();
     this.lines = [];
+    this.entries = [];
     this.currentIndex = -1;
     this.currentText = '';
     this.displayedText = '';
@@ -35,6 +56,7 @@ export class LineRunner {
     this.timer = null;
     this.autoTimer = null;
     this.onLineChange = options.onLineChange || null;
+    this.onLineMeta = options.onLineMeta || null;
     this.onFinish = options.onFinish || null;
   }
 
@@ -124,6 +146,38 @@ export class LineRunner {
     }
   }
 
+  getCurrentMeta() {
+    if (this.currentIndex < 0 || this.currentIndex >= this.entries.length) return null;
+    return this.entries[this.currentIndex] || null;
+  }
+
+  /**
+   * 回傳目前播放句的原文結束位移（給插話／分叉存檔截斷用；無結構化位移則回傳 null）。
+   */
+  getTruncatedEndOffset() {
+    const meta = this.getCurrentMeta();
+    return meta && Number.isFinite(meta.endOffset) ? meta.endOffset : null;
+  }
+
+  /**
+   * 回傳截至目前為止已顯示的句子陣列。
+   */
+  getVisibleLines() {
+    if (this.currentIndex < 0) return [];
+    return this.lines.slice(0, this.currentIndex + 1);
+  }
+
+  notifyLineMeta() {
+    if (typeof this.onLineMeta === 'function') {
+      const meta = this.getCurrentMeta();
+      if (meta) {
+        try {
+          this.onLineMeta(meta, this.currentIndex, this.lines.length);
+        } catch (_) {}
+      }
+    }
+  }
+
   /**
    * 目前句子播完後，若自動播放開啟且還有下一句，排定自動前進。
    * 手動點擊／跳過會先清除這個計時器，確保使用者操作永遠優先。
@@ -143,30 +197,41 @@ export class LineRunner {
   }
 
   /**
-   * 開始播放一組句子
-   * @param {string[]} lines 
-   * @param {Object} callbacks 
+   * 開始播放一組句子（接受 string[] 或 VNLine[]）
+   * @param {Array<string|object>} lines
+   * @param {Object} callbacks
    */
   start(lines, callbacks = {}) {
     this.stop();
     if (callbacks.onLineChange) this.onLineChange = callbacks.onLineChange;
+    if (callbacks.onLineMeta) this.onLineMeta = callbacks.onLineMeta;
     if (callbacks.onFinish) this.onFinish = callbacks.onFinish;
 
     if (!Array.isArray(lines) || lines.length === 0) {
       this.lines = [];
+      this.entries = [];
       this.currentIndex = -1;
       this.isPlaying = false;
       if (this.onFinish) this.onFinish();
       return;
     }
 
-    this.lines = [...lines];
+    this.entries = lines.map(normalizeEntry).filter(e => e.text.length > 0);
+    this.lines = this.entries.map(e => e.text);
+
+    if (this.lines.length === 0) {
+      this.currentIndex = -1;
+      this.isPlaying = false;
+      if (this.onFinish) this.onFinish();
+      return;
+    }
 
     // 若關閉了逐句演出，直接展示全部
     if (!this.enabled) {
       this.currentIndex = this.lines.length - 1;
       this.displayedText = this.lines.join('\n');
       this.isPlaying = false;
+      this.notifyLineMeta();
       if (this.onLineChange) {
         this.onLineChange(this.displayedText, this.currentIndex, this.lines.length, false);
       }
@@ -193,6 +258,8 @@ export class LineRunner {
     let charIndex = 0;
     this.displayedText = '';
     this.isCharTyping = true;
+
+    this.notifyLineMeta();
 
     // 觸發初始回呼
     if (this.onLineChange) {
@@ -278,6 +345,7 @@ export class LineRunner {
     this.isPlaying = false;
     this.currentIndex = this.lines.length - 1;
     this.displayedText = this.lines.join('\n');
+    this.notifyLineMeta();
     if (this.onLineChange) {
       this.onLineChange(this.displayedText, this.currentIndex, this.lines.length, false);
     }
@@ -297,4 +365,3 @@ export class LineRunner {
     this.isPlaying = false;
   }
 }
-

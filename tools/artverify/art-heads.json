@@ -1,0 +1,33 @@
+{
+  "_note": "H14 方案 1：由人工＋measure-file.ps1＋頂部對比圖（compare-v2-top.png）確認的場景髮頂比例，供 artverify harness 優先讀取（source='meta'），避免右上角暖色書架／窗光導致髮色掃描誤判。",
+  "_measuredAt": "2026-11-22",
+  "_installedSet": "2026-11-22 07:48 安裝（add-headroom-v2.ps1 產出，無硬切塊、無拉絲鬼影、JPEG q92）",
+  "g43-story-default.jpg": {
+    "headPct": 0.135,
+    "headPx": 78,
+    "sha256Prefix": "20B73634440C7F16",
+    "source": "measure-file + compare-v2-top 肉眼確認",
+    "note": "1024x576，pad=59，髮頂落在 78px（13.5%）"
+  },
+  "g43-story-soft-morning.jpg": {
+    "headPct": 0.135,
+    "headPx": 78,
+    "sha256Prefix": "0A329A855CD73641",
+    "source": "compare-v2-top 肉眼確認（measure-file 嚴格橘紅 101px）",
+    "note": "1024x576，pad=64，髮絲頂端約 78px（13.5%），背景暖光易令自動掃描低估"
+  },
+  "g43-cg-magic-light.jpg": {
+    "headPct": 0.135,
+    "headPx": 78,
+    "sha256Prefix": "0D9934478ED1BA85",
+    "source": "compare-v2-top 肉眼確認（measure-file 84px）",
+    "note": "1024x576，pad=75，圓潤完整原圖延伸，零拉絲鬼影，髮頂約 78px（13.5%）"
+  },
+  "g43-story-reading.jpg": {
+    "headPct": 0.135,
+    "headPx": 78,
+    "sha256Prefix": "ACF5CBEF146CD5C3",
+    "source": "compare-v2-top 肉眼確認（measure-file 82px）",
+    "note": "1024x576，pad=66，髮頂約 78px（13.5%）"
+  }
+}

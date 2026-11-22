@@ -703,19 +703,26 @@ class PortraitAnimator {
     return [a.eyes.reduce((t, e) => t + e.x, 0) / n / a.size[0], a.eyes.reduce((t, e) => t + e.y, 0) / n / a.size[1]];
   }
 
-  // 表情窗的位置：頭的左側（螢幕座標，已夾在舞臺範圍內）與大小
+  // 表情窗的位置：固定在左欄對話框左上（螢幕座標），不再疊在角色臉上。
+  // 對話框已預留 --ap-face-size 的圓形位置，文字起點固定，表情出現時不會重排。
   faceAnchor(stage) {
-    const g = this.screenGeometry();
-    if (!g) return null;
-    const [hx, hy] = this.imageToScreen(...this.headUV(), g);
-    const size = Math.round(Math.max(72, Math.min(112, g.dh * 0.15)));
     const box = stage.getBoundingClientRect();
-    const x = hx - g.dw * 0.15 - size * 0.62;
-    const left = hx - g.dw * 0.15 - size * 0.62 < box.left + size / 2 + 8;          // 左邊放不下就改放右邊
-    const fx = left ? hx + g.dw * 0.15 + size * 0.62 : x;
+    const dialogue = document.querySelector('#tab-story:not(.text-only) .vn-dialogue-window');
+    const rect = dialogue?.getBoundingClientRect();
+    if (rect && rect.width > 0 && rect.height > 0) {
+      const cssSize = parseFloat(getComputedStyle(dialogue).getPropertyValue('--ap-face-size'));
+      const size = Math.round(Math.max(48, Math.min(72, Number.isFinite(cssSize) ? cssSize : 64)));
+      const inset = 12;
+      return {
+        x: rect.left + inset + size / 2,
+        y: rect.top + inset + size / 2,
+        size,
+      };
+    }
+    const size = Math.round(Math.max(48, Math.min(72, box.width * 0.08)));
     return {
-      x: Math.min(box.right - size / 2 - 8, Math.max(box.left + size / 2 + 8, fx)),
-      y: Math.min(box.bottom - size / 2 - 8, Math.max(box.top + size / 2 + 52, hy)),   // 52：避開頂端的 HUD 列
+      x: box.left + 24 + size / 2,
+      y: box.top + 96 + size / 2,
       size,
     };
   }
@@ -973,7 +980,9 @@ function showFace(stage, animator, name, hold, crop = null) {
   const isStoryPortrait = animator.img.id === 'storyPortrait';
   const anchor = animator.faceAnchor(stage);
   if (!anchor) return;
-  let el = stage.querySelector('.pa-face');
+  // 放到 game-screen 層，才能浮在對話框之上；座標仍以舞臺量測。
+  const layer = stage.parentElement || stage;
+  let el = layer.querySelector('.pa-face');
   if (!el) {
     el = document.createElement('div');
     el.className = 'pa-face';
@@ -992,7 +1001,7 @@ function showFace(stage, animator, name, hold, crop = null) {
   if (name === 'curious') el.classList.add('pa-curious');
   el.style.setProperty('--fs', `${anchor.size}px`);
   el.style.setProperty('--fd', `${hold}ms`);
-  placeFx(stage, el, anchor.x, anchor.y);   // 重新放入 DOM → 彈出動畫重新開始，連點時表情會「切換」一次
+  placeFx(layer, el, anchor.x, anchor.y);   // 重新放入 DOM → 彈出動畫重新開始，連點時表情會「切換」一次
   clearTimeout(state.faceTimer);
   state.faceTimer = setTimeout(() => { el.remove(); if (isStoryPortrait) { state.displayedEmotion = null; restoreStoryEmotionVisual(); } }, hold + 250);
 }
@@ -1031,7 +1040,8 @@ function applyStoryEmotionVisual({ repeat = false } = {}) {
   const portraitStage = animator?.img.closest('.vn-stage');
   const anchor = portraitStage && animator.faceAnchor(portraitStage);
   if (!portraitStage || !anchor) return;
-  const existing = portraitStage.querySelector('.pa-face');
+  const layer = portraitStage.parentElement || portraitStage;
+  const existing = layer.querySelector('.pa-face');
   clearTimeout(state.faceTimer);
   let el = existing;
   if (!el) {
@@ -1051,7 +1061,7 @@ function applyStoryEmotionVisual({ repeat = false } = {}) {
   el.style.removeProperty('background-position');
   el.style.setProperty('--fs', `${anchor.size}px`);
   el.style.removeProperty('--fd');
-  placeFx(portraitStage, el, anchor.x, anchor.y);
+  placeFx(layer, el, anchor.x, anchor.y);
   state.displayedEmotion = emotion;
 }
 

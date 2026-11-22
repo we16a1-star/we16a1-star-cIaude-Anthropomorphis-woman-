@@ -54,6 +54,7 @@ import { advanceStoryClock, affectionStageKeyOf, affectionStageOf, normalizeMile
 import { normalizeSpecialEventKey, rollSpecialEvent, specialEventPromptLines } from './special-events.js';
 import { letterEndingPatch, letterEndingText, shouldTriggerAnthropicLetter } from './anthropic-letter.js';
 import { normalizeStoryEmotion, normalizeStoryEmotionIntensity } from './story-emotion.js';
+import { resolveEmotionWithFallback } from './emotion-fallback.js';
 import { approveStoryEvent, normalizeSeenStoryEventFlags, normalizeStoryEventFlag } from './story-events.js';
 import { evaluateRareGoodnight, RARE_GOODNIGHT_WARMUP_TURNS } from './night-cg.js';
 import { evaluateBedroomScene, BEDROOM_SCENE_COOLDOWN_MS } from './bedroom-scene.js';
@@ -67,15 +68,21 @@ import { loadPlayerNamePreference, normalizePlayerName, savePlayerNamePreference
 // P1-01（S1 設定檔載入器接線）：15 份 config 的單一入口；啟動即驗證，缺欄位報錯帶檔名（細節見 config-loader.js 與 tests/story/config-loader.test.js）
 import { loadConfigs } from './config-loader.js';
 // P1-06（逐句演出引擎）：借鏡 AnimaVN jev.js / player.ts，將回覆逐句播放並支援插話快進
-import { splitLines } from './line-split.js';
+import { splitLines, splitScriptLines } from './line-split.js';
 import { LineRunner } from './line-runner.js';
 // G45（網頁回覆容錯）：彎引號、全形標點、字串內未轉義引號／換行與尾逗號的備援解析。
 import { parseLooseJson } from './json-repair.js';
+// AnimaVN MIT 移植：思考標籤剝離、多聲道音訊總線、現場合成打字音效、宏引擎與對話框微控制。
+import { splitThinkingText } from './thinking-splitter.js';
+import { audioBus } from './audio-bus.js';
+import { TYPE_SOUNDS, loadTypeSoundPreference, saveTypeSoundPreference, playTypeSound } from './type-sound.js';
+import { evaluateMacros, createMacroEnv } from './macro-engine.js';
+import { computeVnControlState } from './vn-controls.js';
 // P1-05（玩家安全界線）：危機本機攔截＋低落陪伴提示詞；網頁與 API 兩條生成管線都強制附加安全段。
 import { SafetyModule, withSafetyPromptSupport } from './safety-module.js';
 // P1-02（S2 提示詞組裝與開發者檢視）：工坊「開發者檢視」六區塊面板。
 // 純檢視＋預覽：面板開關只影響預覽，不會改變遊戲實際送出的提示詞（實際注入屬 P1-03）。
-import { bandKeyForAffection, buildInspectorData, defaultStageForAffection, renderInspectorBlocks, renderInspectorSummary, saveBlockPrefs, loadBlockPrefs } from './prompt-inspector.js';
+import { bandKeyForAffection, buildInspectorData, defaultStageForAffection, renderInspectorBlocks, renderInspectorBudgetBar, renderInspectorSummary, saveBlockPrefs, loadBlockPrefs } from './prompt-inspector.js';
 // P1-01 bootstrap：成功→存模組級變數（P1-02 起的消費端使用）；失敗→console 留痕＋可見警示，
 // 遊戲以 app.js 內建提示詞照常運作（不白屏、不擋存檔）。
 // P1-06 逐句演出單例
@@ -86,6 +93,124 @@ let storyDialogueTranscript = [];
 let storyDialogueLastIndex = -1;
 let storyDialogueFollow = true;
 let storyDialogueUserScroll = false;
+let storyTypeSoundCounter = 0;
+let storyDialogueScrollRaf = 0;
+let lastEnabledTypeSoundId = 'soft';
+if (typeof window !== 'undefined') {
+  window.__audioBus = audioBus;
+  window.__typeSound = { TYPE_SOUNDS, load: loadTypeSoundPreference, save: saveTypeSoundPreference, play: playTypeSound };
+  window.__macroEngine = { evaluateMacros, createMacroEnv };
+  if (typeof document !== 'undefined') {
+    const unlockOnce = () => {
+      try { audioBus.unlock(); audioBus.setActive(true); } catch (_) {}
+      document.removeEventListener('pointerdown', unlockOnce);
+      document.removeEventListener('keydown', unlockOnce);
+    };
+    document.addEventListener('pointerdown', unlockOnce, { passive: true });
+    document.addEventListener('keydown', unlockOnce, { passive: true });
+  }
+}
+function scheduleDialogueScroll(el, previousScroll) {
+  if (!el) return;
+  if (!storyDialogueFollow) {
+    el.scrollTop = previousScroll;
+    return;
+  }
+  if (storyDialogueScrollRaf) return;
+  const run = () => {
+    storyDialogueScrollRaf = 0;
+    if (el.isConnected && storyDialogueFollow) el.scrollTop = el.scrollHeight;
+  };
+  if (typeof requestAnimationFrame === 'function') storyDialogueScrollRaf = requestAnimationFrame(run);
+  else run();
+}
+function ensureVnQuickBar() {
+  if (typeof document === 'undefined') return null;
+  const win = document.querySelector('#tab-story .vn-dialogue-window');
+  if (!win) return null;
+  let bar = document.getElementById('vnQuickBar');
+  if (bar) return bar;
+  bar = document.createElement('div');
+  bar.id = 'vnQuickBar';
+  bar.className = 'vn-quick-bar';
+  bar.setAttribute('role', 'toolbar');
+  bar.setAttribute('aria-label', '對話演出快速控制');
+  bar.innerHTML =
+    '<button type="button" class="vn-quick-btn is-skip" id="vnQuickSkip" hidden>跳過本段</button>' +
+    '<button type="button" class="vn-quick-btn" id="vnQuickAuto" aria-pressed="true">自動開</button>' +
+    '<button type="button" class="vn-quick-btn" id="vnQuickSfx" aria-pressed="false">靜音</button>';
+  win.appendChild(bar);
+  const skipBtn = bar.querySelector('#vnQuickSkip');
+  const autoBtn = bar.querySelector('#vnQuickAuto');
+  const sfxBtn = bar.querySelector('#vnQuickSfx');
+  if (skipBtn) {
+    skipBtn.onclick = (e) => {
+      e.stopPropagation();
+      getStoryLineRunner().skipAll();
+      syncVnQuickBar();
+    };
+  }
+  if (autoBtn) {
+    autoBtn.onclick = (e) => {
+      e.stopPropagation();
+      const runner = getStoryLineRunner();
+      runner.saveAutoAdvancePreference(!runner.autoAdvance);
+      const settingsAuto = document.getElementById('vnAutoPlayToggle');
+      if (settingsAuto) settingsAuto.checked = runner.autoAdvance;
+      syncVnQuickBar();
+    };
+  }
+  if (sfxBtn) {
+    sfxBtn.onclick = (e) => {
+      e.stopPropagation();
+      try { audioBus.unlock(); audioBus.setActive(true); } catch (_) {}
+      const cur = loadTypeSoundPreference();
+      if (cur.id !== 'off') {
+        lastEnabledTypeSoundId = cur.id;
+        saveTypeSoundPreference({ id: 'off', volume: cur.volume });
+      } else {
+        const nextId = lastEnabledTypeSoundId && lastEnabledTypeSoundId !== 'off' ? lastEnabledTypeSoundId : 'soft';
+        const saved = saveTypeSoundPreference({ id: nextId, volume: cur.volume });
+        playTypeSound(saved.id, saved.volume);
+      }
+      const sel = document.getElementById('vnTypeSoundSelect');
+      if (sel) sel.value = loadTypeSoundPreference().id;
+      syncVnQuickBar();
+    };
+  }
+  return bar;
+}
+function syncVnQuickBar() {
+  if (typeof document === 'undefined') return;
+  const bar = document.getElementById('vnQuickBar');
+  if (!bar) return;
+  const runner = getStoryLineRunner();
+  const pref = loadTypeSoundPreference();
+  if (pref.id !== 'off') lastEnabledTypeSoundId = pref.id;
+  const st = computeVnControlState({
+    isPlaying: runner.isPlaying,
+    autoAdvance: runner.autoAdvance,
+    typeSoundId: pref.id,
+    lang: typeof uiLanguage === 'string' ? uiLanguage : 'zh'
+  });
+  const skipBtn = bar.querySelector('#vnQuickSkip');
+  const autoBtn = bar.querySelector('#vnQuickAuto');
+  const sfxBtn = bar.querySelector('#vnQuickSfx');
+  if (skipBtn) {
+    skipBtn.hidden = !st.showSkip;
+    skipBtn.textContent = st.skipLabel;
+  }
+  if (autoBtn) {
+    autoBtn.classList.toggle('is-active', st.autoActive);
+    autoBtn.setAttribute('aria-pressed', String(st.autoActive));
+    autoBtn.textContent = st.autoLabel;
+  }
+  if (sfxBtn) {
+    sfxBtn.classList.toggle('is-active', st.soundActive);
+    sfxBtn.setAttribute('aria-pressed', String(st.soundActive));
+    sfxBtn.textContent = st.soundLabel;
+  }
+}
 function getStoryLineRunner() {
   if (!storyLineRunner) {
     storyLineRunner = new LineRunner({
@@ -126,6 +251,13 @@ function getStoryLineRunner() {
             .slice(0, idx + 1)
             .filter((line) => typeof line === 'string');
           el.textContent = shown.join('\n');
+          if (isTyping && typeof text === 'string' && text.length > 0) {
+            storyTypeSoundCounter += 1;
+            if (storyTypeSoundCounter % 2 === 1) {
+              const pref = loadTypeSoundPreference();
+              if (pref.id !== 'off') playTypeSound(pref.id, pref.volume);
+            }
+          }
         } else {
           el.textContent = text;
         }
@@ -140,13 +272,35 @@ function getStoryLineRunner() {
           el.classList.remove('is-line-playing');
         }
 
-        el.scrollTop = storyDialogueFollow ? el.scrollHeight : previousScroll;
+        scheduleDialogueScroll(el, previousScroll);
+        syncVnQuickBar();
+      },
+      onLineMeta: (meta, idx) => {
+        if (!meta || meta.player) return;
+        // 借鏡 AnimaVN 逐句演出事件驅動：單句若有行內標籤或強特徵情緒，即時微調演出表情（不更動存檔主狀態）
+        if (meta.emotion) {
+          const lineEmotion = normalizeStoryEmotion(meta.emotion);
+          const intensity = normalizeStoryEmotionIntensity(state.storyEmotionIntensity);
+          const token = `${activeSlotId || 'active'}:${Math.max(0, Math.floor(Number(state.storyEmotionToken) || 0))}:line:${idx}:${lineEmotion}`;
+          window.__storyEmotion = lineEmotion;
+          window.__storyEmotionToken = token;
+          const stageEl = document.querySelector('.vn-stage');
+          if (stageEl) {
+            stageEl.setAttribute('data-story-emotion', lineEmotion);
+            stageEl.setAttribute('data-story-emotion-token', token);
+          }
+          window.__portraitAnim?.setStoryEmotion?.(lineEmotion, intensity, token);
+        }
+        if (meta.scene) {
+          window.__storyArt?.applyScenePack?.(meta.scene);
+        }
       },
       onFinish: () => {
         const el = document.getElementById('dialogueText');
         if (el) el.classList.remove('is-line-playing');
         const c = document.getElementById('choices');
         if (c) c.classList.remove('choices-waiting');
+        syncVnQuickBar();
       }
     });
   }
@@ -616,6 +770,14 @@ let openingSceneImageKey = '';
   '選擇要回推的提示詞': 'Choose a saved prompt',
   '複製這份提示詞': 'Copy this prompt',
   '關閉': 'Close',
+  '相簿插圖': 'Album illustration',
+  '上一張插圖': 'Previous illustration',
+  '上一張插圖（←）': 'Previous illustration (←)',
+  '下一張插圖': 'Next illustration',
+  '下一張插圖（→）': 'Next illustration (→)',
+  '關閉插圖': 'Close illustration',
+  '關閉（Esc）': 'Close (Esc)',
+  '自訂立繪': 'Custom portrait',
   '目前存檔尚無提示詞記錄。': 'This save has no prompt history yet.',
   '網頁模式提示詞': 'Web prompt',
   'API 回合資料': 'API turn data',
@@ -1820,6 +1982,17 @@ let openingSceneImageKey = '';
   '目前分頁：': 'Current tab: ',
   '接入檢查：': 'Access check: ',
   '請按「開啟官網並登入」，或按「重新啟動自動化瀏覽器」。': 'Press “Open site and sign in”, or “Restart automation browser”.',
+  '桌面輔助尚未開啟。': 'Desktop helper is not enabled.',
+  '正在聚焦 AI 登入瀏覽器…': 'Focusing the AI sign-in browser…',
+  '無法聚焦：': 'Could not focus: ',
+  '找不到可聚焦的自動化瀏覽器。': 'No focusable automation browser found.',
+  '已聚焦 AI 登入瀏覽器。': 'Focused the AI sign-in browser.',
+  '目前視窗：': 'Current window: ',
+  '桌面輔助已開啟。只會聚焦本遊戲啟動的 Chrome／Edge。': 'Desktop helper enabled. Only this game’s Chrome/Edge window will be focused.',
+  '桌面輔助已關閉。': 'Desktop helper disabled.',
+  '桌面輔助（實驗性）：允許遊戲把「自動化專用」Chrome／Edge 視窗帶到前景': 'Desktop helper (experimental): let the game bring its automation Chrome/Edge window to the foreground',
+  '聚焦 AI 登入瀏覽器': 'Focus the AI sign-in browser',
+  '桌面輔助預設關閉。開啟後只會聚焦本遊戲啟動的 Chrome／Edge，不會讀取其他視窗、剪貼簿或螢幕畫面。': 'Desktop helper is off by default. When enabled, it only focuses the Chrome/Edge window started by this game and does not read other windows, the clipboard, or the screen.',
   '完成後再按「檢查登入與接入」。': 'When done, press “Check sign-in and access”.',
   '送出鈕：輸入文字後出現（自動化會用 Enter 備援）': 'Send button: appears after typing (automation falls back to Enter)',
   '已接入：輸入框正常。': 'Connected: the editor is available. ',
@@ -2791,8 +2964,15 @@ function buildWebPrompt(action,saving=false){
     ?`${target.length} ${target.choices} JSON only: fields narration, affectionDelta, choices (exactly 7 distinct), ending, endingText, memory, emotion, intensity, eventFlag. eventFlag must be null or letter|moon_bird|outing_memory|magic_touch|vow|goodnight|night_chat_reading|cheek_pinch|lakeside_sunset. It is a proposal only; the game enforces affection/time gates, one-shot history, and cooldowns. Use letter for opening/reading a letter; moon_bird only for the one-time magical bird at night; outing_memory for a one-time outing memory; magic_touch only for the one-time magical panel event at night; vow only for a major confession/pledge milestone; goodnight only when the night winds down and affection is 75 or above (at most once every 7 story days; the game picks 36455 or 36628 from the player's setting); night_chat_reading only for quiet bedtime reading together at night with affection 50 or above; cheek_pinch only when the player actually pinches or teases her cheek in daytime; lakeside_sunset only for a one-time lakeside sunset outing with affection 50 or above. Otherwise null. Already completed one-shot flags: ${normalizeSeenStoryEventFlags(state.storyEventSeen).join(', ')||'none'}. emotion is neutral|happy|proud|shy|surprised|dizzy|curious|focused; focused means reading, solving, thinking carefully, or attentively listening, while curious means genuine interest or a question. intensity is an integer 1-3: use 1 for subtle, 2 for clear, 3 only for a strong moment; neutral uses 1. Keep narration, emotion and intensity consistent. Declining or setting a boundary alone never lowers affection. No text outside JSON.`
     :`${target.length} ${target.choices} 只輸出JSON：narration、affectionDelta、choices（恰好7個）、ending、endingText、memory、emotion、intensity、eventFlag。eventFlag 必須是 null 或 letter／moon_bird／outing_memory／magic_touch／vow／goodnight／night_chat_reading／cheek_pinch／lakeside_sunset；它只是事件提議，遊戲端會檢查好感、時段、一次性狀態與冷卻。拆信／讀信用 letter；夜間一次性信鳥用 moon_bird；外出回憶用 outing_memory；夜間魔法面板一次性事件用 magic_touch；重大誓約或告白里程碑才用 vow；晚安收尾且好感 75 以上才用 goodnight（每 7 個故事日最多一次；遊戲依玩家設定選 36455 或 36628）；夜間一起蓋被讀書、好感 50 以上用 night_chat_reading；玩家實際在白天捏臉或戳臉頰時才用 cheek_pinch；好感 50 以上的湖畔夕陽一次性外出用 lakeside_sunset；其他情形用 null。已完成的一次性事件：${normalizeSeenStoryEventFlags(state.storyEventSeen).join('、')||'無'}。emotion 限 neutral／happy／proud／shy／surprised／dizzy／curious／focused；focused 用於閱讀、思考解題或認真聆聽，curious 用於真正好奇或發問。intensity 是 1～3 整數：1 輕微、2 明顯、3 僅重大情緒時用；neutral 用 1。旁白、emotion、intensity 必須一致。婉拒或表達界線本身不扣好感。只輸出 JSON 本體。`;
   const opening=isOpening?openingStylePrompt(state.openingStyle,uiLanguage):''; const craft=craftRules(uiLanguage);
-  // 追加九：世界書（命中關鍵詞才注入）；提示詞管理器與作者註記未使用時完全不追加行（逐字元相容）。
-  const worldBookLines=worldBookPromptLines(state.worldBook,(transcript||'')+'\n'+chosen,uiLanguage,{phase:isOpening?'opening':'chat'});
+  // 追加九：世界書（命中關鍵詞才注入，支援 AnimaVN 正則／遞迴與 {{char}}/{{user}} 宏展開）；未使用時完全不追加行（逐字元相容）。
+  const wbMacroEnv = createMacroEnv({
+    char: activeCharacterName(),
+    user: state.playerName || loadPlayerNamePreference() || 'User'
+  });
+  const worldBookLines=worldBookPromptLines(state.worldBook,(transcript||'')+'\n'+chosen,uiLanguage,{
+    phase:isOpening?'opening':'chat',
+    substitute: (t) => evaluateMacros(t, wbMacroEnv)
+  });
   const tweakOff=normalizePromptTweaks(state.promptTweaks).rulesOff;
   // 節省模式只留「不留就會出錯」的規則（JSON 引號寫法、記憶改寫），其餘寫作技巧壓成一句。
   const craftLines=saving
@@ -3281,7 +3461,7 @@ function parseWebReply(value){
   if(!Array.isArray(result.choices)||result.choices.length!==7||result.choices.some(choice=>typeof choice!=='string')) throw new Error('AI 漏掉或未提供完整七選項；請用「AI 漏掉七選項？一鍵準備修復提示詞」要求它補齊。');
   if(choices.length!==7) throw new Error('AI 的 7 個選項有空白或重複；請用修復提示詞重新整理成 7 個不同選項。');
   result.choices=choices;
-  result.emotion=normalizeStoryEmotion(result.emotion);
+  result.emotion=resolveEmotionWithFallback(result.emotion,result.narration);
   result.intensity=normalizeStoryEmotionIntensity(result.intensity);
   result.eventFlag=normalizeStoryEventFlag(result.eventFlag);
   const delta=Number(result.affectionDelta);
@@ -4302,7 +4482,15 @@ function renderCharacterPortrait(){
   for(const image of [$('storyPortrait'),$('profilePortrait')])if(image){image.src=src;image.alt=activeCharacterName();}
   // G16：開始介面用專屬立繪；使用者換了自訂角色圖時，開始介面也改顯示他的圖
   const startImage=$('startPortrait');if(startImage)startImage.alt=activeCharacterName();
-  $('tab-story')?.classList.toggle('has-custom-portrait',Boolean(custom));
+  const hasCustom = Boolean(custom);
+  const tab = $('tab-story');
+  if(tab){
+    tab.classList.toggle('has-custom-portrait', hasCustom);
+    // WP4：檢測是否具備透明通道（PNG 或 WebP）
+    const isTransparent = hasCustom && (/^data:image\/(?:png|webp)/i.test(custom) || state.customPortraitTransparent === true);
+    tab.classList.toggle('is-transparent-portrait', isTransparent);
+  }
+  const badge=$('customPortraitBadge');if(badge)badge.hidden=!hasCustom;
 }
 
 // 使用者在系統設定要求「減少動態」時，捲動改為即時，不做平滑動畫。
@@ -4382,21 +4570,42 @@ function renderAlbum(){
   grid.innerHTML=ALBUM_ENTRIES.map(entry=>{
     const unlocked=isAlbumUnlocked(state,entry.id);
     if(!unlocked) return `<div class="album-item album-locked" data-album="${esc(entry.id)}"><div class="album-lock">🔒</div><div class="album-title">${esc(entry.title)}</div></div>`;
-    return `<div class="album-item" data-album="${esc(entry.id)}"><img src="assets/${esc(entry.file)}" alt="${esc(entry.title)}" loading="lazy"><div class="album-title">${esc(entry.title)}</div></div>`;
+    return `<div class="album-item" data-album="${esc(entry.id)}"><img src="assets/${esc(entry.thumb || entry.file)}" alt="${esc(entry.title)}" loading="lazy"><div class="album-title">${esc(entry.title)}</div></div>`;
   }).join('');
   grid.querySelectorAll('.album-item:not(.album-locked)').forEach(item=>{
     item.onclick=()=>openAlbumLightbox(item.dataset.album);
   });
 }
+let albumLightboxId='';
+function albumUnlockedEntries(){
+  return ALBUM_ENTRIES.filter(entry=>isAlbumUnlocked(state,entry.id));
+}
+function showAlbumLightboxEntry(entry){
+  const img=document.getElementById('albumLightboxImg');
+  if(!entry||!img) return;
+  albumLightboxId=entry.id;
+  img.src='assets/'+entry.file;
+  img.alt=entry.title;
+  const list=albumUnlockedEntries();
+  for(const id of ['albumLightboxPrev','albumLightboxNext']){
+    const button=document.getElementById(id);
+    if(button) button.disabled=list.length<2;
+  }
+}
 function openAlbumLightbox(id){
   const entry=albumEntry(id);
   if(!entry) return;
   const lb=document.getElementById('albumLightbox');
-  const img=document.getElementById('albumLightboxImg');
-  if(!lb||!img) return;
-  img.src='assets/'+entry.file;
-  img.alt=entry.title;
+  if(!lb) return;
+  showAlbumLightboxEntry(entry);
   lb.hidden=false;
+}
+function stepAlbumLightbox(delta){
+  const list=albumUnlockedEntries();
+  if(list.length<2) return;
+  const index=list.findIndex(entry=>entry.id===albumLightboxId);
+  const next=(index+delta+list.length)%list.length;
+  showAlbumLightboxEntry(list[next]);
 }
 function closeAlbumLightbox(){
   const lb=document.getElementById('albumLightbox');
@@ -4408,6 +4617,29 @@ function unlockAlbum(id){
   if(!state.albumUnlocked.includes(id)){ state.albumUnlocked=[...state.albumUnlocked,id]; }
 }
 
+// 美術計畫：場景標籤由當下故事時間決定；開始畫面不顯示，避免開場誤報；夜間且為雨景時呈現「古籍閱覽室 · 雨夜」。
+function updateStageSceneLabel() {
+  const label = document.querySelector('.stage-scene-label');
+  if (!label) return;
+  const tab = $('tab-story');
+  const isStart = tab.classList.contains('story-empty') || tab.classList.contains('g43-story-opening');
+  label.hidden = isStart;
+  if (isStart) return;
+  const clock = realStoryClock(state.storyClock);
+  const timeEnabled = state.storyClock?.mode === 'story' || state.storyClock?.mode === 'real';
+  const defaultArt = document.getElementById('storyDefaultArt');
+  const isRainyNight = defaultArt?.dataset?.art === 'rainy-night' ||
+    (clock.slot === 2 && (/雨夜|暴雨|窗外雷雨|窗外雨聲|細雨|雨絲/.test(state.lastAssistantDialogue || '') || state.storyWeather === 'rain'));
+  const slotName = timeEnabled
+    ? (isRainyNight
+      ? (uiLanguage === 'en' ? 'Rainy Night' : '雨夜')
+      : (uiLanguage === 'en'
+        ? ['Morning light', 'Daytime', 'Night'][clock.slot] || ''
+        : ['晨光', '白天', '夜間'][clock.slot] || ''))
+    : (isRainyNight ? (uiLanguage === 'en' ? 'Rainy Night' : '雨夜') : '');
+  const room = uiLanguage === 'en' ? 'Rare Books Room' : '古籍閱覽室';
+  label.innerHTML = '<span aria-hidden="true">✦</span> ' + esc(room) + (slotName ? ' · ' + esc(slotName) : '');
+}
 function render() {
   renderCharacterName();
   renderWorldSetting();
@@ -4435,11 +4667,13 @@ function render() {
   $('storyNotice').textContent = storyNoticeText;
   $('tab-story').classList.toggle('text-only',sceneMode==='text');
   $('tab-story').classList.toggle('story-empty',!state.history.length&&!state.pendingAction);
+  $('tab-story').classList.toggle('story-ending',Boolean(state.ending));
   const aiStoryTurns=state.history.filter(item=>item.role==='ai'||item.role==='assistant');
   const firstStoryText=String(aiStoryTurns[0]?.text||'');
   const firstStorySentences=(firstStoryText.match(/[。！？.!?]/g)||[]).length;
   $('tab-story').classList.toggle('g43-story-opening',aiStoryTurns.length<1||(aiStoryTurns.length===1&&firstStorySentences<2));
   $('tab-story').classList.toggle('has-web-pending',Boolean(state.pendingAction&&state.aiMode==='web'));
+  updateStageSceneLabel();
   $('sceneImageBtn').hidden=false;
   $('importSceneImageBtn').hidden=false;
   $('sceneImageStatus').textContent=sceneMode==='text'?uiText('文字場景模式：目前場景會以文字詳細描述，不產生圖片。'):uiText('選擇你的回應，讓故事繼續');
@@ -4484,6 +4718,8 @@ function render() {
     }
   }
   g12UpdatePageHint();
+  ensureVnQuickBar();
+  syncVnQuickBar();
   try{
     const prev=lastRenderedAffection;
     lastRenderedAffection=state.affection;
@@ -4577,7 +4813,10 @@ function render() {
   const apiRecoveryControls=`<button class="choice-btn ai-btn" id="retryPendingTurn">${uiText('重試目前回合')}</button><button class="choice-btn" id="retryPendingWebTurn">${uiText('改用官方 AI 網頁完成這一回合')}</button>`;
   const webToApiRecovery=state.aiMode==='web'&&aiConnections.length?`<button class="choice-btn" id="retryPendingApiTurn">${uiText('改用已設定的 API 完成這一回合')}</button>`:'';
   const webMoreActions=state.pendingAction&&state.aiMode==='web'?`<details class="web-more-actions"><summary>${uiText('其他操作與備份')}</summary><button class="choice-btn" id="copyWebPromptBtn">${uiText('重新複製提示詞')}</button>${isAndroidApp()?'':`<button class="choice-btn" id="restoreWebLayoutBtn">${uiText('還原遊戲視窗')}</button>`}${webToApiRecovery}<button class="choice-btn" id="backupPendingSaveBtn">${uiText('匯出包含待完成回合的存檔備份')}</button><button class="choice-btn" id="openAiSettings">${uiText('前往 AI 帳號設定')}</button></details>`:'';
-  c.innerHTML = (state.pendingAction ? `<div class="pending-turn" role="status"><b>本回合尚未生成，故事進度已保留。</b><p>${esc(uiErrorText(state.lastAiError||(state.aiMode==='web'?'提示詞已準備好；請依下方步驟手動送出。':'切換到可用的 AI 帳號後即可重試。')))}</p><p>${uiText('AI 尚未成功完成這一回合；故事和玩家行動都已保存。你可以重試、切換 AI 服務／帳號、改用另一種模式，或匯出包含待辦回合的備份。')}</p>${state.aiMode==='web'?webReplyControls:apiRecoveryControls}${state.aiMode==='web'?webMoreActions:`${webToApiRecovery}<button class="choice-btn" id="backupPendingSaveBtn">${uiText('匯出包含待完成回合的存檔備份')}</button><button class="choice-btn" id="openAiSettings">${uiText('前往 AI 帳號設定')}</button>`}</div>` : '') + (state.ending?'<div class="ai-hint">'+uiText('本章已結束，仍可處理尚未完成的送禮互動。')+'</div>':'') + giftPanels + fixedChoices.map((x,i)=>`<button class="choice-btn" data-i="${i}" ${state.pendingAction?'disabled':''}>${i+1}. ${esc(x)}</button>`).join('') +
+  const choicesListHtml = fixedChoices.length
+    ? `<div class="choices-list" role="group" aria-label="${uiText('故事選項')}">${fixedChoices.map((x,i)=>`<button class="choice-btn" data-i="${i}" ${state.pendingAction?'disabled':''}><span class="choice-num">${i+1}</span><span class="choice-text">${esc(x)}</span></button>`).join('')}</div>`
+    : '';
+  c.innerHTML = (state.pendingAction ? `<div class="pending-turn" role="status"><b>本回合尚未生成，故事進度已保留。</b><p>${esc(uiErrorText(state.lastAiError||(state.aiMode==='web'?'提示詞已準備好；請依下方步驟手動送出。':'切換到可用的 AI 帳號後即可重試。')))}</p><p>${uiText('AI 尚未成功完成這一回合；故事和玩家行動都已保存。你可以重試、切換 AI 服務／帳號、改用另一種模式，或匯出包含待辦回合的備份。')}</p>${state.aiMode==='web'?webReplyControls:apiRecoveryControls}${state.aiMode==='web'?webMoreActions:`${webToApiRecovery}<button class="choice-btn" id="backupPendingSaveBtn">${uiText('匯出包含待完成回合的存檔備份')}</button><button class="choice-btn" id="openAiSettings">${uiText('前往 AI 帳號設定')}</button>`}</div>` : '') + (state.ending?'<div class="ai-hint">'+uiText('本章已結束，仍可處理尚未完成的送禮互動。')+'</div>':'') + giftPanels + choicesListHtml +
     `<button class="choice-btn free-choice-toggle" id="freeChoiceToggle" ${state.pendingAction||state.ending?'disabled':''}>8. ${uiText('自訂行動／台詞')}</button>
      <div class="free-action" id="freeActionPanel" hidden>
        <div class="free-title">8. ${uiText('自訂行動／台詞')}</div>
@@ -4587,6 +4826,8 @@ function render() {
        <div class="free-row"><textarea id="freeInput" rows=3 maxlength=2000 ${state.pendingAction||state.ending?'disabled':''} placeholder="選「做／說／想」快速帶入，或直接寫下你這回合的行動、台詞或念頭。"></textarea><button class="choice-btn ai-btn free-send-wide" id="freeSend" ${state.pendingAction||state.ending?'disabled':''}>${uiText('送出我的行動')}</button></div>
      </div>` + `<p class="keyboard-hint">${uiText(keyboardHint)}</p>`;
   c.scrollTop = 0;
+  const choicesListEl = c.querySelector('.choices-list');
+  if (choicesListEl) choicesListEl.scrollTop = 0;
   // 待辦面板第一次出現（含重新載入後）時，避免瀏覽器還原舊捲動位置而把標題與
   // 回覆輸入區藏在上面。只在待辦行動改變時重置一次，之後尊重玩家自己的捲動。
   const pendingKey = state.pendingAction || '';
@@ -5586,6 +5827,36 @@ function ensureVnPerformanceControls() {
     gnBox.append(gnSelect);
     group.append(gnBox);
 
+    // 2.5 打字跳字音效（AnimaVN MIT Web Audio 現場合成，零外部音檔）
+    const typeSoundBox = document.createElement('div');
+    typeSoundBox.className = 'vn-typesound-box';
+    const tsLabel = document.createElement('label');
+    tsLabel.htmlFor = 'vnTypeSoundSelect';
+    tsLabel.textContent = uiText('打字跳字音效：');
+    const tsSelect = document.createElement('select');
+    tsSelect.id = 'vnTypeSoundSelect';
+    for (const item of TYPE_SOUNDS) {
+      const opt = document.createElement('option');
+      opt.value = item.id;
+      opt.textContent = uiText(item.name);
+      tsSelect.append(opt);
+    }
+    const tsVol = document.createElement('input');
+    tsVol.type = 'range';
+    tsVol.id = 'vnTypeSoundVolume';
+    tsVol.min = '5';
+    tsVol.max = '100';
+    tsVol.step = '5';
+    const tsVolVal = document.createElement('span');
+    tsVolVal.id = 'vnTypeSoundVolumeVal';
+    const tsPreview = document.createElement('button');
+    tsPreview.type = 'button';
+    tsPreview.id = 'vnTypeSoundPreview';
+    tsPreview.className = 'vn-typesound-preview';
+    tsPreview.textContent = uiText('試聽音效');
+    typeSoundBox.append(tsLabel, tsSelect, tsVol, tsVolVal, tsPreview);
+    group.append(typeSoundBox);
+
     // 3. 語音合成預留 (D20)
     const voiceBox = document.createElement('label');
     voiceBox.className = 'vn-voice-label';
@@ -5631,6 +5902,7 @@ function ensureVnPerformanceControls() {
     autoPlayToggle.checked = runner.autoAdvance;
     autoPlayToggle.onchange = () => {
       runner.saveAutoAdvancePreference(autoPlayToggle.checked);
+      syncVnQuickBar();
     };
   }
 
@@ -5650,6 +5922,34 @@ function ensureVnPerformanceControls() {
     gnSelect.onchange = () => {
       try { localStorage.setItem('claude_novel_goodnight_cg_pref_v1', gnSelect.value); } catch(_) {}
     };
+  }
+
+  const tsSelect = $('vnTypeSoundSelect');
+  const tsVol = $('vnTypeSoundVolume');
+  const tsVolVal = $('vnTypeSoundVolumeVal');
+  const tsPreview = $('vnTypeSoundPreview');
+  if (tsSelect && tsVol) {
+    const curPref = loadTypeSoundPreference();
+    tsSelect.value = curPref.id;
+    tsVol.value = String(Math.round(curPref.volume * 100));
+    if (tsVolVal) tsVolVal.textContent = ` ${tsVol.value}%`;
+    const persistTypeSound = () => {
+      const next = saveTypeSoundPreference({ id: tsSelect.value, volume: Number(tsVol.value) / 100 });
+      if (tsVolVal) tsVolVal.textContent = ` ${Math.round(next.volume * 100)}%`;
+      syncVnQuickBar();
+    };
+    tsSelect.onchange = persistTypeSound;
+    tsVol.oninput = persistTypeSound;
+    if (tsPreview) {
+      tsPreview.onclick = () => {
+        try { audioBus.unlock(); audioBus.setActive(true); } catch (_) {}
+        const kind = tsSelect.value === 'off' ? 'soft' : tsSelect.value;
+        const vol = Number(tsVol.value) / 100;
+        playTypeSound(kind, vol);
+        setTimeout(() => playTypeSound(kind, vol), 85);
+        setTimeout(() => playTypeSound(kind, vol), 170);
+      };
+    }
   }
 
   if (voiceToggle) {
@@ -5694,6 +5994,7 @@ function ensurePromptInspectorPanel(){
 <button id="pmInspectorRefresh" type="button">重新組裝</button>
 </div>
 <p class="pm-summary" id="pmInspectorSummary" role="status"></p>
+<div id="pmInspectorBudget"></div>
 <div class="pm-blocks" id="pmInspectorBlocks"></div>`;
   host.append(panel);
   const stageSelect=$('pmInspectorStage');
@@ -5729,6 +6030,8 @@ function refreshPromptInspector(){
   blocksHost.innerHTML=renderInspectorBlocks(data.blocks);
   const summary=$('pmInspectorSummary');
   if(summary)summary.textContent=renderInspectorSummary(data);
+  const budgetHost=$('pmInspectorBudget');
+  if(budgetHost)budgetHost.innerHTML=renderInspectorBudgetBar(data);
   blocksHost.querySelectorAll('input[data-block]').forEach(input=>{
     input.onchange=()=>{
       const prefs=loadBlockPrefs(window.localStorage);
@@ -6027,7 +6330,7 @@ function applyTurn(r, role='ai') {
     if(!state.ending){state.ending=true;state.history.push({role:'ending',text:uiText('好感度歸零，故事結束了。')});}
   }
   if (r.memory !== undefined) state.storyMemory = String(r.memory || '').slice(-1000);
-  state.storyEmotion=normalizeStoryEmotion(r.emotion);
+  state.storyEmotion=resolveEmotionWithFallback(r.emotion,r.narration);
   state.storyEmotionIntensity=normalizeStoryEmotionIntensity(r.intensity);
   state.storyEmotionToken=Math.max(0,Math.floor(Number(state.storyEmotionToken)||0))+1;
   if (r.narration) state.history.push({role,text:r.narration});
@@ -6093,7 +6396,11 @@ function applyTurn(r, role='ai') {
   temporaryChatFallbackKey='';
   if (role === 'ai' && r.narration) {
     try {
-      const lines = splitLines(r.narration);
+      const scriptLines = splitScriptLines(r.narration, {
+        charName: state.characterName || DEFAULT_CHARACTER_NAME,
+        userName: state.playerName || 'User'
+      });
+      const lines = scriptLines.length ? scriptLines : splitLines(r.narration);
       storyDialogueTranscript = [];
       storyDialogueLastIndex = -1;
       storyDialogueFollow = true;
@@ -6446,7 +6753,16 @@ $('exportBtn').onclick=exportData;
 $('importBtn').onclick=()=>$('importFile').click();
 $('importFile').onchange=e=>{const f=e.target.files?.[0]; importData(f); e.target.value='';};
 const albumLightboxClose=$('albumLightboxClose'); if(albumLightboxClose) albumLightboxClose.onclick=closeAlbumLightbox;
+const albumLightboxPrev=$('albumLightboxPrev'); if(albumLightboxPrev) albumLightboxPrev.onclick=e=>{e.stopPropagation();stepAlbumLightbox(-1);};
+const albumLightboxNext=$('albumLightboxNext'); if(albumLightboxNext) albumLightboxNext.onclick=e=>{e.stopPropagation();stepAlbumLightbox(1);};
 const albumLightbox=$('albumLightbox'); if(albumLightbox) albumLightbox.onclick=e=>{if(e.target===albumLightbox)closeAlbumLightbox();};
+document.addEventListener('keydown',event=>{
+  const lb=$('albumLightbox');
+  if(!lb||lb.hidden)return;
+  if(event.key==='Escape'){event.preventDefault();closeAlbumLightbox();}
+  else if(event.key==='ArrowLeft'){event.preventDefault();stepAlbumLightbox(-1);}
+  else if(event.key==='ArrowRight'){event.preventDefault();stepAlbumLightbox(1);}
+});
 document.querySelectorAll('[data-language-select]').forEach(select=>{select.onchange=()=>{uiLanguage=select.value==='en'?'en':'zh';localStorage.setItem(LANGUAGE_KEY,uiLanguage);settings();render();};});
 $('sceneMode').onchange=()=>{sceneMode=$('sceneMode').value==='offer'?'offer':'text';localStorage.setItem(SCENE_MODE_KEY,sceneMode);render();};
 $('sceneImageBtn').onclick=requestSceneIllustration;
@@ -6688,6 +7004,45 @@ if(askAccountToggle){
     window.claudeDesktop?.setAskGoogleAccount?.(askGoogleAccount);
   };
 }
+// 桌面輔助（實驗性）：只聚焦本 App 啟動的 Chrome／Edge，預設關閉。
+const DESKTOP_HELPER_KEY='claude_novel_desktop_helper_v1';
+let desktopHelperEnabled=localStorage.getItem(DESKTOP_HELPER_KEY)==='1';
+function syncDesktopHelperUi(){
+  const toggle=$('desktopHelperToggle');
+  if(toggle)toggle.checked=desktopHelperEnabled;
+  const button=$('focusAiBrowserBtn');
+  if(button)button.disabled=!desktopHelperEnabled;
+}
+function setDesktopHelperStatus(text){const el=$('desktopHelperStatus');if(el)el.textContent=text;}
+async function applyDesktopHelperPreference(){try{await window.claudeDesktop?.setDesktopHelper?.(desktopHelperEnabled);}catch{}}
+async function focusAiBrowserFromSettings(){
+  if(!desktopHelperEnabled){setDesktopHelperStatus(uiText('桌面輔助尚未開啟。'));return;}
+  const provider=webConnectionProvider();
+  const button=$('focusAiBrowserBtn');
+  if(button)button.disabled=true;
+  setDesktopHelperStatus(uiText('正在聚焦 AI 登入瀏覽器…'));
+  try{
+    const result=await window.claudeDesktop?.focusAutomationBrowser?.({provider});
+    if(!result||result.ok===false){setDesktopHelperStatus(uiText('無法聚焦：')+(result?.error||uiText('找不到可聚焦的自動化瀏覽器。')));}
+    else{setDesktopHelperStatus(uiText('已聚焦 AI 登入瀏覽器。')+(result.title?uiText('目前視窗：')+result.title:''));}
+  }catch(error){setDesktopHelperStatus(uiText('無法聚焦：')+uiErrorText(ipcMessage(error,'請確認 Chrome／Edge 可以正常開啟。')));}
+  finally{if(button)button.disabled=!desktopHelperEnabled;}
+}
+const desktopHelperToggle=$('desktopHelperToggle');
+if(desktopHelperToggle){
+  desktopHelperToggle.checked=desktopHelperEnabled;
+  desktopHelperToggle.onchange=()=>{
+    desktopHelperEnabled=desktopHelperToggle.checked;
+    try{localStorage.setItem(DESKTOP_HELPER_KEY,desktopHelperEnabled?'1':'0');}catch{}
+    syncDesktopHelperUi();
+    void applyDesktopHelperPreference();
+    setDesktopHelperStatus(desktopHelperEnabled?uiText('桌面輔助已開啟。只會聚焦本遊戲啟動的 Chrome／Edge。'):uiText('桌面輔助已關閉。'));
+  };
+}
+const focusAiBrowserBtn=$('focusAiBrowserBtn');
+if(focusAiBrowserBtn){focusAiBrowserBtn.onclick=()=>void focusAiBrowserFromSettings();}
+syncDesktopHelperUi();
+void applyDesktopHelperPreference();
 $('webCheckConnectionBtn').onclick=()=>void checkWebConnection();
 $('webRestartAutomationBtn').onclick=()=>void restartAutomationBrowserFromSettings();
 $('enableWebAiBtn').onclick=()=>{if(busy)return;state.aiMode='web';state.webProvider=normalizeWebAIProvider($('webAiProvider').value);save();settings();render();if(state.pendingAction)beginWebTurn(state.pendingAction==='__OPENING__'?null:state.pendingAction);};
