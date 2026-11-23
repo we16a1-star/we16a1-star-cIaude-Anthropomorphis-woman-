@@ -21,13 +21,13 @@ export function evaluateModelCheck(story, { provider = '', model = '', latencyMs
     choices.length !== 7 ? `收到 ${choices.length} 個；必須恰好 7 個。` : (distinct.size === 7 ? '' : '有空白或重複的選項。'),
     choices.length !== 7 ? `Found ${choices.length}; expected exactly 7.` : (distinct.size === 7 ? '' : 'Some choices are empty or duplicated.'));
   const affectionOk = Number.isFinite(Number(safeStory?.affectionDelta));
-  const emotionOk = ['neutral', 'happy', 'proud', 'shy', 'surprised', 'dizzy', 'curious', 'focused'].includes(String(safeStory?.emotion || '').toLowerCase());
+  const emotionOk = ['neutral', 'happy', 'proud', 'shy', 'surprised', 'dizzy', 'curious', 'focused', 'worried', 'tender'].includes(String(safeStory?.emotion || '').toLowerCase());
   add('affection', '好感度格式正確', 'Affection format is valid', affectionOk,
     affectionOk ? '' : 'affectionDelta 必須是數字。',
     affectionOk ? '' : 'affectionDelta must be a number.');
   add('emotion', '表情欄位正確', 'Emotion field is valid', emotionOk,
-      emotionOk ? '' : 'emotion 必須是 neutral、happy、proud、shy、surprised、dizzy、curious、focused 其中一個。',
-      emotionOk ? '' : 'emotion must be neutral, happy, proud, shy, surprised, dizzy, curious, or focused.');
+      emotionOk ? '' : 'emotion 必須是 neutral、happy、proud、shy、surprised、dizzy、curious、focused、worried、tender 其中一個。',
+      emotionOk ? '' : 'emotion must be neutral, happy, proud, shy, surprised, dizzy, curious, focused, worried, or tender.');
   const intensity = Number(safeStory?.intensity);
   const intensityOk = Number.isInteger(intensity) && intensity >= 1 && intensity <= 3;
   add('intensity', '情緒強度為 1～3', 'Emotion intensity is 1-3', intensityOk,

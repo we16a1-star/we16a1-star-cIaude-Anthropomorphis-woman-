@@ -277,8 +277,10 @@ export function createWorkshopHarnessPanels(ctx) {
     if (st) st.textContent = uiText('正在執行六項系統與後端診斷…');
     const cards = characterCardsList();
     const activeCards = selectedCharacterCards();
+    const apiBase = typeof apiBaseUrl === 'function' ? apiBaseUrl() : '';
     const report = await backendDebugger.runDiagnostics({
-      apiBase: typeof apiBaseUrl === 'function' ? apiBaseUrl() : '',
+      apiBase,
+      headers: typeof desktopApiHeaders === 'function' ? desktopApiHeaders(apiBase) : {},
       configs: getGameConfigs(),
       pluginRegistry,
       audioCoordinator,
@@ -365,8 +367,10 @@ export function createWorkshopHarnessPanels(ctx) {
       const s = getState();
       if (st) st.textContent = uiText('正在探測後端模型契約 (/api/model-check)…');
       const conn = activeAiConnection?.() || null;
+      const apiBase = typeof apiBaseUrl === 'function' ? apiBaseUrl() : '';
       const res = await backendDebugger.probeModel({
-        apiBase: typeof apiBaseUrl === 'function' ? apiBaseUrl() : '',
+        apiBase,
+        headers: typeof desktopApiHeaders === 'function' ? desktopApiHeaders(apiBase) : {},
         provider: s.provider || '',
         model: s.model || '',
         accountProfile: conn?.profileId || ''

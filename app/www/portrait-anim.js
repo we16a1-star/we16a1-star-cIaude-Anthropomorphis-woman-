@@ -884,10 +884,12 @@ function placeFx(stage, fx, x, y) {
   fx.style.setProperty('--pa-y', '0px');
   stage.appendChild(fx);
   const origin = fx.getBoundingClientRect();
+  const originCx = origin.left + origin.width / 2;
+  const originCy = origin.top + origin.height / 2;
   fx.style.setProperty('--pa-x', '100px');
   const k = (fx.getBoundingClientRect().left - origin.left) / 100 || 1;
-  fx.style.setProperty('--pa-x', `${Math.round((x - origin.left) / k)}px`);
-  fx.style.setProperty('--pa-y', `${Math.round((y - origin.top) / k)}px`);
+  fx.style.setProperty('--pa-x', `${Math.round((x - originCx) / k)}px`);
+  fx.style.setProperty('--pa-y', `${Math.round((y - originCy) / k)}px`);
   return k;
 }
 
@@ -906,7 +908,7 @@ function spawnTouchFx(stage, x, y) {
 // G43 起依好感度選四階圖（WP2）；好感度讀不到或新圖未載入時，退回原本依點擊位置的 pat／happy／surprised／dizzy。
 // 表情圖放在 assets/expressions/（來源與授權狀態見該資料夾的 README.txt）；舊表情缺任何一張就整個停用表情窗，其餘觸碰動畫照常。
 const FACE_DIR = 'assets/expressions/';
-const FACES = ['pat', 'happy', 'surprised', 'dizzy', 'story-daily', 'story-proud', 'story-shy', 'story-focused'];
+const FACES = ['pat', 'happy', 'surprised', 'dizzy', 'story-daily', 'story-proud', 'story-shy', 'story-focused', 'story-curious', 'story-worried', 'story-tender'];
 const FACE_SHOW_MS = 1600;            // 一次表情的停留時間（參考 claude-xiaoke 的摸頭表情 1.6 秒）
 const FACE_DIZZY_MS = 2200;
 const FACE_BURST = [5, 2200];         // [連點次數, 時間窗(毫秒)]
@@ -988,9 +990,9 @@ function showFace(stage, animator, name, hold, crop = null) {
     el.className = 'pa-face';
     el.setAttribute('aria-hidden', 'true');
   }
-  el.classList.remove('pa-story-emotion', 'pa-curious', 'pa-proud', 'pa-shy', 'pa-focused', 'pa-daily');
+  el.classList.remove('pa-story-emotion', 'pa-curious', 'pa-proud', 'pa-shy', 'pa-focused', 'pa-worried', 'pa-tender', 'pa-daily');
   el.dataset.face = name;
-  el.style.backgroundImage = `url("${FACE_DIR}${name === 'curious' ? 'surprised' : name}.webp")`;
+  el.style.backgroundImage = `url("${FACE_DIR}${name === 'curious' ? 'story-curious' : name}.webp")`;
   if (crop) {
     el.style.backgroundSize = crop.size;
     el.style.backgroundPosition = crop.pos;
@@ -1045,8 +1047,8 @@ function applyStoryEmotionVisual({ repeat = false } = {}) {
   if (state.faceOk !== true) return;
   const name = emotion === 'neutral' ? 'story-daily' : resolveExpressionFaceAsset(emotion);
   const animator = state.animators.find(item => item.img.id === 'storyPortrait');
-  const portraitStage = animator?.img.closest('.vn-stage');
-  const anchor = portraitStage && animator.faceAnchor(portraitStage);
+  const portraitStage = (animator?.swapped ? animator.canvas?.closest?.('.vn-stage') : animator?.img?.closest?.('.vn-stage')) || document.querySelector('#tab-story .vn-stage');
+  const anchor = portraitStage && animator?.faceAnchor?.(portraitStage);
   if (!portraitStage || !anchor) return;
   const layer = portraitStage.parentElement || portraitStage;
   const existing = layer.querySelector('.pa-face');

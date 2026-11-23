@@ -606,7 +606,7 @@ function getStoryLineRunner() {
           window.__storyArt?.applyScenePack?.(meta.scene);
         }
         if (meta.imagePrompt && sceneImageGenerator.getConfig().autoOnVnTag) {
-          const base = (state.apiBase || location.origin).replace(/\/$/, '');
+          const base = (state.apiBase || defaultApiBase()).replace(/\/$/, '');
           void sceneImageGenerator.generateAndImport({
             prompt: meta.imagePrompt,
             apiBase: base,
@@ -5548,7 +5548,7 @@ function getWorkshopHarnessPanels(){
       getGameConfigs:()=>__gameConfigs,
       audioCoordinator,
       getWebSpeechDiagnostics,
-      apiBaseUrl:()=>(state.apiBase||location.origin).replace(/\/$/,''),
+      apiBaseUrl:()=>(state.apiBase||defaultApiBase()).replace(/\/$/,''),
       desktopApiHeaders,
       importSceneIllustration,
       activeAiConnection:()=>typeof currentAiConnection==='function'?currentAiConnection():null,
@@ -5744,7 +5744,7 @@ function renderApiUsage(){
 }
 async function callAI(action=null) {
   if(slotWantsTemporaryChat(activeSlotId))throw new Error(uiText('臨時對話故事只能透過已確認的 Claude、ChatGPT 或 Gemini 官網進行；API 模式不會被當成臨時對話。'));
-  const base=(state.apiBase||location.origin).replace(/\/$/,'');
+  const base=(state.apiBase||defaultApiBase()).replace(/\/$/,'');
   if (!base || base === 'about:blank') throw new Error('尚未設定 AI 後端網址');
   const connection=currentAiConnection();
   if(action===null) action=`__OPENING_STYLE__:${state.openingStyle}`;
@@ -6316,7 +6316,7 @@ $('sceneImageBtn').onclick=requestSceneIllustration;
 $('importSceneImageBtn').onclick=()=>$('sceneImageFile').click();
 ensureSceneApiImageGenUi({
   buildDefaultScenePrompt: buildSceneImagePrompt,
-  apiBaseUrl: () => (state.apiBase || location.origin).replace(/\/$/, ''),
+  apiBaseUrl: () => (state.apiBase || defaultApiBase()).replace(/\/$/, ''),
   desktopApiHeaders,
   getAccountProfile: () => currentAiConnection()?.profileId || '',
   getExtraCharNames: () => selectedCharacterCards().map((c) => c.name),

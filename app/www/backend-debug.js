@@ -100,7 +100,7 @@ export class BackendDebugger {
   /**
    * 探測後端 GET /api/health
    */
-  async checkBackendHealth({ apiBase = '', fetchImpl = null, timeoutMs = 4500 } = {}) {
+  async checkBackendHealth({ apiBase = '', headers = {}, fetchImpl = null, timeoutMs = 4500 } = {}) {
     const fetcher = fetchImpl || (typeof fetch === 'function' ? fetch : null);
     const url = `${String(apiBase || '').replace(/\/+$/, '')}/api/health`;
     if (!fetcher) {
@@ -116,10 +116,11 @@ export class BackendDebugger {
     const started = Date.now();
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+    const reqHeaders = { Accept: 'application/json', ...(headers && typeof headers === 'object' ? headers : {}) };
     try {
       const res = await fetcher(url, {
         method: 'GET',
-        headers: { Accept: 'application/json' },
+        headers: reqHeaders,
         signal: controller ? controller.signal : undefined
       });
       const latencyMs = Date.now() - started;
@@ -174,17 +175,18 @@ export class BackendDebugger {
   /**
    * 探測後端 POST /api/model-check
    */
-  async probeModel({ apiBase = '', provider = '', model = '', accountProfile = '', fetchImpl = null, timeoutMs = 12000 } = {}) {
+  async probeModel({ apiBase = '', headers = {}, provider = '', model = '', accountProfile = '', fetchImpl = null, timeoutMs = 12000 } = {}) {
     const fetcher = fetchImpl || (typeof fetch === 'function' ? fetch : null);
     const url = `${String(apiBase || '').replace(/\/+$/, '')}/api/model-check`;
     if (!fetcher) return { ok: false, latencyMs: 0, message: 'fetch 不可用' };
     const started = Date.now();
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+    const reqHeaders = { 'Content-Type': 'application/json', ...(headers && typeof headers === 'object' ? headers : {}) };
     try {
       const res = await fetcher(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: reqHeaders,
         body: JSON.stringify({ provider, model, accountProfile }),
         signal: controller ? controller.signal : undefined
       });
@@ -221,6 +223,7 @@ export class BackendDebugger {
     // 1. 後端 API 健康度
     checks.push(await this.checkBackendHealth({
       apiBase: ctx.apiBase || '',
+      headers: ctx.headers || {},
       fetchImpl: ctx.fetchImpl || null
     }));
 

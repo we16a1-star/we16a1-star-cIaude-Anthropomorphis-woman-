@@ -131,15 +131,30 @@ const tests = [
     assert.equal(dbg.getTrace().length, 1);
     assert.equal(dbg.getTrace()[0].detail.apiKey, undefined, '敏感 key 必須於事件追蹤就被剔除');
 
-    const fakeFetch = async (url) => ({
-      ok: true,
-      status: 200,
-      headers: { get: () => 'application/json' },
-      json: async () => ({ ok: true, profiles: { anthropic: ['DEFAULT'], gemini: ['PERSONAL'] } })
-    });
+    let seenHealthHeader = '';
+    let seenProbeHeader = '';
+    const fakeFetch = async (url, init) => {
+      if (String(url).includes('/api/health')) {
+        seenHealthHeader = init?.headers?.['X-Desktop-Token'] || '';
+        return {
+          ok: true,
+          status: 200,
+          headers: { get: () => 'application/json' },
+          json: async () => ({ ok: true, profiles: { anthropic: ['DEFAULT'], gemini: ['PERSONAL'] } })
+        };
+      }
+      seenProbeHeader = init?.headers?.['X-Desktop-Token'] || '';
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ ok: true, message: 'ok' })
+      };
+    };
 
     const report = await dbg.runDiagnostics({
       apiBase: 'http://127.0.0.1:3000',
+      headers: { 'X-Desktop-Token': 'desktop-tok-verify' },
       fetchImpl: fakeFetch,
       configs: {
         emotions: {
@@ -153,6 +168,17 @@ const tests = [
       cardCount: 2,
       activeCardCount: 1
     });
+
+    assert.equal(seenHealthHeader, 'desktop-tok-verify', '桌面版後端健康檢查必須轉傳 X-Desktop-Token');
+    const probeRes = await dbg.probeModel({
+      apiBase: 'http://127.0.0.1:3000',
+      headers: { 'X-Desktop-Token': 'desktop-tok-verify' },
+      provider: 'openai',
+      model: 'gpt-6.1-terra',
+      fetchImpl: fakeFetch
+    });
+    assert.equal(probeRes.ok, true);
+    assert.equal(seenProbeHeader, 'desktop-tok-verify', '桌面版模型探測必須轉傳 X-Desktop-Token');
 
     assert.equal(report.ok, true);
     assert.equal(report.checks.length, 7);
